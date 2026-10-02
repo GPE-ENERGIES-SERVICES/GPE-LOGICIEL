@@ -1,0 +1,57 @@
+{
+ "idweb": "26-92748",
+ "id": "26_92748",
+ "contractfolderid": null,
+ "objet": "Prestations de maintenance préventive et curative d’une machine à graver laser de la marque TROTEC modèle Speedy 300 (S38205) pour la Régie Municipale des Pompes Funèbres de la Ville de Marseille",
+ "filename": "26-92748",
+ "famille": "FNS",
+ "code_departement": [
+  "13"
+ ],
+ "code_departement_prestation": null,
+ "famille_libelle": "Marchés entre 90 k€ et seuils européens",
+ "dateparution": "2026-09-25",
+ "datefindiffusion": "2026-10-02",
+ "datelimitereponse": null,
+ "nomacheteur": "Ville de Marseille",
+ "titulaire": null,
+ "perimetre": "FNSimple",
+ "type_procedure": null,
+ "soustype_procedure": null,
+ "procedure_libelle": "Procédure NC",
+ "procedure_categorise": "/",
+ "nature": "RECTIFICATIF",
+ "sousnature": null,
+ "nature_libelle": "Rectificatif",
+ "sousnature_libelle": "Rectificatif",
+ "nature_categorise": "rectificatif/standard",
+ "nature_categorise_libelle": "Rectificatif/",
+ "criteres": null,
+ "marche_public_simplifie": null,
+ "marche_public_simplifie_label": null,
+ "etat": "RECTIFICATIF",
+ "descripteur_code": [
+  "196"
+ ],
+ "dc": [
+  "196"
+ ],
+ "descripteur_libelle": [
+  "Maintenance"
+ ],
+ "type_marche": [
+  "SERVICES"
+ ],
+ "type_marche_facette": [
+  "Services"
+ ],
+ "type_avis": null,
+ "annonce_lie": [
+  "26-87745"
+ ],
+ "annonces_anterieures": null,
+ "source_schema": "3.2.5",
+ "gestion": "{\"REFERENCE\": {\"IDWEB\": \"26-92748\", \"TYPE_AVIS\": {\"FAMILLE\": {\"FNS\": \"\"}, \"PERIMETRE\": {\"FNSimple\": \"\"}, \"NATURE\": {\"RECTIFICATIF\": \"\"}, \"STATUT\": {\"RECTIFICATIF\": \"\"}}, \"ANNONCE_ANTERIEUR\": {\"IDWEB\": \"26-87745\"}}, \"INDEXATION\": {\"SCHEMA\": \"3.2.5\", \"NOMORGANISME\": \"Ville de Marseille\", \"DATE_PUBLICATION\": \"2026-09-25\", \"DATE_FIN_DIFFUSION\": \"2026-10-02\", \"DESCRIPTEURS\": {\"DESCRIPTEUR\": {\"CODE\": \"196\", \"LIBELLE\": \"Maintenance\"}}, \"NATURE_MARCHE\": {\"SERVICES\": \"\"}, \"DEP_PUBLICATION\": \"13\", \"RESUME_OBJET\": \"Prestations de maintenance préventive et curative d’une machine à graver laser de la marque TROTEC modèle Speedy 300 (S38205) pour la Régie Municipale des Pompes Funèbres de la Ville de Marseille\"}}",
+ "donnees": "{\"FNSimple\": {\"organisme\": {\"nomOfficiel\": \"Ville de Marseille\", \"typeIdentificationNational\": {\"siret\": \"\"}, \"codeIdentificationNational\": \"21130055300016\", \"ville\": \"Marseille cedex \", \"cp\": \"13233\", \"grpCommandes\": {\"non\": \"\"}}, \"rectificatif\": {\"avisInitial\": {\"idWeb\": \"26-87745\"}, \"natureMarche\": {\"intitule\": \"Prestations de maintenance préventive et curative d’une machine à graver laser de la marque TROTEC modèle Speedy 300 (S38205) pour la Régie Municipale des Pompes Funèbres de la Ville de Marseille\", \"codeCPV\": {\"objetPrincipal\": {\"classPrincipale\": \"50324200\"}}, \"natureMarche\": {\"services\": \"\"}, \"description\": \"Le présent marché a pour objet des Prestations de maintenance préventive et curative d’une ma-chine à graver laser de la marque TROTEC modèle Speedy 300 (S38205) pour la Régie Municipale des Pompes Funèbres de la Ville de Marseille.\\nCette machine acquise par la RMPF en mai 2023 n'est plus sous garantie. \\nCette machine est utilisée pour :\\nGraver des plaques pour les cercueils, urnes, et tous les éléments obligatoires aux convois d’obsèques, \\nGraver, pour le compte des familles, des inscriptions sur des objets qui sont ensuite dé-posées sur les monuments funéraires,\\nIl s'agit d'un marché mixte : \\nUne partie à prix global et forfaitaire pour des prestations de maintenance préventive (poste 1)\\nUne partie à prix unitaires, à bons de commande, pour des prestations maintenance curative (poste 2)\", \"criteresAttrib\": \"Critères énoncés dans les documents de la consultation\"}, \"infosRectif\": \"La Date Limite de remise des offres (DLRO)prévue le 25/09/2026 à 16H00 est reportée au 02/10/2026 à 16H00.\"}}}",
+ "url_avis": "https://www.boamp.fr/pages/avis/?q=idweb:26-92748"
+}

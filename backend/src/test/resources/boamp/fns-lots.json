@@ -1,0 +1,66 @@
+{
+ "idweb": "26-94039",
+ "id": "26_94039",
+ "contractfolderid": null,
+ "objet": "Impression des magazines et des autres supports de communication pour la Ville de Saint-Paul-Trois-Châteaux",
+ "filename": "26-94039",
+ "famille": "FNS",
+ "code_departement": [
+  "26"
+ ],
+ "code_departement_prestation": null,
+ "famille_libelle": "Marchés entre 90 k€ et seuils européens",
+ "dateparution": "2026-09-29",
+ "datefindiffusion": "2026-10-20",
+ "datelimitereponse": "2026-10-20T12:00:00+00:00",
+ "nomacheteur": "Ville de Saint-Paul-Trois-Châteaux",
+ "titulaire": null,
+ "perimetre": "FNSimple",
+ "type_procedure": "OUVERT",
+ "soustype_procedure": null,
+ "procedure_libelle": "Procédure Ouverte",
+ "procedure_categorise": "OUVERT/",
+ "nature": "APPEL_OFFRE",
+ "sousnature": null,
+ "nature_libelle": "Avis de marché",
+ "sousnature_libelle": null,
+ "nature_categorise": "appeloffre/standard",
+ "nature_categorise_libelle": "Avis de marché/",
+ "criteres": [
+  "environnementaux"
+ ],
+ "marche_public_simplifie": null,
+ "marche_public_simplifie_label": null,
+ "etat": "INITIAL",
+ "descripteur_code": [
+  "160",
+  "285",
+  "161"
+ ],
+ "dc": [
+  "160",
+  "285",
+  "161"
+ ],
+ "descripteur_libelle": [
+  "Impression",
+  "Publicité, Communication",
+  "Imprimés"
+ ],
+ "type_marche": [
+  "SERVICES"
+ ],
+ "type_marche_facette": [
+  "Services"
+ ],
+ "type_avis": [
+  "5",
+  "1"
+ ],
+ "annonce_lie": null,
+ "annonces_anterieures": null,
+ "source_schema": "3.2.5",
+ "gestion": "{\"REFERENCE\": {\"IDWEB\": \"26-94039\", \"TYPE_AVIS\": {\"FAMILLE\": {\"FNS\": \"\"}, \"PERIMETRE\": {\"FNSimple\": \"\"}, \"NATURE\": {\"APPEL_OFFRE\": \"\"}, \"STATUT\": {\"INITIAL\": \"\"}}}, \"INDEXATION\": {\"SCHEMA\": \"3.2.5\", \"NOMORGANISME\": \"Ville de Saint-Paul-Trois-Châteaux\", \"TYPE_PROCEDURE\": {\"OUVERT\": \"\"}, \"DATE_PUBLICATION\": \"2026-09-29\", \"DATE_LIMITE_REPONSE\": \"2026-10-20T12:00:00\", \"DATE_FIN_DIFFUSION\": \"2026-10-20\", \"DESCRIPTEURS\": {\"DESCRIPTEUR\": [{\"CODE\": \"160\", \"LIBELLE\": \"Impression\"}, {\"CODE\": \"285\", \"LIBELLE\": \"Publicité, Communication\"}, {\"CODE\": \"161\", \"LIBELLE\": \"Imprimés\"}]}, \"NATURE_MARCHE\": {\"SERVICES\": \"\"}, \"CRITERES_SOCIAUX_ENV\": {\"ENVIRONNEMENTAUX\": \"\"}, \"DEP_PUBLICATION\": \"26\", \"RESUME_OBJET\": \"Impression des magazines et des autres supports de communication pour la Ville de Saint-Paul-Trois-Châteaux\"}}",
+ "donnees": "{\"FNSimple\": {\"organisme\": {\"nomOfficiel\": \"Ville de Saint-Paul-Trois-Châteaux\", \"typeIdentificationNational\": {\"siret\": \"\"}, \"codeIdentificationNational\": \"21260324500011\", \"ville\": \"SAINT-PAUL-TROIS-CHÂTEAUX\", \"cp\": \"26130\", \"grpCommandes\": {\"non\": \"\"}}, \"initial\": {\"communication\": {\"urlDocConsul\": \"https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=dematent.login&type=Dce&Idm=1879481\", \"identifiantInterne\": \"2026-024\", \"docSecurite\": {\"oui\": \"\"}, \"urlSecurite\": {\"non\": \"\"}, \"nomContact\": \"Service Achats et Commande Publique\", \"telContact\": \"+33 475967878\"}, \"procedure\": {\"procedureAdapteeO\": \"\", \"capaciteExercice\": \"Formulaire Dc1 : n formulaire Dc1 (lettre de candidature) ou une déclaration sur l'honneur pour justifier qu'il n'entre dans aucun cas mentionné aux articles L2141-1 à L2141-5 du Ccp et notamment qu'il est en règles au regard des articles L. 5212-1 à L5212-11 du code du travail concernant l'emploi des travailleurs handicapés Formulaire Dc2 : Déclaration du candidat\", \"capaciteEcoFin\": \"Chiffre d'affaires annuel spécifique : Déclaration concernant le chiffre d'affaires global et le chiffre d'affaires concernant les prestations objet du contrat, réalisées au cours des trois derniers exercices disponibles Assurance responsabilité professionnelle pour les risques : Déclaration appropriée de banques ou preuve d'une assurance pour les risques professionnels Effectif moyen annuel : Déclaration indiquant les effectifs moyens annuels du candidat et l'importance du personnel d'encadrement pour chacune des trois dernières années\", \"capaciteTech\": \"Références sur des services spécifiés : Liste des principales prestations effectuées au cours des trois dernières années, indiquant le montant, la date et le destinataire. Elles sont prouvées par des attestations du destinataire ou, à défaut, par une déclaration du candidat\", \"techAchat\": {\"accordCadre\": \"\"}, \"dateReceptionOffres\": \"2026-10-20T12:00:00\", \"presOffres\": {\"interdite\": \"\"}, \"nbCandidatReduit\": {\"non\": \"\"}, \"attributionSansNegociation\": {\"oui\": \"\"}, \"variantes\": {\"non\": \"\"}, \"categorieAcheteur\": \"Acheteur(s) habilité(s) à passer les marchés subséquents ou bons de commande\", \"criteresAttrib\": \"Valeur Technique de l'offre à l'aide du mémoire technique : 30%\\nDélai de livraison : 10%\\nPrise en compte de la notion de développement durable  : 10%\\nPrix des prestations : 50%\"}, \"natureMarche\": {\"intitule\": \"Impression des magazines et des autres supports de communication pour la Ville de Saint-Paul-Trois-Châteaux\", \"codeCPV\": {\"objetPrincipal\": {\"classPrincipale\": \"79800000\"}}, \"natureMarche\": {\"services\": \"\"}, \"description\": \"La présente consultation concerne des prestations d'impression, de façonnage et de fabrication  pour les magazines et d'autres supports de communication pour les besoins de la Ville de Saint-Paul-Trois-Châteaux. La conception graphique est exclue du présent marché. Les caractéristiques des différentes prestations sont détaillées dans le BPU de chaque lot et le CCTP commun à tous les lots.\\nL'accord-cadre sera exécuté par l'émission de bons de commande.Chaque lot fera l'objet d'une attribution séparée.Le contrat  est susceptible d'être reconduit dans les conditions du cahier des charges.Les prestations sont réglées par des prix unitaires.Les montants estimatifs sont indicatifs et comprennent la totalité des périodes de reconduction\", \"lieuExecution\": \"FRK23 - Drôme\", \"dureeMois\": \"12\", \"valeurEstimee\": {\"@devise\": \"EUR\", \"fourchette\": {\"valeurHaute\": \"198000\"}}, \"tranches\": {\"non\": \"\"}, \"reservationMarche\": {\"non\": \"\"}, \"lotsMarche\": {\"oui\": \"\"}}, \"lots\": {\"lot\": [{\"description\": \"01 : Impression de magazines . Echantillons à fournir\", \"codeCPV\": {\"objetPrincipal\": {\"classPrincipale\": \"79810000\"}}, \"estimationValeur\": {\"@devise\": \"EUR\", \"valeur\": \"120000\"}, \"lieuExecutionLivraison\": \"Territoire de Saint-Paul-Trois-Châteaux\\n26130\\nSaint-paul-trois-châteaux\"}, {\"description\": \"02 : Impression d'affiches sucettes 120 x 176 \\ncm. Echantillons à fournir\", \"codeCPV\": {\"objetPrincipal\": {\"classPrincipale\": \"79810000\"}}, \"estimationValeur\": {\"@devise\": \"EUR\", \"valeur\": \"10000\"}, \"lieuExecutionLivraison\": \"Territoire de Saint-Paul-Trois-Châteaux\\n26130\\nSaint-paul-trois-châteaux\"}, {\"description\": \"03 : Impression de flyers, dépliants et affiches\", \"codeCPV\": {\"objetPrincipal\": {\"classPrincipale\": \"79810000\"}}, \"estimationValeur\": {\"@devise\": \"EUR\", \"valeur\": \"20000\"}, \"lieuExecutionLivraison\": \"Territoire de Saint-Paul-Trois-Châteaux\\n26130\\nSaint-paul-trois-châteaux\"}, {\"description\": \"04 : Impression \\nde banderoles, roll-up, \\nwinflag, panneaux aquilux et dibond\", \"codeCPV\": {\"objetPrincipal\": {\"classPrincipale\": \"79810000\"}}, \"estimationValeur\": {\"@devise\": \"EUR\", \"valeur\": \"48000\"}, \"lieuExecutionLivraison\": \"Territoire de Saint-Paul-Trois-Châteaux\\n26130\\nSaint-paul-trois-châteaux\"}]}, \"informComplementaire\": {\"non\": \"\"}}}}",
+ "url_avis": "https://www.boamp.fr/pages/avis/?q=idweb:26-94039"
+}

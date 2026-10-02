@@ -1,0 +1,60 @@
+{
+ "idweb": "26-93202",
+ "id": "26_93202",
+ "contractfolderid": null,
+ "objet": "Prestations de traiteur dans le cadre des banquets annuels des aînés",
+ "filename": "26-93202",
+ "famille": "MAPA",
+ "code_departement": [
+  "62"
+ ],
+ "code_departement_prestation": null,
+ "famille_libelle": "Marchés <90 k€ (MAPA)",
+ "dateparution": "2026-09-28",
+ "datefindiffusion": "2026-10-14",
+ "datelimitereponse": "2026-10-14T12:00:00+00:00",
+ "nomacheteur": "Ville Liévin",
+ "titulaire": null,
+ "perimetre": "MAPA",
+ "type_procedure": "PROCEDURE_ADAPTE",
+ "soustype_procedure": null,
+ "procedure_libelle": "Procédure Adaptée",
+ "procedure_categorise": "PROCEDURE_ADAPTE/",
+ "nature": "APPEL_OFFRE",
+ "sousnature": null,
+ "nature_libelle": "Avis de marché",
+ "sousnature_libelle": null,
+ "nature_categorise": "appeloffre/standard",
+ "nature_categorise_libelle": "Avis de marché/",
+ "criteres": [
+  "environnementaux"
+ ],
+ "marche_public_simplifie": null,
+ "marche_public_simplifie_label": null,
+ "etat": "INITIAL",
+ "descripteur_code": [
+  "304"
+ ],
+ "dc": [
+  "304"
+ ],
+ "descripteur_libelle": [
+  "Repas, traiteur"
+ ],
+ "type_marche": [
+  "SERVICES"
+ ],
+ "type_marche_facette": [
+  "Services"
+ ],
+ "type_avis": [
+  "5",
+  "1"
+ ],
+ "annonce_lie": null,
+ "annonces_anterieures": null,
+ "source_schema": "3.2.5",
+ "gestion": "{\"REFERENCE\": {\"IDWEB\": \"26-93202\", \"TYPE_AVIS\": {\"FAMILLE\": {\"MAPA\": \"\"}, \"PERIMETRE\": {\"MAPA\": \"\"}, \"NATURE\": {\"APPEL_OFFRE\": \"\"}, \"STATUT\": {\"INITIAL\": \"\"}}}, \"INDEXATION\": {\"SCHEMA\": \"3.2.5\", \"NOMORGANISME\": \"Ville Liévin\", \"TYPE_PROCEDURE\": {\"PROCEDURE_ADAPTE\": \"\"}, \"DATE_PUBLICATION\": \"2026-09-28\", \"DATE_LIMITE_REPONSE\": \"2026-10-14T12:00:00\", \"DATE_FIN_DIFFUSION\": \"2026-10-14\", \"DESCRIPTEURS\": {\"DESCRIPTEUR\": {\"CODE\": \"304\", \"LIBELLE\": \"Repas, traiteur\"}}, \"NATURE_MARCHE\": {\"SERVICES\": \"\"}, \"CRITERES_SOCIAUX_ENV\": {\"ENVIRONNEMENTAUX\": \"\"}, \"DEP_PUBLICATION\": \"62\", \"RESUME_OBJET\": \"Prestations de traiteur dans le cadre des banquets annuels des aînés\"}}",
+ "donnees": "{\"MAPA\": {\"organisme\": {\"correspondantPRM\": {\"nom\": \"PAIVA\", \"pren\": \"Dany\", \"fonc\": \"Maire\"}, \"acheteurPublic\": \"Ville Liévin\", \"adr\": {\"voie\": {\"nomvoie\": \"45 rue Edouard Vaillant\"}, \"cp\": \"62800\", \"ville\": \"Liévin\"}, \"coord\": {\"tel\": \"0321448818\", \"mel\": \"marchespublics@lievin.fr\", \"url\": \"https://lievin.fr/\"}, \"urlProfilAcheteur\": \"http://www.marches-securises.fr\", \"classificationOrganisme\": \"4\"}, \"initial\": {\"natureMarche\": {\"services\": \"\"}, \"description\": {\"objet\": \"Prestations de traiteur dans le cadre des banquets annuels des aînés\", \"lieuExecutionLivraison\": {\"voie\": {\"nomvoie\": \"FRE12 - Pas-de-Calais\"}}}, \"caracteristiques\": {\"variantes\": {\"non\": \"\"}, \"principales\": \"Montant HT maximum pour la durée totale du contrat : 85000.0 Euro(s) H.T.\\nL'accord-cadre sera exécuté par l'émission de bons de commande.\\nLes prestations sont réglées par des prix unitaires\", \"quantites\": \"Durée : Le présent marché prend effet à compter de sa date de notification et  prendra fin à la date du dernier repas réalisé\"}, \"conditions\": {\"euro\": \"\", \"langue\": {\"langEC\": \"fr\"}}, \"justifications\": {\"justificationAutre\": \"Renvoi au règlement de la consultation\"}, \"criteres\": {\"critereCDC\": \"\"}, \"procedure\": {\"procedureAdaptee\": \"\"}, \"delais\": {\"receptionOffres\": \"2026-10-14T12:00:00\", \"validite\": {\"nbMois\": \"3\"}}, \"renseignements\": {\"idMarche\": \"2026M016\", \"rensgComplt\": \"Les dépôts de plis doivent être impérativement remis par voie dématérialisée.\\nPour retrouver cet avis intégral, déposer un pli, allez sur http://www.marches-securises.fr\\nCode NUTS : FRE12\\nMarché périodique : NON\\nCalendrier prévisionnel de publication des prochains avis :L'execution du marché est soumise à d'autres conditions particulières :La source de financement du marché est assurée par le budget de la collectivité.\\nInstance chargée des procédures de recours : Tribunal administratif de Lille, 143, rue Jacquemars Giélée, BP 2039\\n59014 Lille\\nTél : 0320631300 Fax : 0320631347Mel : greffe.ta-lille@juradm.fr\\nService auprès duquel des renseignements peuvent être obtenus concernant l'introduction des recours : Tribunal administratif de Lille, 143, rue Jacquemars Giélée, BP 2039\\n59014 Lille\\nTél : 0320631300 Fax : 0320631347Mel : greffe.ta-lille@juradm.fr\"}, \"marcheUnique\": \"\", \"infosSup\": \"\\n       \"}}}",
+ "url_avis": "https://www.boamp.fr/pages/avis/?q=idweb:26-93202"
+}

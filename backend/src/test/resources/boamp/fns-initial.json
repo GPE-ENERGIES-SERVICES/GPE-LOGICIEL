@@ -1,0 +1,61 @@
+{
+ "idweb": "26-94116",
+ "id": "26_94116",
+ "contractfolderid": null,
+ "objet": "Fourniture et acheminement d'énergie électrique",
+ "filename": "26-94116",
+ "famille": "FNS",
+ "code_departement": [
+  "73"
+ ],
+ "code_departement_prestation": null,
+ "famille_libelle": "Marchés entre 90 k€ et seuils européens",
+ "dateparution": "2026-09-30",
+ "datefindiffusion": "2026-11-03",
+ "datelimitereponse": "2026-11-03T12:00:00+00:00",
+ "nomacheteur": "Commune d'Albiez-Montrond (73)",
+ "titulaire": null,
+ "perimetre": "FNSimple",
+ "type_procedure": "OUVERT",
+ "soustype_procedure": null,
+ "procedure_libelle": "Procédure Ouverte",
+ "procedure_categorise": "OUVERT/",
+ "nature": "APPEL_OFFRE",
+ "sousnature": null,
+ "nature_libelle": "Avis de marché",
+ "sousnature_libelle": null,
+ "nature_categorise": "appeloffre/standard",
+ "nature_categorise_libelle": "Avis de marché/",
+ "criteres": null,
+ "marche_public_simplifie": null,
+ "marche_public_simplifie_label": null,
+ "etat": "INITIAL",
+ "descripteur_code": [
+  "2",
+  "59"
+ ],
+ "dc": [
+  "2",
+  "59"
+ ],
+ "descripteur_libelle": [
+  "Abonnement",
+  "Chauffage (exploitation, entretien)"
+ ],
+ "type_marche": [
+  "FOURNITURES"
+ ],
+ "type_marche_facette": [
+  "Fournitures"
+ ],
+ "type_avis": [
+  "5",
+  "1"
+ ],
+ "annonce_lie": null,
+ "annonces_anterieures": null,
+ "source_schema": "3.2.5",
+ "gestion": "{\"REFERENCE\": {\"IDWEB\": \"26-94116\", \"TYPE_AVIS\": {\"FAMILLE\": {\"FNS\": \"\"}, \"PERIMETRE\": {\"FNSimple\": \"\"}, \"NATURE\": {\"APPEL_OFFRE\": \"\"}, \"STATUT\": {\"INITIAL\": \"\"}}}, \"INDEXATION\": {\"SCHEMA\": \"3.2.5\", \"NOMORGANISME\": \"Commune d'Albiez-Montrond (73)\", \"TYPE_PROCEDURE\": {\"OUVERT\": \"\"}, \"DATE_PUBLICATION\": \"2026-09-30\", \"DATE_LIMITE_REPONSE\": \"2026-11-03T12:00:00\", \"DATE_FIN_DIFFUSION\": \"2026-11-03\", \"DESCRIPTEURS\": {\"DESCRIPTEUR\": [{\"CODE\": \"2\", \"LIBELLE\": \"Abonnement\"}, {\"CODE\": \"59\", \"LIBELLE\": \"Chauffage (exploitation, entretien)\"}]}, \"NATURE_MARCHE\": {\"FOURNITURES\": \"\"}, \"DEP_PUBLICATION\": \"73\", \"RESUME_OBJET\": \"Fourniture et acheminement d'énergie électrique\"}}",
+ "donnees": "{\"FNSimple\": {\"organisme\": {\"nomOfficiel\": \"Commune d'Albiez-Montrond (73)\", \"typeIdentificationNational\": {\"siret\": \"\"}, \"codeIdentificationNational\": \"21730013600017\", \"ville\": \"Albiez-Montrond\", \"cp\": \"73300\", \"grpCommandes\": {\"non\": \"\"}}, \"initial\": {\"communication\": {\"urlProfilAch\": \"https://www.marches-securises.fr/\", \"identifiantInterne\": \"ALBIEZ-MONTROND_73_A_20260923_1\", \"docSecurite\": {\"oui\": \"\"}, \"urlSecurite\": {\"non\": \"\"}, \"nomContact\": \"VERNE Jérôme\", \"adresseMailContact\": \"jerome.verne@orange.fr\", \"telContact\": \"+33 679420579\"}, \"procedure\": {\"procedureAdapteeO\": \"\", \"capaciteExercice\": \"Se référer aux documents de la consultation (règlement de la consultation)\", \"capaciteEcoFin\": \"Se référer aux documents de la consultation (règlement de la consultation)\", \"capaciteTech\": \"Se référer aux documents de la consultation (règlement de la consultation)\", \"techAchat\": {\"autres\": \"\"}, \"dateReceptionOffres\": \"2026-11-03T12:00:00\", \"presOffres\": {\"interdite\": \"\"}, \"nbCandidatReduit\": {\"non\": \"\"}, \"attributionSansNegociation\": {\"oui\": \"\"}, \"variantes\": {\"non\": \"\"}}, \"natureMarche\": {\"intitule\": \"Fourniture et acheminement d'énergie électrique\", \"codeCPV\": {\"objetPrincipal\": {\"classPrincipale\": \"09310000\"}}, \"natureMarche\": {\"fournitures\": \"\"}, \"description\": \"Les prestations objet du marché concernent les points de livraison situés sur le périmètre du GRD et comprennent : \\n-\\tLa fourniture de l'énergie électrique, pour les points de livraison, \\n-\\tL'accès au réseau public de distribution et son utilisation pour le point de livraison du domaine skiable\\n-\\tLes services nécessairement liés à la fourniture de l'énergie électrique et à l'accès au réseau public de distribution et l'utilisation de ce réseau.\\n-\\tLa fonction responsable d'équilibre\\n-\\tDomaine Skiable Albiez-Montrond devra être rattachée au périmètre de capacité du fournisseur retenue.\\n-\\tPas de flexibilité nécessaire\", \"lieuExecution\": \"ALBIEZ-MONTROND\", \"dureeMois\": \"13\", \"valeurEstimee\": {\"@devise\": \"EUR\", \"fourchette\": \"\"}, \"tranches\": {\"non\": \"\"}, \"reservationMarche\": {\"non\": \"\"}, \"lotsMarche\": {\"non\": \"\"}}, \"informComplementaire\": {\"non\": \"\"}}}}",
+ "url_avis": "https://www.boamp.fr/pages/avis/?q=idweb:26-94116"
+}

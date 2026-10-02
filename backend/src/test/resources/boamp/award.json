@@ -1,0 +1,68 @@
+{
+ "idweb": "26-93008",
+ "id": "26_93008",
+ "contractfolderid": null,
+ "objet": "Mission de Maîtrise d'oeuvre pour les travaux de Rénovation énergétique du gymnase de Lieurey",
+ "filename": "26-93008",
+ "famille": "FNS",
+ "code_departement": [
+  "27"
+ ],
+ "code_departement_prestation": null,
+ "famille_libelle": "Marchés entre 90 k€ et seuils européens",
+ "dateparution": "2026-09-25",
+ "datefindiffusion": "2026-12-23",
+ "datelimitereponse": null,
+ "nomacheteur": "Eure Amenagement Developpement",
+ "titulaire": null,
+ "perimetre": "FNSimple",
+ "type_procedure": null,
+ "soustype_procedure": null,
+ "procedure_libelle": "Procédure NC",
+ "procedure_categorise": "/",
+ "nature": "ATTRIBUTION",
+ "sousnature": null,
+ "nature_libelle": "Résultat de marché",
+ "sousnature_libelle": null,
+ "nature_categorise": "attribution/standard",
+ "nature_categorise_libelle": "Résultat de marché/",
+ "criteres": [
+  "environnementaux"
+ ],
+ "marche_public_simplifie": null,
+ "marche_public_simplifie_label": null,
+ "etat": "INITIAL",
+ "descripteur_code": [
+  "197",
+  "33",
+  "455"
+ ],
+ "dc": [
+  "197",
+  "33",
+  "455"
+ ],
+ "descripteur_libelle": [
+  "Maîtrise d'oeuvre",
+  "Bâtiment",
+  "Ingénierie"
+ ],
+ "type_marche": [
+  "SERVICES"
+ ],
+ "type_marche_facette": [
+  "Services"
+ ],
+ "type_avis": [
+  "10",
+  "6"
+ ],
+ "annonce_lie": [
+  "25-14540"
+ ],
+ "annonces_anterieures": null,
+ "source_schema": "3.2.5",
+ "gestion": "{\"REFERENCE\": {\"IDWEB\": \"26-93008\", \"TYPE_AVIS\": {\"FAMILLE\": {\"FNS\": \"\"}, \"PERIMETRE\": {\"FNSimple\": \"\"}, \"NATURE\": {\"ATTRIBUTION\": \"\"}, \"STATUT\": {\"INITIAL\": \"\"}}, \"ANNONCE_ANTERIEUR\": {\"IDWEB\": \"25-14540\"}}, \"INDEXATION\": {\"SCHEMA\": \"3.2.5\", \"NOMORGANISME\": \"Eure Amenagement Developpement\", \"DATE_PUBLICATION\": \"2026-09-25\", \"DATE_FIN_DIFFUSION\": \"2026-12-23\", \"DESCRIPTEURS\": {\"DESCRIPTEUR\": [{\"CODE\": \"197\", \"LIBELLE\": \"Maîtrise d'oeuvre\"}, {\"CODE\": \"33\", \"LIBELLE\": \"Bâtiment\"}, {\"CODE\": \"455\", \"LIBELLE\": \"Ingénierie\"}]}, \"NATURE_MARCHE\": {\"SERVICES\": \"\"}, \"CRITERES_SOCIAUX_ENV\": {\"ENVIRONNEMENTAUX\": \"\"}, \"DEP_PUBLICATION\": \"27\", \"RESUME_OBJET\": \"Mission de Maîtrise d'oeuvre pour les travaux de Rénovation énergétique du gymnase de Lieurey\"}}",
+ "donnees": "{\"FNSimple\": {\"organisme\": {\"nomOfficiel\": \"Eure Amenagement Developpement\", \"typeIdentificationNational\": {\"siret\": \"\"}, \"codeIdentificationNational\": \"62365031400072\", \"ville\": \"EVREUX\", \"cp\": \"27009\", \"grpCommandes\": {\"non\": \"\"}}, \"attribution\": {\"avisInitial\": {\"idWeb\": \"25-14540\"}, \"natureMarche\": {\"intitule\": \"Mission de Maîtrise d'oeuvre pour les travaux de Rénovation énergétique du gymnase de Lieurey\", \"codeCPV\": {\"objetPrincipal\": {\"classPrincipale\": \"71200000\"}}, \"natureMarche\": {\"services\": \"\"}, \"description\": \"Le pouvoir adjudicateur ne souhaite imposer aucune forme de groupement à l'attributaire du marché.\\nIl est interdit aux candidats de présenter plusieurs offres en agissant à la fois en qualité de candidats individuels et de membres d'un ou plusieurs groupements.\\n\\nCette consultation comporte des conditions d'exécution à caractère environnemental dont le détail est indiqué dans le CCAP. Le respect de ces dispositions est une condition de la conformité de l'offre.\\nUne offre comportant des réserves ou ne respectant pas ces conditions d'exécution particulières sera déclarée irrégulière au motif du non-respect du cahier des charges.\\nChaque titulaire concerné devra mettre en oeuvre tous les moyens dont il dispose pour respecter ces objectifs de développement durable dans le cadre de l'exécution des prestations\", \"criteresAttrib\": \"Valeur technique de l'offre : 60%\\nPrix : 40%\"}, \"attributionMarche\": \"Date d'attribution : 06/05/25\\nMarché n° : 2024-12-0-001-25\\nBruno Saas, 1637 rue du Bout d'Aval, 76690 St Georges Sur Fontaine\\nMontant indéfini\"}}}",
+ "url_avis": "https://www.boamp.fr/pages/avis/?q=idweb:26-93008"
+}

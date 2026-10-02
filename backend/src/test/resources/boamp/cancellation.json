@@ -1,0 +1,58 @@
+{
+ "idweb": "26-91344",
+ "id": "26_91344",
+ "contractfolderid": null,
+ "objet": "Travaux de construction d’une cuisine satellite du collège de Doujani",
+ "filename": "26-91344",
+ "famille": "FNS",
+ "code_departement": [
+  "974",
+  "976"
+ ],
+ "code_departement_prestation": null,
+ "famille_libelle": "Marchés entre 90 k€ et seuils européens",
+ "dateparution": "2026-09-22",
+ "datefindiffusion": "2026-10-19",
+ "datelimitereponse": null,
+ "nomacheteur": "Rectorat de Mayotte",
+ "titulaire": null,
+ "perimetre": "FNSimple",
+ "type_procedure": null,
+ "soustype_procedure": null,
+ "procedure_libelle": "Procédure NC",
+ "procedure_categorise": "/",
+ "nature": "ANNULATION",
+ "sousnature": null,
+ "nature_libelle": "Avis d'annulation",
+ "sousnature_libelle": null,
+ "nature_categorise": "Annulation/",
+ "nature_categorise_libelle": "Annulation/",
+ "criteres": null,
+ "marche_public_simplifie": null,
+ "marche_public_simplifie_label": null,
+ "etat": "INITIAL",
+ "descripteur_code": [
+  "77"
+ ],
+ "dc": [
+  "77"
+ ],
+ "descripteur_libelle": [
+  "Cuisine (équipement)"
+ ],
+ "type_marche": [
+  "TRAVAUX"
+ ],
+ "type_marche_facette": [
+  "Travaux"
+ ],
+ "type_avis": null,
+ "annonce_lie": [
+  "26-89214"
+ ],
+ "annonces_anterieures": null,
+ "source_schema": "3.2.5",
+ "gestion": "{\"REFERENCE\": {\"IDWEB\": \"26-91344\", \"TYPE_AVIS\": {\"FAMILLE\": {\"FNS\": \"\"}, \"PERIMETRE\": {\"FNSimple\": \"\"}, \"NATURE\": {\"ANNULATION\": \"\"}, \"STATUT\": {\"INITIAL\": \"\"}}, \"ANNONCE_ANTERIEUR\": {\"IDWEB\": \"26-89214\"}}, \"INDEXATION\": {\"SCHEMA\": \"3.2.5\", \"NOMORGANISME\": \"Rectorat de Mayotte\", \"DATE_PUBLICATION\": \"2026-09-22\", \"DATE_FIN_DIFFUSION\": \"2026-10-19\", \"DESCRIPTEURS\": {\"DESCRIPTEUR\": {\"CODE\": \"77\", \"LIBELLE\": \"Cuisine (équipement)\"}}, \"NATURE_MARCHE\": {\"TRAVAUX\": \"\"}, \"DEP_PUBLICATION\": [\"974\", \"976\"], \"RESUME_OBJET\": \"Travaux de construction d’une cuisine satellite du collège de Doujani\"}}",
+ "donnees": "{\"FNSimple\": {\"organisme\": {\"nomOfficiel\": \"Rectorat de Mayotte\", \"typeIdentificationNational\": {\"siret\": \"\"}, \"codeIdentificationNational\": \"17985083900012\", \"ville\": \"Mamoudzou\", \"cp\": \"97600\", \"grpCommandes\": {\"non\": \"\"}}, \"annulation\": {\"avisInitial\": {\"idWeb\": \"26-89214\"}, \"natureMarche\": {\"intitule\": \"Travaux de réhabilitation du satellite de restauration du collège de Sada\", \"codeCPV\": {\"objetPrincipal\": \"\"}, \"natureMarche\": {\"travaux\": \"\"}}, \"infosAnnulation\": \"Conformément à l’article R2185-1 du code de la commande publique, la consultation est déclarée sans suite pour motif d’intérêt général en raison de la redéfinition des besoins de l’acheteur.\"}}}",
+ "url_avis": "https://www.boamp.fr/pages/avis/?q=idweb:26-91344"
+}
