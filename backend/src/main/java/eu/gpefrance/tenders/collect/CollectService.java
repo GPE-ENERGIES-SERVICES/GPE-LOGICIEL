@@ -8,8 +8,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -41,16 +43,20 @@ public class CollectService {
 
 	private final Clock clock;
 
+	private final TaskExecutor taskExecutor;
+
 	private final AtomicBoolean running = new AtomicBoolean();
 
 	public CollectService(BoampClient boampClient, BoampProperties properties, RawNoticeRepository rawNotices,
-			CollectRunRepository runs, TransactionTemplate transaction, Clock clock) {
+			CollectRunRepository runs, TransactionTemplate transaction, Clock clock,
+			@Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor) {
 		this.boampClient = boampClient;
 		this.properties = properties;
 		this.rawNotices = rawNotices;
 		this.runs = runs;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.taskExecutor = taskExecutor;
 	}
 
 	/**
@@ -66,9 +72,7 @@ public class CollectService {
 	}
 
 	public CollectRun collect(CollectTrigger trigger) {
-		if (!running.compareAndSet(false, true)) {
-			throw new CollectAlreadyRunningException();
-		}
+		acquire();
 		try {
 			return doCollect(trigger);
 		}
@@ -77,8 +81,36 @@ public class CollectService {
 		}
 	}
 
+	/**
+	 * Starts a collection in the background. Fails immediately if one is
+	 * already running.
+	 */
+	public void startInBackground(CollectTrigger trigger) {
+		acquire();
+		try {
+			taskExecutor.execute(() -> {
+				try {
+					doCollect(trigger);
+				}
+				finally {
+					running.set(false);
+				}
+			});
+		}
+		catch (RuntimeException ex) {
+			running.set(false);
+			throw ex;
+		}
+	}
+
 	public boolean isRunning() {
 		return running.get();
+	}
+
+	private void acquire() {
+		if (!running.compareAndSet(false, true)) {
+			throw new CollectAlreadyRunningException();
+		}
 	}
 
 	private CollectRun doCollect(CollectTrigger trigger) {
@@ -105,13 +137,14 @@ public class CollectService {
 	}
 
 	/**
-	 * The day of the last successful collection is fetched again: notices
-	 * published later that same day were not available yet.
+	 * Starts one day before the last successful collection: notices published
+	 * later that day, or made available late by the open data portal, are
+	 * caught on the next run. Notices already stored are skipped anyway.
 	 */
 	private LocalDate startDate(LocalDate today) {
 		ZoneId zone = clock.getZone();
 		return runs.findFirstBySourceAndStatusOrderByStartedAtDesc(SOURCE, CollectStatus.SUCCESS)
-			.map(last -> LocalDate.ofInstant(last.getStartedAt(), zone))
+			.map(last -> LocalDate.ofInstant(last.getStartedAt(), zone).minusDays(1))
 			.orElse(today.minusDays(properties.initialDays()));
 	}
 

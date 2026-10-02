@@ -71,14 +71,14 @@ class CollectServiceTests {
 	}
 
 	@Test
-	void nextCollectionResumesFromTheLastSuccessAndSkipsKnownNotices() {
+	void nextCollectionResumesTheDayBeforeTheLastSuccessAndSkipsKnownNotices() {
 		given(boampClient.fetchPublishedOn(any())).willReturn(List.of(record("26-1")));
 		service.collect(CollectTrigger.SCHEDULED);
 
 		CollectRun second = service.collect(CollectTrigger.SCHEDULED);
 
-		assertThat(second.getSinceDate()).isEqualTo(TODAY);
-		assertThat(second.getNoticesReceived()).isEqualTo(1);
+		assertThat(second.getSinceDate()).isEqualTo(TODAY.minusDays(1));
+		assertThat(second.getNoticesReceived()).isEqualTo(2);
 		assertThat(second.getNoticesNew()).isZero();
 		assertThat(rawNotices.count()).isEqualTo(1);
 	}
