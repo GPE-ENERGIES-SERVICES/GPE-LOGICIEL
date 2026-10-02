@@ -93,6 +93,19 @@ public class Tender {
 	@Column(name = "filtered_at")
 	private Instant filteredAt;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "follow_up_status", nullable = false)
+	private FollowUpStatus followUpStatus = FollowUpStatus.NEW;
+
+	@Column(name = "follow_up_comment")
+	private String followUpComment;
+
+	@Column(name = "follow_up_by")
+	private String followUpBy;
+
+	@Column(name = "follow_up_at")
+	private Instant followUpAt;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -176,6 +189,13 @@ public class Tender {
 		this.retained = retained;
 		this.filterReason = reason;
 		this.filteredAt = now;
+	}
+
+	public void followUp(FollowUpStatus status, String comment, String user, Instant now) {
+		this.followUpStatus = status;
+		this.followUpComment = comment;
+		this.followUpBy = user;
+		this.followUpAt = now;
 	}
 
 	public void cancel(Instant now) {
@@ -285,6 +305,22 @@ public class Tender {
 
 	public Instant getFilteredAt() {
 		return filteredAt;
+	}
+
+	public FollowUpStatus getFollowUpStatus() {
+		return followUpStatus;
+	}
+
+	public String getFollowUpComment() {
+		return followUpComment;
+	}
+
+	public String getFollowUpBy() {
+		return followUpBy;
+	}
+
+	public Instant getFollowUpAt() {
+		return followUpAt;
 	}
 
 	public Instant getCreatedAt() {
