@@ -36,4 +36,12 @@ final class TextCleaner {
 		return cleaned.isEmpty() ? null : cleaned;
 	}
 
+	/**
+	 * Same as {@link #clean(String)} for a value displayed on a single line.
+	 */
+	static String cleanLine(String text) {
+		String cleaned = clean(text);
+		return cleaned == null ? null : cleaned.replace('\n', ' ');
+	}
+
 }

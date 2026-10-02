@@ -149,6 +149,15 @@ public class Tender {
 		return notice;
 	}
 
+	/**
+	 * A new deadline announced by a rectification prevails; the former one
+	 * stays visible in the notice history.
+	 */
+	public void changeDeadline(Instant newDeadline, Instant now) {
+		deadline = newDeadline;
+		updatedAt = now;
+	}
+
 	public void cancel(Instant now) {
 		changeStatus(TenderStatus.CANCELLED, now);
 	}

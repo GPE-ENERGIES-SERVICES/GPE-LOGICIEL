@@ -145,17 +145,17 @@ class BoampNoticeParserTests {
 	}
 
 	@Test
-	void cleansMarkupAndKeepsMissingValuesEmpty() {
+	void cleansTextsAndKeepsMissingValuesEmpty() {
 		ParsedNotice notice = parser.parse("""
 				{"idweb": "26-1", "nature": "APPEL_OFFRE", "etat": "INITIAL",
-				 "objet": "  <p>Travaux&nbsp;de   peinture</p> ", "nomacheteur": "",
-				 "code_departement": null, "type_marche": ["TRAVAUX", "AUTRE"], "donnees": null}
+				 "objet": "  <p>Travaux&nbsp;de</p>\\n   peinture ", "nomacheteur": "",
+				 "code_departement": ["5", "2A", "971"], "type_marche": ["TRAVAUX", "AUTRE"], "donnees": null}
 				""");
 
 		TenderDetails details = notice.details();
 		assertThat(details.title()).isEqualTo("Travaux de peinture");
 		assertThat(details.buyer()).isNull();
-		assertThat(details.departments()).isEmpty();
+		assertThat(details.departments()).containsExactly("05", "2A", "971");
 		assertThat(details.marketTypes()).containsExactly(MarketType.WORKS);
 		assertThat(details.procedureType()).isNull();
 		assertThat(details.deadline()).isNull();

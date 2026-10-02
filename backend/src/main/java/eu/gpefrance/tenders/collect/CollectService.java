@@ -18,11 +18,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 import eu.gpefrance.tenders.collect.boamp.BoampClient;
 import eu.gpefrance.tenders.collect.boamp.BoampProperties;
 import eu.gpefrance.tenders.collect.boamp.BoampRecord;
+import eu.gpefrance.tenders.tender.TenderLifecycleService;
 
 /**
- * Collects BOAMP notices published since the last successful collection.
- * A failed collection does not move the starting point, so the next one
- * fetches the same days again; notices already stored are skipped.
+ * Collects BOAMP notices published since the last successful collection,
+ * then converts them to tenders. A failed collection does not move the
+ * starting point, so the next one fetches the same days again; notices
+ * already stored are skipped.
  */
 @Service
 public class CollectService {
@@ -45,11 +47,16 @@ public class CollectService {
 
 	private final TaskExecutor taskExecutor;
 
+	private final NormalizationService normalization;
+
+	private final TenderLifecycleService lifecycle;
+
 	private final AtomicBoolean running = new AtomicBoolean();
 
 	public CollectService(BoampClient boampClient, BoampProperties properties, RawNoticeRepository rawNotices,
 			CollectRunRepository runs, TransactionTemplate transaction, Clock clock,
-			@Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor) {
+			@Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor, NormalizationService normalization,
+			TenderLifecycleService lifecycle) {
 		this.boampClient = boampClient;
 		this.properties = properties;
 		this.rawNotices = rawNotices;
@@ -57,6 +64,8 @@ public class CollectService {
 		this.transaction = transaction;
 		this.clock = clock;
 		this.taskExecutor = taskExecutor;
+		this.normalization = normalization;
+		this.lifecycle = lifecycle;
 	}
 
 	/**
@@ -133,7 +142,23 @@ public class CollectService {
 			run.fail(received, created, ex.getClass().getSimpleName() + ": " + ex.getMessage(), clock.instant());
 			log.error("Collection failed after {} notices received", received, ex);
 		}
-		return runs.save(run);
+		run = runs.save(run);
+		processCollected();
+		return run;
+	}
+
+	/**
+	 * Runs even after a failed collection: the notices stored before the
+	 * failure are usable.
+	 */
+	private void processCollected() {
+		try {
+			normalization.normalizePending();
+			lifecycle.closeExpired();
+		}
+		catch (RuntimeException ex) {
+			log.error("Processing of the collected notices failed", ex);
+		}
 	}
 
 	/**

@@ -73,7 +73,7 @@ public class BoampNoticeParser {
 		String idweb = text(record.get("idweb"));
 
 		TenderDetails details = new TenderDetails(title(record, donnees),
-				TextCleaner.clean(text(record.get("nomacheteur"))), reference(donnees), location(donnees),
+				TextCleaner.cleanLine(text(record.get("nomacheteur"))), reference(donnees), location(donnees),
 				departments(record), marketTypes(record), procedure(record), cpvCodes(donnees),
 				amount(findFirst(donnees, AMOUNT_KEYS::contains)), date(record.get("dateparution")), deadline(record),
 				noticeUrl(record, idweb), platformUrl(donnees), lots(donnees));
@@ -116,15 +116,16 @@ public class BoampNoticeParser {
 	}
 
 	private static String title(JsonNode record, JsonNode donnees) {
-		String title = TextCleaner.clean(text(record.get("objet")));
-		return title != null ? title : TextCleaner.clean(text(findFirst(donnees, "intitule"::equals)));
+		String title = TextCleaner.cleanLine(text(record.get("objet")));
+		return title != null ? title : TextCleaner.cleanLine(text(findFirst(donnees, "intitule"::equals)));
 	}
 
 	/**
 	 * The buyer's own reference of the consultation.
 	 */
 	private static String reference(JsonNode donnees) {
-		String reference = text(findFirst(donnees, key -> key.equals("identifiantInterne") || key.equals("idMarche")));
+		String reference = text(
+				findFirst(donnees, key -> key.equals("identifiantInterne") || key.equals("idMarche")));
 		if (reference == null) {
 			JsonNode eforms = donnees.path("EFORMS");
 			for (JsonNode notice : eforms.values()) {
@@ -134,7 +135,7 @@ public class BoampNoticeParser {
 				}
 			}
 		}
-		return TextCleaner.clean(reference);
+		return TextCleaner.cleanLine(reference);
 	}
 
 	/**
@@ -145,27 +146,34 @@ public class BoampNoticeParser {
 		if (realized != null) {
 			String city = text(findFirst(realized, "cbc:CityName"::equals));
 			if (city != null) {
-				return TextCleaner.clean(city);
+				return TextCleaner.cleanLine(city);
 			}
 		}
-		JsonNode place = findFirst(donnees, key -> key.equals("lieuExecution") || key.equals("lieuExecutionLivraison"));
+		JsonNode place = findFirst(donnees,
+				key -> key.equals("lieuExecution") || key.equals("lieuExecutionLivraison"));
 		if (place == null) {
 			return null;
 		}
 		List<String> parts = new ArrayList<>();
 		collectTexts(place, parts);
-		return TextCleaner.clean(String.join(", ", parts));
+		return TextCleaner.cleanLine(String.join(", ", parts));
 	}
 
 	/**
-	 * Departments of execution when given, otherwise of publication.
+	 * Departments of execution when given, otherwise of publication, as
+	 * two-character codes ("05", "2A", "971").
 	 */
 	private static List<String> departments(JsonNode record) {
 		List<String> departments = texts(record.get("code_departement_prestation"));
 		if (departments.isEmpty()) {
 			departments = texts(record.get("code_departement"));
 		}
-		return departments.stream().map(String::strip).filter(d -> !d.isEmpty()).distinct().toList();
+		return departments.stream()
+			.map(String::strip)
+			.filter(code -> !code.isEmpty())
+			.map(code -> code.length() == 1 ? "0" + code : code)
+			.distinct()
+			.toList();
 	}
 
 	private static List<MarketType> marketTypes(JsonNode record) {
@@ -362,7 +370,7 @@ public class BoampNoticeParser {
 			if (amount == null) {
 				amount = amount(project.path("cac:RequestedTenderTotal").get("cbc:EstimatedOverallContractAmount"));
 			}
-			lots.add(new LotDetails(lotNumber(number, i + 1), TextCleaner.clean(title), amount));
+			lots.add(new LotDetails(lotNumber(number, i + 1), TextCleaner.cleanLine(title), amount));
 		}
 		return lots;
 	}

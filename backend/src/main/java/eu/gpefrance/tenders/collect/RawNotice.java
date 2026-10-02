@@ -3,7 +3,6 @@ package eu.gpefrance.tenders.collect;
 import java.time.Instant;
 import java.time.LocalDate;
 
-import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -16,11 +15,11 @@ import jakarta.persistence.Table;
 
 /**
  * A notice exactly as received from its source. It is inserted by
- * {@link RawNoticeRepository#insertIfAbsent} and never modified, so the
- * conversion to the common format can be replayed at any time.
+ * {@link RawNoticeRepository#insertIfAbsent} and its content is never
+ * modified, so the conversion to the common format can be replayed at any
+ * time. Only the outcome of that conversion is recorded on it.
  */
 @Entity
-@Immutable
 @Table(name = "raw_notice")
 public class RawNotice {
 
@@ -44,7 +43,21 @@ public class RawNotice {
 	@Column(name = "collected_at", nullable = false, updatable = false)
 	private Instant collectedAt;
 
+	@Column(name = "normalized_at")
+	private Instant normalizedAt;
+
+	@Column(name = "normalization_note")
+	private String normalizationNote;
+
 	protected RawNotice() {
+	}
+
+	/**
+	 * @param note why the notice did not create or update a tender, if so
+	 */
+	public void markNormalized(String note, Instant now) {
+		this.normalizedAt = now;
+		this.normalizationNote = note;
 	}
 
 	public Long getId() {
@@ -69,6 +82,14 @@ public class RawNotice {
 
 	public Instant getCollectedAt() {
 		return collectedAt;
+	}
+
+	public Instant getNormalizedAt() {
+		return normalizedAt;
+	}
+
+	public String getNormalizationNote() {
+		return normalizationNote;
 	}
 
 }

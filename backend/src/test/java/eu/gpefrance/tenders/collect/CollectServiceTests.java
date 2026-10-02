@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -23,6 +24,7 @@ import eu.gpefrance.tenders.ClockConfiguration;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
 import eu.gpefrance.tenders.collect.boamp.BoampClient;
 import eu.gpefrance.tenders.collect.boamp.BoampRecord;
+import eu.gpefrance.tenders.tender.TenderRepository;
 
 @SpringBootTest(properties = "boamp.initial-days=2")
 @Import(TestcontainersConfiguration.class)
@@ -49,10 +51,15 @@ class CollectServiceTests {
 		return Clock.fixed(Instant.parse("2026-10-05T08:00:00Z"), ClockConfiguration.ZONE);
 	}
 
+	@Autowired
+	private TenderRepository tenders;
+
+	@Autowired
+	private JdbcTemplate jdbc;
+
 	@BeforeEach
 	void cleanDatabase() {
-		runs.deleteAll();
-		rawNotices.deleteAll();
+		jdbc.execute("TRUNCATE collect_run, tender_notice, lot, tender, raw_notice RESTART IDENTITY CASCADE");
 	}
 
 	@Test
@@ -99,6 +106,18 @@ class CollectServiceTests {
 
 		given(boampClient.fetchPublishedOn(any())).willReturn(List.of());
 		assertThat(service.collect(CollectTrigger.SCHEDULED).getSinceDate()).isEqualTo(TODAY.minusDays(2));
+	}
+
+	@Test
+	void convertsTheCollectedNoticesToTenders() {
+		given(boampClient.fetchPublishedOn(any())).willReturn(List.of());
+		given(boampClient.fetchPublishedOn(TODAY)).willReturn(List.of(new BoampRecord("26-9", TODAY, """
+				{"idweb": "26-9", "nature": "APPEL_OFFRE", "etat": "INITIAL", "objet": "Travaux"}""")));
+
+		service.collect(CollectTrigger.SCHEDULED);
+
+		assertThat(tenders.findBySourceAndExternalId(CollectService.SOURCE, "26-9")).isPresent();
+		assertThat(rawNotices.findAll()).allSatisfy(notice -> assertThat(notice.getNormalizedAt()).isNotNull());
 	}
 
 	@Test
