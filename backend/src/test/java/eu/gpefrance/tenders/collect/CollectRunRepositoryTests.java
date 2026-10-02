@@ -2,6 +2,7 @@ package eu.gpefrance.tenders.collect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
@@ -22,12 +23,14 @@ class CollectRunRepositoryTests {
 
 	@Test
 	void findsLastSuccessfulRunIgnoringFailures() {
-		CollectRun success = new CollectRun("BOAMP", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 1));
-		success.succeed(10, 8);
+		CollectRun success = new CollectRun("BOAMP", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 1),
+				Instant.parse("2026-10-01T05:00:00Z"));
+		success.succeed(10, 8, Instant.parse("2026-10-01T05:01:00Z"));
 		repository.saveAndFlush(success);
 
-		CollectRun failure = new CollectRun("BOAMP", CollectTrigger.MANUAL, LocalDate.of(2026, 10, 2));
-		failure.fail(0, 0, "timeout");
+		CollectRun failure = new CollectRun("BOAMP", CollectTrigger.MANUAL, LocalDate.of(2026, 10, 2),
+				Instant.parse("2026-10-02T05:00:00Z"));
+		failure.fail(0, 0, "timeout", Instant.parse("2026-10-02T05:01:00Z"));
 		repository.saveAndFlush(failure);
 
 		assertThat(repository.findFirstBySourceAndStatusOrderByStartedAtDesc("BOAMP", CollectStatus.SUCCESS))
@@ -42,8 +45,8 @@ class CollectRunRepositoryTests {
 
 	@Test
 	void truncatesVeryLongErrorMessages() {
-		CollectRun run = new CollectRun("BOAMP", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 1));
-		run.fail(0, 0, "x".repeat(5000));
+		CollectRun run = new CollectRun("BOAMP", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 1), Instant.now());
+		run.fail(0, 0, "x".repeat(5000), Instant.now());
 
 		assertThat(repository.saveAndFlush(run).getErrorMessage()).hasSize(2000);
 	}

@@ -14,4 +14,6 @@ public interface CollectRunRepository extends JpaRepository<CollectRun, Long> {
 
 	List<CollectRun> findAllByOrderByStartedAtDesc(Pageable pageable);
 
+	List<CollectRun> findAllByStatus(CollectStatus status);
+
 }

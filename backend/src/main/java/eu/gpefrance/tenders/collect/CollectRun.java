@@ -58,29 +58,29 @@ public class CollectRun {
 	protected CollectRun() {
 	}
 
-	public CollectRun(String source, CollectTrigger trigger, LocalDate sinceDate) {
+	public CollectRun(String source, CollectTrigger trigger, LocalDate sinceDate, Instant startedAt) {
 		this.source = source;
 		this.trigger = trigger;
 		this.sinceDate = sinceDate;
 		this.status = CollectStatus.RUNNING;
-		this.startedAt = Instant.now();
+		this.startedAt = startedAt;
 	}
 
-	public void succeed(int received, int created) {
+	public void succeed(int received, int created, Instant finishedAt) {
 		this.status = CollectStatus.SUCCESS;
 		this.noticesReceived = received;
 		this.noticesNew = created;
-		this.finishedAt = Instant.now();
+		this.finishedAt = finishedAt;
 	}
 
-	public void fail(int received, int created, String message) {
+	public void fail(int received, int created, String message, Instant finishedAt) {
 		this.status = CollectStatus.FAILED;
 		this.noticesReceived = received;
 		this.noticesNew = created;
 		this.errorMessage = message == null || message.length() <= MAX_ERROR_LENGTH
 				? message
 				: message.substring(0, MAX_ERROR_LENGTH);
-		this.finishedAt = Instant.now();
+		this.finishedAt = finishedAt;
 	}
 
 	public Long getId() {

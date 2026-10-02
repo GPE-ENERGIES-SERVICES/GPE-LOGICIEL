@@ -3,6 +3,7 @@ package eu.gpefrance.tenders.collect;
 import java.time.Instant;
 import java.time.LocalDate;
 
+import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -14,10 +15,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * A notice exactly as received from its source. It is never modified, so the
+ * A notice exactly as received from its source. It is inserted by
+ * {@link RawNoticeRepository#insertIfAbsent} and never modified, so the
  * conversion to the common format can be replayed at any time.
  */
 @Entity
+@Immutable
 @Table(name = "raw_notice")
 public class RawNotice {
 
@@ -42,14 +45,6 @@ public class RawNotice {
 	private Instant collectedAt;
 
 	protected RawNotice() {
-	}
-
-	public RawNotice(String source, String externalId, String payload, LocalDate publishedAt) {
-		this.source = source;
-		this.externalId = externalId;
-		this.payload = payload;
-		this.publishedAt = publishedAt;
-		this.collectedAt = Instant.now();
 	}
 
 	public Long getId() {
