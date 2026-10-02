@@ -35,6 +35,7 @@ class BoampNoticeParserTests {
 		assertThat(notice.linkedIds()).isEmpty();
 		TenderDetails details = notice.details();
 		assertThat(details.title()).startsWith("Marché Global Sectoriel pour le projet de restructuration");
+		assertThat(details.description()).startsWith("La présente consultation est lancée par l'établissement support");
 		assertThat(details.buyer()).isEqualTo("Centre Hospitalier de Valence - Etablissement support GHT DAV");
 		assertThat(details.departments()).containsExactly("26");
 		assertThat(details.marketTypes()).containsExactly(MarketType.WORKS);
@@ -74,6 +75,7 @@ class BoampNoticeParserTests {
 		TenderDetails details = parse("fns-initial").details();
 
 		assertThat(details.title()).isEqualTo("Fourniture et acheminement d'énergie électrique");
+		assertThat(details.description()).startsWith("Les prestations objet du marché concernent les points de livraison");
 		assertThat(details.buyer()).isEqualTo("Commune d'Albiez-Montrond (73)");
 		assertThat(details.reference()).isEqualTo("ALBIEZ-MONTROND_73_A_20260923_1");
 		assertThat(details.location()).isEqualTo("ALBIEZ-MONTROND");
@@ -92,6 +94,7 @@ class BoampNoticeParserTests {
 	void parsesTheLotsOfAFnsimpleNoticeWithTheirAmounts() {
 		TenderDetails details = parse("fns-lots").details();
 
+		assertThat(details.description()).startsWith("La présente consultation concerne des prestations d'impression");
 		assertThat(details.lots()).hasSize(4);
 		assertThat(details.lots()).extracting(LotDetails::number).containsExactly("1", "2", "3", "4");
 		assertThat(details.lots()).extracting(LotDetails::estimatedAmount)
@@ -105,6 +108,7 @@ class BoampNoticeParserTests {
 		TenderDetails details = parse("mapa").details();
 
 		assertThat(details.procedureType()).isEqualTo(ProcedureType.ADAPTED);
+		assertThat(details.description()).startsWith("Montant HT maximum pour la durée totale du contrat");
 		assertThat(details.reference()).isEqualTo("2026M016");
 		assertThat(details.location()).isEqualTo("FRE12 - Pas-de-Calais");
 		assertThat(details.platformUrl()).isEqualTo("http://www.marches-securises.fr");

@@ -43,6 +43,8 @@ public class Tender {
 	@Column(nullable = false)
 	private String title;
 
+	private String description;
+
 	private String buyer;
 
 	private String reference;
@@ -83,6 +85,14 @@ public class Tender {
 	@Column(nullable = false)
 	private TenderStatus status;
 
+	private Boolean retained;
+
+	@Column(name = "filter_reason")
+	private String filterReason;
+
+	@Column(name = "filtered_at")
+	private Instant filteredAt;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -115,6 +125,7 @@ public class Tender {
 	 */
 	public void update(TenderDetails details, Instant now) {
 		title = firstNonNull(details.title(), title);
+		description = firstNonNull(details.description(), description);
 		buyer = firstNonNull(details.buyer(), buyer);
 		reference = firstNonNull(details.reference(), reference);
 		location = firstNonNull(details.location(), location);
@@ -158,6 +169,15 @@ public class Tender {
 		updatedAt = now;
 	}
 
+	/**
+	 * Records the outcome of the filtering criteria and its reason.
+	 */
+	public void applyFilter(boolean retained, String reason, Instant now) {
+		this.retained = retained;
+		this.filterReason = reason;
+		this.filteredAt = now;
+	}
+
 	public void cancel(Instant now) {
 		changeStatus(TenderStatus.CANCELLED, now);
 	}
@@ -194,6 +214,10 @@ public class Tender {
 
 	public String getTitle() {
 		return title;
+	}
+
+	public String getDescription() {
+		return description;
 	}
 
 	public String getBuyer() {
@@ -246,6 +270,21 @@ public class Tender {
 
 	public TenderStatus getStatus() {
 		return status;
+	}
+
+	/**
+	 * @return {@code null} while the tender has not been filtered yet
+	 */
+	public Boolean getRetained() {
+		return retained;
+	}
+
+	public String getFilterReason() {
+		return filterReason;
+	}
+
+	public Instant getFilteredAt() {
+		return filteredAt;
 	}
 
 	public Instant getCreatedAt() {

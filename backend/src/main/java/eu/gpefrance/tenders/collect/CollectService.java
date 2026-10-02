@@ -18,13 +18,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 import eu.gpefrance.tenders.collect.boamp.BoampClient;
 import eu.gpefrance.tenders.collect.boamp.BoampProperties;
 import eu.gpefrance.tenders.collect.boamp.BoampRecord;
+import eu.gpefrance.tenders.filter.FilterService;
 import eu.gpefrance.tenders.tender.TenderLifecycleService;
 
 /**
  * Collects BOAMP notices published since the last successful collection,
- * then converts them to tenders. A failed collection does not move the
- * starting point, so the next one fetches the same days again; notices
- * already stored are skipped.
+ * then converts them to tenders and filters them. A failed collection does
+ * not move the starting point, so the next one fetches the same days again;
+ * notices already stored are skipped.
  */
 @Service
 public class CollectService {
@@ -49,6 +50,8 @@ public class CollectService {
 
 	private final NormalizationService normalization;
 
+	private final FilterService filter;
+
 	private final TenderLifecycleService lifecycle;
 
 	private final AtomicBoolean running = new AtomicBoolean();
@@ -56,7 +59,7 @@ public class CollectService {
 	public CollectService(BoampClient boampClient, BoampProperties properties, RawNoticeRepository rawNotices,
 			CollectRunRepository runs, TransactionTemplate transaction, Clock clock,
 			@Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor, NormalizationService normalization,
-			TenderLifecycleService lifecycle) {
+			FilterService filter, TenderLifecycleService lifecycle) {
 		this.boampClient = boampClient;
 		this.properties = properties;
 		this.rawNotices = rawNotices;
@@ -65,6 +68,7 @@ public class CollectService {
 		this.clock = clock;
 		this.taskExecutor = taskExecutor;
 		this.normalization = normalization;
+		this.filter = filter;
 		this.lifecycle = lifecycle;
 	}
 
@@ -154,6 +158,7 @@ public class CollectService {
 	private void processCollected() {
 		try {
 			normalization.normalizePending();
+			filter.filterPending();
 			lifecycle.closeExpired();
 		}
 		catch (RuntimeException ex) {

@@ -9,7 +9,7 @@ import java.util.List;
  * Information of a tender in the common format, as read from one notice.
  * Absent information is {@code null} or an empty list.
  */
-public record TenderDetails(String title, String buyer, String reference, String location, List<String> departments,
+public record TenderDetails(String title, String description, String buyer, String reference, String location, List<String> departments,
 		List<MarketType> marketTypes, ProcedureType procedureType, List<String> cpvCodes, BigDecimal estimatedAmount,
 		LocalDate publishedAt, Instant deadline, String noticeUrl, String platformUrl, List<LotDetails> lots) {
 

@@ -66,7 +66,7 @@ class TenderLifecycleServiceTests {
 	}
 
 	private static Tender tender(String externalId, Instant deadline) {
-		return new Tender("BOAMP", externalId, new TenderDetails("Travaux", null, null, null, List.of(), List.of(),
+		return new Tender("BOAMP", externalId, new TenderDetails("Travaux", null, null, null, null, List.of(), List.of(),
 				null, List.of(), null, null, deadline, null, null, List.of()), NOW);
 	}
 

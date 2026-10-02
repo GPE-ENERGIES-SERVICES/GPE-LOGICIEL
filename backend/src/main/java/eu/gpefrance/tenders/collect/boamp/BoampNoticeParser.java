@@ -72,7 +72,7 @@ public class BoampNoticeParser {
 		JsonNode donnees = parseJson(record.get("donnees"));
 		String idweb = text(record.get("idweb"));
 
-		TenderDetails details = new TenderDetails(title(record, donnees),
+		TenderDetails details = new TenderDetails(title(record, donnees), description(donnees),
 				TextCleaner.cleanLine(text(record.get("nomacheteur"))), reference(donnees), location(donnees),
 				departments(record), marketTypes(record), procedure(record), cpvCodes(donnees),
 				amount(findFirst(donnees, AMOUNT_KEYS::contains)), date(record.get("dateparution")), deadline(record),
@@ -118,6 +118,25 @@ public class BoampNoticeParser {
 	private static String title(JsonNode record, JsonNode donnees) {
 		String title = TextCleaner.cleanLine(text(record.get("objet")));
 		return title != null ? title : TextCleaner.cleanLine(text(findFirst(donnees, "intitule"::equals)));
+	}
+
+	/**
+	 * The description of the whole consultation: the project description in
+	 * eForms, otherwise the first plain-text description (lots come later in
+	 * a breadth-first search), or the main characteristics of a MAPA notice.
+	 */
+	private static String description(JsonNode donnees) {
+		for (JsonNode notice : donnees.path("EFORMS").values()) {
+			String description = text(notice.path("cac:ProcurementProject").get("cbc:Description"));
+			if (description != null) {
+				return TextCleaner.clean(description);
+			}
+		}
+		JsonNode description = findFirst(donnees, "description"::equals, JsonNode::isString);
+		if (description == null) {
+			description = findFirst(donnees, "principales"::equals, JsonNode::isString);
+		}
+		return TextCleaner.clean(text(description));
 	}
 
 	/**
@@ -410,13 +429,17 @@ public class BoampNoticeParser {
 	 * same key repeated inside each lot.
 	 */
 	private static JsonNode findFirst(JsonNode root, Predicate<String> key) {
+		return findFirst(root, key, value -> !value.isNull());
+	}
+
+	private static JsonNode findFirst(JsonNode root, Predicate<String> key, Predicate<JsonNode> value) {
 		Deque<JsonNode> queue = new ArrayDeque<>();
 		queue.add(root);
 		while (!queue.isEmpty()) {
 			JsonNode node = queue.poll();
 			if (node.isObject()) {
 				for (Map.Entry<String, JsonNode> property : node.properties()) {
-					if (key.test(property.getKey()) && !property.getValue().isNull()) {
+					if (key.test(property.getKey()) && value.test(property.getValue())) {
 						return property.getValue();
 					}
 					queue.add(property.getValue());
