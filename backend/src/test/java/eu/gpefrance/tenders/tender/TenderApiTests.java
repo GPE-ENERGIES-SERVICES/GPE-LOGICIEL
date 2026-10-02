@@ -2,6 +2,8 @@ package eu.gpefrance.tenders.tender;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 import eu.gpefrance.tenders.ClockConfiguration;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
+import eu.gpefrance.tenders.TestUsers;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -57,13 +60,13 @@ class TenderApiTests {
 		save("26-2", "Réseau de chaleur", "69", 10, true, null);
 		save("26-3", "Nettoyage", "13", 15, false, null);
 
-		assertThat(mvc.get().uri("/api/tenders?tab=NEW")).hasStatusOk()
+		assertThat(mvc.get().uri("/api/tenders?tab=NEW").with(TestUsers.user())).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("""
 					{"totalElements": 2, "content": [{"title": "Réseau de chaleur"},
 					{"title": "Travaux d'électricité", "retained": true}]}
 					""");
-		assertThat(mvc.get().uri("/api/tenders?tab=FILTERED_OUT")).hasStatusOk()
+		assertThat(mvc.get().uri("/api/tenders?tab=FILTERED_OUT").with(TestUsers.user())).hasStatusOk()
 			.bodyJson()
 			.extractingPath("$.content[0].title")
 			.isEqualTo("Nettoyage");
@@ -75,10 +78,12 @@ class TenderApiTests {
 		save("26-2", "Electricite eclairage public", "01", 3, true, null);
 		save("26-3", "Electricité du stade", "69", 30, true, new BigDecimal("900000"));
 
-		assertThat(mvc.get().uri("/api/tenders?q=ELECTRICITE")).bodyJson()
+		assertThat(mvc.get().uri("/api/tenders?q=ELECTRICITE").with(TestUsers.user())).bodyJson()
 			.extractingPath("$.totalElements")
 			.isEqualTo(3);
-		assertThat(mvc.get().uri("/api/tenders?department=69&minDaysLeft=7&maxAmount=100000")).bodyJson()
+		assertThat(mvc.get()
+			.uri("/api/tenders?department=69&minDaysLeft=7&maxAmount=100000")
+			.with(TestUsers.user())).bodyJson()
 			.extractingPath("$.content[*].title")
 			.asArray()
 			.containsExactly("Travaux d'électricité");
@@ -91,11 +96,13 @@ class TenderApiTests {
 		assertThat(mvc.put()
 			.uri("/api/tenders/{id}/follow-up", tender.getId())
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"status\": \"TO_STUDY\", \"comment\": \"  Visite à prévoir \"}")).hasStatusOk()
+			.content("{\"status\": \"TO_STUDY\", \"comment\": \"  Visite à prévoir \"}")
+			.with(TestUsers.user())
+			.with(csrf())).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("{\"followUpStatus\": \"TO_STUDY\", \"followUpComment\": \"Visite à prévoir\"}");
 
-		assertThat(mvc.get().uri("/api/tenders/counts")).bodyJson()
+		assertThat(mvc.get().uri("/api/tenders/counts").with(TestUsers.user())).bodyJson()
 			.isLenientlyEqualTo("{\"NEW\": 0, \"TO_STUDY\": 1, \"RESPONDING\": 0}");
 	}
 
@@ -106,7 +113,7 @@ class TenderApiTests {
 						List.of(new LotDetails("1", "Gros œuvre", null), new LotDetails("2", "Électricité", null))),
 				NOW));
 
-		assertThat(mvc.get().uri("/api/tenders/{id}", tender.getId())).hasStatusOk()
+		assertThat(mvc.get().uri("/api/tenders/{id}", tender.getId()).with(TestUsers.user())).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("""
 					{"externalId": "26-1", "title": "Construction d'une école",
@@ -117,7 +124,7 @@ class TenderApiTests {
 
 	@Test
 	void answersNotFoundForAnUnknownTender() {
-		assertThat(mvc.get().uri("/api/tenders/999")).hasStatus(HttpStatus.NOT_FOUND);
+		assertThat(mvc.get().uri("/api/tenders/999").with(TestUsers.user())).hasStatus(HttpStatus.NOT_FOUND);
 	}
 
 	private Tender save(String externalId, String title, String department, int daysLeft, boolean retained,

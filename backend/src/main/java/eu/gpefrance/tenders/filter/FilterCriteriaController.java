@@ -1,13 +1,13 @@
 package eu.gpefrance.tenders.filter;
 
-import java.security.Principal;
-
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import eu.gpefrance.tenders.user.AppUserPrincipal;
 import jakarta.validation.Valid;
 
 @RestController
@@ -32,8 +32,9 @@ public class FilterCriteriaController {
 	 * Replaces the criteria and filters every tender again.
 	 */
 	@PutMapping
-	public FilterCriteriaResponse replace(@Valid @RequestBody FilterCriteriaRequest request, Principal principal) {
-		FilterCriteria updated = filterService.replaceCriteria(request, principal == null ? null : principal.getName());
+	public FilterCriteriaResponse replace(@Valid @RequestBody FilterCriteriaRequest request,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		FilterCriteria updated = filterService.replaceCriteria(request, user.displayName());
 		filterService.filterAll();
 		return FilterCriteriaResponse.from(updated);
 	}

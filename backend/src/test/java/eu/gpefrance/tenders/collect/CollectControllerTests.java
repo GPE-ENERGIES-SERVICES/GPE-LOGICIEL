@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -13,16 +15,25 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
+import eu.gpefrance.tenders.SecurityConfiguration;
+import eu.gpefrance.tenders.TestUsers;
+import eu.gpefrance.tenders.user.AppUserDetailsService;
+
 @WebMvcTest(CollectController.class)
+@Import(SecurityConfiguration.class)
 class CollectControllerTests {
 
 	@Autowired
 	private MockMvcTester mvc;
+
+	@MockitoBean
+	private AppUserDetailsService userDetailsService;
 
 	@MockitoBean
 	private CollectService collectService;
@@ -38,7 +49,7 @@ class CollectControllerTests {
 		given(runs.findAllByOrderByStartedAtDesc(any(Pageable.class))).willReturn(List.of(run));
 		given(collectService.isRunning()).willReturn(true);
 
-		assertThat(mvc.get().uri("/api/collect-runs"))
+		assertThat(mvc.get().uri("/api/collect-runs").with(TestUsers.user()))
 			.hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("""
@@ -49,10 +60,29 @@ class CollectControllerTests {
 	}
 
 	@Test
-	void startsAManualCollection() {
-		assertThat(mvc.post().uri("/api/collect-runs")).hasStatus(HttpStatus.ACCEPTED);
+	void requiresAnAuthenticatedUser() {
+		assertThat(mvc.get().uri("/api/collect-runs")).hasStatus(HttpStatus.UNAUTHORIZED);
+	}
+
+	@Test
+	void letsAnAdministratorStartAManualCollection() {
+		assertThat(mvc.post().uri("/api/collect-runs").with(TestUsers.admin()).with(csrf()))
+			.hasStatus(HttpStatus.ACCEPTED);
 
 		verify(collectService).startInBackground(CollectTrigger.MANUAL);
+	}
+
+	@Test
+	void refusesAManualCollectionToAUser() {
+		assertThat(mvc.post().uri("/api/collect-runs").with(TestUsers.user()).with(csrf()))
+			.hasStatus(HttpStatus.FORBIDDEN);
+
+		verifyNoInteractions(collectService);
+	}
+
+	@Test
+	void refusesARequestWithoutCsrfToken() {
+		assertThat(mvc.post().uri("/api/collect-runs").with(TestUsers.admin())).hasStatus(HttpStatus.FORBIDDEN);
 	}
 
 	@Test
@@ -60,7 +90,11 @@ class CollectControllerTests {
 		willThrow(new CollectAlreadyRunningException()).given(collectService)
 			.startInBackground(CollectTrigger.MANUAL);
 
-		assertThat(mvc.post().uri("/api/collect-runs")).hasStatus(HttpStatus.CONFLICT);
+		assertThat(mvc.post().uri("/api/collect-runs").with(TestUsers.admin()).with(csrf()))
+			.hasStatus(HttpStatus.CONFLICT)
+			.bodyJson()
+			.extractingPath("$.detail")
+			.isEqualTo("Une collecte est déjà en cours");
 	}
 
 }

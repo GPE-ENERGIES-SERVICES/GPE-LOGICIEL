@@ -1,9 +1,9 @@
 package eu.gpefrance.tenders.tender;
 
 import java.math.BigDecimal;
-import java.security.Principal;
 import java.util.Map;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import eu.gpefrance.tenders.user.AppUserPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -51,8 +52,8 @@ public class TenderController {
 
 	@PutMapping("/{id}/follow-up")
 	public TenderDetailResponse followUp(@PathVariable Long id, @Valid @RequestBody FollowUpRequest request,
-			Principal principal) {
-		return tenderService.followUp(id, request, principal == null ? null : principal.getName());
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return tenderService.followUp(id, request, user.displayName());
 	}
 
 }

@@ -1,13 +1,14 @@
 package eu.gpefrance.tenders.collect;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.ErrorResponseException;
 
-@ResponseStatus(HttpStatus.CONFLICT)
-public class CollectAlreadyRunningException extends RuntimeException {
+public class CollectAlreadyRunningException extends ErrorResponseException {
 
 	public CollectAlreadyRunningException() {
-		super("A collection is already running");
+		super(HttpStatus.CONFLICT,
+				ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Une collecte est déjà en cours"), null);
 	}
 
 }
