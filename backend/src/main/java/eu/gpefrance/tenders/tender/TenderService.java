@@ -52,7 +52,7 @@ public class TenderService {
 	@Transactional
 	public TenderDetailResponse followUp(Long id, FollowUpRequest request, String user) {
 		Tender tender = find(id);
-		tender.followUp(request.status(), request.cleanComment(), user, clock.instant());
+		tender.followUp(request.status(), request.commentOr(tender.getFollowUpComment()), user, clock.instant());
 		return TenderDetailResponse.from(tender);
 	}
 

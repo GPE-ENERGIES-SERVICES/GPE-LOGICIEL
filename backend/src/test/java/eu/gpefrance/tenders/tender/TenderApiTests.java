@@ -21,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import eu.gpefrance.tenders.ClockConfiguration;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
@@ -107,6 +108,18 @@ class TenderApiTests {
 	}
 
 	@Test
+	void keepsTheCommentWhenOnlyTheStatusChanges() {
+		Tender tender = save("26-1", "Travaux d'électricité", "69", 20, true, null);
+		followUp(tender, "{\"status\": \"TO_STUDY\", \"comment\": \"Visite à prévoir\"}");
+
+		assertThat(followUp(tender, "{\"status\": \"RESPONDING\"}")).bodyJson()
+			.isLenientlyEqualTo("{\"followUpStatus\": \"RESPONDING\", \"followUpComment\": \"Visite à prévoir\"}");
+		assertThat(followUp(tender, "{\"status\": \"RESPONDING\", \"comment\": \" \"}")).bodyJson()
+			.extractingPath("$.followUpComment")
+			.isNull();
+	}
+
+	@Test
 	void returnsTheDetailWithLotsAndHistory() {
 		Tender tender = tenders.save(new Tender("BOAMP", "26-1",
 				details("Construction d'une école", "69", NOW.plus(Duration.ofDays(20)), null,
@@ -125,6 +138,16 @@ class TenderApiTests {
 	@Test
 	void answersNotFoundForAnUnknownTender() {
 		assertThat(mvc.get().uri("/api/tenders/999").with(TestUsers.user())).hasStatus(HttpStatus.NOT_FOUND);
+	}
+
+	private MvcTestResult followUp(Tender tender, String body) {
+		return mvc.put()
+			.uri("/api/tenders/{id}/follow-up", tender.getId())
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(body)
+			.with(TestUsers.user())
+			.with(csrf())
+			.exchange();
 	}
 
 	private Tender save(String externalId, String title, String department, int daysLeft, boolean retained,
