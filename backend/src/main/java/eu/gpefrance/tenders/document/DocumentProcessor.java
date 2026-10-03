@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
@@ -55,12 +56,14 @@ public class DocumentProcessor {
 
 	private final TaskExecutor taskExecutor;
 
+	private final ApplicationEventPublisher events;
+
 	private final Clock clock;
 
 	public DocumentProcessor(DossierRepository dossiers, DocumentRepository documents, DocumentPageRepository pages,
 			FileStorage storage, PdfTextExtractor pdfExtractor, OfficeConverter officeConverter,
 			TransactionTemplate transaction, @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
-			Clock clock) {
+			ApplicationEventPublisher events, Clock clock) {
 		this.dossiers = dossiers;
 		this.documents = documents;
 		this.pages = pages;
@@ -69,6 +72,7 @@ public class DocumentProcessor {
 		this.officeConverter = officeConverter;
 		this.transaction = transaction;
 		this.taskExecutor = taskExecutor;
+		this.events = events;
 		this.clock = clock;
 	}
 
@@ -86,7 +90,8 @@ public class DocumentProcessor {
 	}
 
 	/**
-	 * Reads every document still pending in the dossier.
+	 * Reads every document still pending in the dossier, then announces it so
+	 * that the analysis can start.
 	 */
 	public void process(Long dossierId) {
 		List<Long> pending = transaction.execute(status -> {
@@ -110,7 +115,9 @@ public class DocumentProcessor {
 			transaction.executeWithoutResult(status -> dossiers.findById(dossierId)
 				.orElseThrow()
 				.fail("Erreur pendant la lecture du dossier : " + ex.getMessage(), clock.instant()));
+			return;
 		}
+		events.publishEvent(new DossierReadEvent(dossierId));
 	}
 
 	private void processDocument(Long documentId) {

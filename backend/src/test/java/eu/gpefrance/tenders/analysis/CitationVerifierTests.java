@@ -28,6 +28,7 @@ class CitationVerifierTests {
 	@Test
 	void correctsTheCitedPageWhenTheQuoteIsElsewhereInTheDocument() {
 		assertThat(CitationVerifier.locate("Critères : Prix des prestations : 60 %", PAGES, 1)).contains(4);
+		assertThat(CitationVerifier.locate("toire pour tous les candidats", PAGES, 2)).contains(3);
 	}
 
 	@Test

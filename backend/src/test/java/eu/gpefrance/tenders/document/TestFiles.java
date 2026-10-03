@@ -19,7 +19,7 @@ import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 /**
  * Builds PDF and ZIP files for tests.
  */
-final class TestFiles {
+public final class TestFiles {
 
 	private TestFiles() {
 	}
@@ -28,7 +28,7 @@ final class TestFiles {
 	 * A PDF with one page per text; an empty text gives a page without text,
 	 * like a scanned page.
 	 */
-	static byte[] pdf(String... pageTexts) {
+	public static byte[] pdf(String... pageTexts) {
 		try (PDDocument document = new PDDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			for (String text : pageTexts) {
 				PDPage page = new PDPage();

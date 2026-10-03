@@ -48,15 +48,15 @@ final class CitationVerifier {
 		}
 		if (citedPage != null && pages.containsKey(citedPage)) {
 			String page = compact(pages.get(citedPage));
-			if (containsInOrder(page, parts)
-					|| containsInOrder(page + compact(pages.getOrDefault(citedPage + 1, "")), parts)) {
+			int start = indexInOrder(page + compact(pages.getOrDefault(citedPage + 1, "")), parts);
+			if (start >= 0 && start < page.length()) {
 				return Optional.of(citedPage);
 			}
 		}
 		return pages.entrySet()
 			.stream()
 			.sorted(Map.Entry.comparingByKey())
-			.filter(page -> containsInOrder(compact(page.getValue()), parts))
+			.filter(page -> indexInOrder(compact(page.getValue()), parts) >= 0)
 			.map(Map.Entry::getKey)
 			.findFirst();
 	}
@@ -150,16 +150,23 @@ final class CitationVerifier {
 		return parts;
 	}
 
-	private static boolean containsInOrder(String text, List<String> parts) {
+	/**
+	 * @return where the first part starts, or -1 when a part is missing
+	 */
+	private static int indexInOrder(String text, List<String> parts) {
+		int start = -1;
 		int from = 0;
 		for (String part : parts) {
 			int index = text.indexOf(part, from);
 			if (index < 0) {
-				return false;
+				return -1;
+			}
+			if (start < 0) {
+				start = index;
 			}
 			from = index + part.length();
 		}
-		return true;
+		return start;
 	}
 
 	/** Letters and digits only, lower case, without accents. */

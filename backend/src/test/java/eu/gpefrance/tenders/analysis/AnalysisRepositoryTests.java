@@ -34,13 +34,15 @@ class AnalysisRepositoryTests {
 	@Autowired
 	private TestEntityManager entityManager;
 
+	private Tender tender;
+
 	private Dossier dossier;
 
 	private Document rc;
 
 	@BeforeEach
 	void createDossier() {
-		Tender tender = entityManager.persist(new Tender("BOAMP", "26-1", new TenderDetails("Travaux d'électricité",
+		tender = entityManager.persist(new Tender("BOAMP", "26-1", new TenderDetails("Travaux d'électricité",
 				null, null, null, null, List.of("69"), List.of(), null, List.of(), null, null, null, null, null,
 				List.of()), NOW));
 		dossier = new Dossier(tender.getId(), 1, "user@example.com", NOW);
@@ -50,7 +52,7 @@ class AnalysisRepositoryTests {
 
 	@Test
 	void keepsEachFieldWithItsSource() {
-		Analysis analysis = new Analysis(dossier.getId(), "model-a", "v1", NOW);
+		Analysis analysis = analysis("v1", NOW);
 		analysis.addField("deadline", "15/11/2026 12:00", "Date limite : 15/11/2026 à 12h00", rc.getId(), 4,
 				FieldState.UNVERIFIED);
 		analysis.addField("site_visit", null, null, null, null, FieldState.NOT_INDICATED);
@@ -65,6 +67,8 @@ class AnalysisRepositoryTests {
 		assertThat(found.getPromptVersion()).isEqualTo("v1");
 		assertThat(found.getInputTokens()).isEqualTo(12000);
 		assertThat(found.getOutputTokens()).isEqualTo(800);
+		assertThat(found.getTenderId()).isEqualTo(tender.getId());
+		assertThat(found.getDocumentIds()).containsExactly(rc.getId());
 		assertThat(found.getFields())
 			.extracting(ExtractedField::getFieldKey, ExtractedField::getValue, ExtractedField::getDocumentId,
 					ExtractedField::getPageNumber, ExtractedField::getState)
@@ -74,8 +78,8 @@ class AnalysisRepositoryTests {
 
 	@Test
 	void aNewAnalysisKeepsTheEarlierOnes() {
-		repository.save(new Analysis(dossier.getId(), "model-a", "v1", NOW));
-		repository.save(new Analysis(dossier.getId(), "model-a", "v2", NOW.plusSeconds(60)));
+		repository.save(analysis("v1", NOW));
+		repository.save(analysis("v2", NOW.plusSeconds(60)));
 
 		assertThat(repository.findByDossierIdOrderByIdDesc(dossier.getId())).extracting(Analysis::getPromptVersion)
 			.containsExactly("v2", "v1");
@@ -83,11 +87,16 @@ class AnalysisRepositoryTests {
 
 	@Test
 	void truncatesALongErrorMessage() {
-		Analysis analysis = new Analysis(dossier.getId(), "model-a", "v1", NOW);
+		Analysis analysis = analysis("v1", NOW);
 		analysis.fail("x".repeat(5000), NOW);
 
 		assertThat(analysis.getStatus()).isEqualTo(AnalysisStatus.FAILED);
 		assertThat(analysis.getErrorMessage()).hasSize(2000);
+	}
+
+	private Analysis analysis(String promptVersion, Instant now) {
+		return new Analysis(tender.getId(), dossier.getId(), "model-a", promptVersion, List.of(rc.getId()),
+				"f".repeat(64), now);
 	}
 
 }

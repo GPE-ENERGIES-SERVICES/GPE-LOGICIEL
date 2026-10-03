@@ -2,17 +2,23 @@ package eu.gpefrance.tenders.analysis;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -31,6 +37,9 @@ public class Analysis {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@Column(name = "tender_id", nullable = false, updatable = false)
+	private Long tenderId;
+
 	@Column(name = "dossier_id", nullable = false, updatable = false)
 	private Long dossierId;
 
@@ -43,6 +52,14 @@ public class Analysis {
 
 	@Column(name = "prompt_version", nullable = false, updatable = false)
 	private String promptVersion;
+
+	@Column(name = "input_fingerprint", nullable = false, updatable = false)
+	private String inputFingerprint;
+
+	@ElementCollection
+	@CollectionTable(name = "analysis_document", joinColumns = @JoinColumn(name = "analysis_id"))
+	@Column(name = "document_id")
+	private Set<Long> documentIds = new HashSet<>();
 
 	@Column(name = "input_tokens")
 	private Integer inputTokens;
@@ -66,10 +83,18 @@ public class Analysis {
 	protected Analysis() {
 	}
 
-	public Analysis(Long dossierId, String model, String promptVersion, Instant now) {
+	/**
+	 * @param documentIds the documents given to the model
+	 * @param inputFingerprint identifies the documents, model and instructions
+	 */
+	public Analysis(Long tenderId, Long dossierId, String model, String promptVersion, Collection<Long> documentIds,
+			String inputFingerprint, Instant now) {
+		this.tenderId = tenderId;
 		this.dossierId = dossierId;
 		this.model = model;
 		this.promptVersion = promptVersion;
+		this.documentIds.addAll(documentIds);
+		this.inputFingerprint = inputFingerprint;
 		this.createdAt = now;
 		this.status = AnalysisStatus.PENDING;
 	}
@@ -87,11 +112,16 @@ public class Analysis {
 	}
 
 	/**
-	 * Tokens are recorded to measure the cost of each dossier.
+	 * Tokens are recorded to measure the cost of each dossier, even when the
+	 * answer cannot be used.
 	 */
-	public void finish(int inputTokens, int outputTokens, Instant now) {
+	public void recordUsage(int inputTokens, int outputTokens) {
 		this.inputTokens = inputTokens;
 		this.outputTokens = outputTokens;
+	}
+
+	public void finish(int inputTokens, int outputTokens, Instant now) {
+		recordUsage(inputTokens, outputTokens);
 		status = AnalysisStatus.DONE;
 		finishedAt = now;
 	}
@@ -105,6 +135,10 @@ public class Analysis {
 
 	public Long getId() {
 		return id;
+	}
+
+	public Long getTenderId() {
+		return tenderId;
 	}
 
 	public Long getDossierId() {
@@ -121,6 +155,14 @@ public class Analysis {
 
 	public String getPromptVersion() {
 		return promptVersion;
+	}
+
+	public String getInputFingerprint() {
+		return inputFingerprint;
+	}
+
+	public Set<Long> getDocumentIds() {
+		return Collections.unmodifiableSet(documentIds);
 	}
 
 	public Integer getInputTokens() {
