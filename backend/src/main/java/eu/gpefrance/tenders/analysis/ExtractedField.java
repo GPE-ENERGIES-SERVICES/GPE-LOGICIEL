@@ -1,5 +1,7 @@
 package eu.gpefrance.tenders.analysis;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -47,6 +49,18 @@ public class ExtractedField {
 	@Column(nullable = false)
 	private FieldState state;
 
+	@Enumerated(EnumType.STRING)
+	private FieldDecision decision;
+
+	@Column(name = "corrected_value")
+	private String correctedValue;
+
+	@Column(name = "decided_by")
+	private String decidedBy;
+
+	@Column(name = "decided_at")
+	private Instant decidedAt;
+
 	protected ExtractedField() {
 	}
 
@@ -61,8 +75,42 @@ public class ExtractedField {
 		this.state = state;
 	}
 
+	/**
+	 * Records the decision of a user; the value of the model is kept. A new
+	 * decision on a field means the sheet has to be validated again.
+	 * @param decision the decision, or null to cancel the previous one
+	 * @param correctedValue the right value, for a correction only
+	 */
+	void decide(FieldDecision decision, String correctedValue, String user, Instant now) {
+		this.decision = decision;
+		this.correctedValue = decision == FieldDecision.CORRECTED ? correctedValue : null;
+		this.decidedBy = decision == null ? null : user;
+		this.decidedAt = decision == null ? null : now;
+		analysis.cancelValidation();
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	Analysis getAnalysis() {
+		return analysis;
+	}
+
+	public FieldDecision getDecision() {
+		return decision;
+	}
+
+	public String getCorrectedValue() {
+		return correctedValue;
+	}
+
+	public String getDecidedBy() {
+		return decidedBy;
+	}
+
+	public Instant getDecidedAt() {
+		return decidedAt;
 	}
 
 	public String getFieldKey() {

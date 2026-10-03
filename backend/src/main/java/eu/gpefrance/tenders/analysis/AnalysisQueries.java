@@ -77,7 +77,8 @@ public class AnalysisQueries {
 					field.getDocumentId(),
 					field.getDocumentId() == null || !documents.containsKey(field.getDocumentId()) ? null
 							: documents.get(field.getDocumentId()).getFileName(),
-					field.getPageNumber(), field.getState()))
+					field.getPageNumber(), field.getState(), field.getDecision(), field.getCorrectedValue(),
+					field.getDecidedBy(), field.getDecidedAt()))
 			.toList();
 		List<DocumentResponse> documentResponses = dossier.getDocuments()
 			.stream()
@@ -93,7 +94,8 @@ public class AnalysisQueries {
 		return new AnalysisResponse(analysis.getId(), analysis.getDossierId(), dossier.getVersion(),
 				analysis.getStatus(), analysis.getModel(), analysis.getPromptVersion(), analysis.getCreatedAt(),
 				analysis.getFinishedAt(), analysis.getErrorMessage(), analysis.getInputTokens(),
-				analysis.getOutputTokens(), cost(analysis), noticeDeadline, fields, documents);
+				analysis.getOutputTokens(), cost(analysis), noticeDeadline, analysis.getValidatedBy(),
+				analysis.getValidatedAt(), fields, documents);
 	}
 
 	private Dossier dossier(Analysis analysis) {

@@ -13,17 +13,21 @@ import eu.gpefrance.tenders.document.PieceType;
  * @param cost cost of the call to the model in euros, when prices are set
  * @param noticeDeadline deadline published in the notice, shown next to the
  * one read in the documents
+ * @param validatedBy who validated the whole sheet, or null
  */
 public record AnalysisResponse(Long id, Long dossierId, int dossierVersion, AnalysisStatus status, String model,
 		String promptVersion, Instant createdAt, Instant finishedAt, String errorMessage, Integer inputTokens,
-		Integer outputTokens, BigDecimal cost, Instant noticeDeadline, List<FieldResponse> fields,
-		List<DocumentResponse> documents) {
+		Integer outputTokens, BigDecimal cost, Instant noticeDeadline, String validatedBy, Instant validatedAt,
+		List<FieldResponse> fields, List<DocumentResponse> documents) {
 
 	/**
+	 * @param value the value of the model, kept even when corrected
 	 * @param documentName file of the source, to show next to the page
+	 * @param decision what a user decided, which prevails over the model
 	 */
 	public record FieldResponse(Long id, String key, String value, String quote, Long documentId,
-			String documentName, Integer pageNumber, FieldState state) {
+			String documentName, Integer pageNumber, FieldState state, FieldDecision decision,
+			String correctedValue, String decidedBy, Instant decidedAt) {
 	}
 
 	/**

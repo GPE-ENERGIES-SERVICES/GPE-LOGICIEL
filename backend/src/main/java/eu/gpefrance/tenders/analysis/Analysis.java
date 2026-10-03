@@ -76,6 +76,12 @@ public class Analysis {
 	@Column(name = "finished_at")
 	private Instant finishedAt;
 
+	@Column(name = "validated_by")
+	private String validatedBy;
+
+	@Column(name = "validated_at")
+	private Instant validatedAt;
+
 	@OneToMany(mappedBy = "analysis", cascade = CascadeType.ALL)
 	@OrderBy("id")
 	private List<ExtractedField> fields = new ArrayList<>();
@@ -133,8 +139,32 @@ public class Analysis {
 		finishedAt = now;
 	}
 
+	/**
+	 * A user states that the sheet has been checked.
+	 */
+	public void validate(String user, Instant now) {
+		if (status != AnalysisStatus.DONE) {
+			throw new AnalysisRejectedException("Seule une analyse terminée peut être validée.");
+		}
+		validatedBy = user;
+		validatedAt = now;
+	}
+
+	void cancelValidation() {
+		validatedBy = null;
+		validatedAt = null;
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public String getValidatedBy() {
+		return validatedBy;
+	}
+
+	public Instant getValidatedAt() {
+		return validatedAt;
 	}
 
 	public Long getTenderId() {

@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -154,6 +155,58 @@ class AnalysisApiTests {
 		assertThat(analysis.getStatus()).isEqualTo(AnalysisStatus.FAILED);
 		assertThat(analysis.getErrorMessage()).contains("illisible");
 		assertThat(analysis.getInputTokens()).isEqualTo(500);
+	}
+
+	@Test
+	void keepsTheValueOfTheModelWhenAUserCorrectsIt() throws InterruptedException {
+		Tender tender = tender(true);
+		upload(tender, "RC.pdf", "Les offres devront parvenir avant le 15/11/2026 à 12h00.");
+		Analysis analysis = waitForAnalysis(tender, 1);
+		Long deadlineId = analysis.getFields()
+			.stream()
+			.filter(field -> field.getFieldKey().equals("deadline"))
+			.findFirst()
+			.orElseThrow()
+			.getId();
+
+		assertThat(decide(deadlineId, "{\"decision\": \"CORRECTED\", \"value\": \"\"}"))
+			.hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(decide(deadlineId, "{\"decision\": \"CORRECTED\", \"value\": \"2026-11-16T12:00\"}"))
+			.hasStatusOk();
+		assertThat(mvc.post()
+			.uri("/api/analyses/{id}/validation", analysis.getId())
+			.with(TestUsers.user())
+			.with(csrf())).hasStatusOk()
+			.bodyJson()
+			.extractingPath("$.latest.validatedBy")
+			.isEqualTo("Marie Durand");
+
+		ExtractedField deadline = analyses.findWithFieldsById(analysis.getId())
+			.orElseThrow()
+			.getFields()
+			.stream()
+			.filter(field -> field.getId().equals(deadlineId))
+			.findFirst()
+			.orElseThrow();
+		assertThat(deadline.getValue()).isEqualTo("2026-11-15T12:00");
+		assertThat(deadline.getDecision()).isEqualTo(FieldDecision.CORRECTED);
+		assertThat(deadline.getCorrectedValue()).isEqualTo("2026-11-16T12:00");
+		assertThat(deadline.getDecidedBy()).isEqualTo("Marie Durand");
+
+		assertThat(decide(deadlineId, "{\"decision\": \"VALIDATED\"}")).hasStatusOk()
+			.bodyJson()
+			.extractingPath("$.latest.validatedBy")
+			.isNull();
+	}
+
+	private MvcTestResult decide(Long fieldId, String body) {
+		return mvc.put()
+			.uri("/api/extracted-fields/{id}/decision", fieldId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(body)
+			.with(TestUsers.user())
+			.with(csrf())
+			.exchange();
 	}
 
 	private Tender tender(boolean retained) {
