@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { AnalysisSection } from "@/components/analysis/AnalysisSection";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { FollowUpForm } from "@/components/FollowUpForm";
 import { api } from "@/lib/api";
@@ -120,6 +121,11 @@ export default function TenderPage() {
       <section className="card">
         <h2>Dossier de consultation (DCE)</h2>
         <DocumentsSection tenderId={tender.id} />
+      </section>
+
+      <section className="card">
+        <h2>Fiche de synthèse</h2>
+        <AnalysisSection tenderId={tender.id} />
       </section>
 
       <section className="card">

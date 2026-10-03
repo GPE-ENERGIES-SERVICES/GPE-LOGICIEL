@@ -43,7 +43,7 @@ public final class ExtractionGrid {
 					"Montant estimé du marché en euros hors taxes, s'il est indiqué."),
 			single("duration", "Durée du marché", AT_A_GLANCE, FieldKind.TEXT,
 					"Durée du marché ou délai d'exécution, et date prévisionnelle de démarrage si elle est indiquée."),
-			list("attention_points", "Points d'attention", ATTENTION,
+			list("attention_points", "Exigences particulières relevées", ATTENTION,
 					"Exigences inhabituelles ou contraignantes à ne pas manquer : travaux en site occupé, astreintes, délais très courts, pénalités élevées, clauses particulières."),
 			single("object", "Objet", REQUESTED, FieldKind.TEXT, "Objet de la consultation."),
 			single("buyer", "Acheteur", REQUESTED, FieldKind.TEXT, "Nom de l'acheteur public (pouvoir adjudicateur)."),

@@ -564,3 +564,100 @@ td.actions a + a {
   cursor: pointer;
   color: var(--muted);
 }
+
+/* Summary sheet */
+
+.analysis-meta .badge {
+  margin-left: 0;
+}
+
+.sheet-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.sheet-state .badge {
+  margin-left: 0;
+}
+
+.badge.verified {
+  background: #e7f5ec;
+  border-color: #a9d8b9;
+  color: var(--success);
+}
+
+.summary h3 {
+  margin-top: 1.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.field-group {
+  margin: 0.75rem 0;
+}
+
+.field-group h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.field {
+  padding: 0.4rem 0 0.4rem 0.75rem;
+  border-left: 3px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+.field.rejected {
+  opacity: 0.7;
+}
+
+.field-value {
+  font-weight: 600;
+}
+
+.struck {
+  text-decoration: line-through;
+}
+
+.source {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+}
+
+.quote {
+  margin: 0.25rem 0;
+  padding: 0;
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.field-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+}
+
+.field .inline-form {
+  margin: 0.25rem 0 0;
+}
+
+.attention li,
+.to-check li {
+  margin-bottom: 0.25rem;
+}
+
+.attention {
+  color: var(--urgent);
+  font-weight: 600;
+}
+
+.documents-read {
+  margin-top: 0.25rem;
+}
