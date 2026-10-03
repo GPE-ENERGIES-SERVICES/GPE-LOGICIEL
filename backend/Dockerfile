@@ -8,6 +8,10 @@ COPY src src
 RUN ./mvnw -q -B package -DskipTests
 
 FROM eclipse-temurin:21-jre
+# LibreOffice converts the Word documents of the consultation files to PDF.
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends libreoffice-writer-nogui fonts-dejavu-core \
+	&& rm -rf /var/lib/apt/lists/*
 RUN useradd --system --create-home app && mkdir -p /data/storage && chown app /data/storage
 USER app
 WORKDIR /app
