@@ -197,6 +197,39 @@ export type Analysis = {
   documents: AnalysisDocument[];
 };
 
+export type AnalysisJournalEntry = {
+  id: number;
+  tenderId: number;
+  tenderTitle: string | null;
+  dossierVersion: number;
+  status: AnalysisStatus;
+  model: string;
+  promptVersion: string;
+  createdAt: string;
+  finishedAt: string | null;
+  errorMessage: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cost: number | null;
+};
+
+export type AnalysisQuality = {
+  done: number;
+  failed: number;
+  totalCost: number | null;
+  averageCost: number | null;
+  fields: {
+    key: string;
+    label: string;
+    answers: number;
+    verified: number;
+    notIndicated: number;
+    validated: number;
+    corrected: number;
+    rejected: number;
+  }[];
+};
+
 export type TenderAnalysis = {
   configured: boolean;
   grid: GridField[];

@@ -33,6 +33,7 @@ public class SecurityConfiguration {
 			.requestMatchers(HttpMethod.POST, "/api/collect-runs").hasRole("ADMIN")
 			.requestMatchers(HttpMethod.PUT, "/api/filter-criteria").hasRole("ADMIN")
 			.requestMatchers("/api/users/**").hasRole("ADMIN")
+			.requestMatchers(HttpMethod.GET, "/api/analyses", "/api/analyses/quality").hasRole("ADMIN")
 			.anyRequest().authenticated())
 			.csrf(csrf -> csrf.spa())
 			.exceptionHandling(exceptions -> exceptions

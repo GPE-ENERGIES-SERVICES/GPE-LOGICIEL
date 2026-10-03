@@ -9,6 +9,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -197,6 +198,36 @@ class AnalysisApiTests {
 			.bodyJson()
 			.extractingPath("$.latest.validatedBy")
 			.isNull();
+	}
+
+	@Test
+	void reportsTheCostAndTheDecisionsToTheAdministrator() throws InterruptedException {
+		Tender tender = tender(true);
+		upload(tender, "RC.pdf", "Les offres devront parvenir avant le 15/11/2026 à 12h00.");
+		Analysis analysis = waitForAnalysis(tender, 1);
+		Long deadlineId = analysis.getFields()
+			.stream()
+			.filter(field -> field.getFieldKey().equals("deadline"))
+			.findFirst()
+			.orElseThrow()
+			.getId();
+		decide(deadlineId, "{\"decision\": \"VALIDATED\"}");
+
+		assertThat(mvc.get().uri("/api/analyses").with(TestUsers.user())).hasStatus(HttpStatus.FORBIDDEN);
+		assertThat(mvc.get().uri("/api/analyses").with(TestUsers.admin())).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					[{"tenderTitle": "Rénovation de l'école", "dossierVersion": 1, "status": "DONE",
+					  "model": "test-model", "inputTokens": 1000, "outputTokens": 200, "cost": 0.006}]""");
+		assertThat(mvc.get().uri("/api/analyses/quality").with(TestUsers.admin())).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"done": 1, "failed": 0, "totalCost": 0.006, "averageCost": 0.006}""");
+		assertThat(mvc.get().uri("/api/analyses/quality").with(TestUsers.admin()))
+			.bodyJson()
+			.extractingPath("$.fields[0]")
+			.isEqualTo(Map.of("key", "deadline", "label", "Date et heure limite de remise des offres",
+					"answers", 1, "verified", 1, "notIndicated", 0, "validated", 1, "corrected", 0, "rejected", 0));
 	}
 
 	private MvcTestResult decide(Long fieldId, String body) {

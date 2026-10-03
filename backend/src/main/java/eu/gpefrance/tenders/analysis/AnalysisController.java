@@ -1,5 +1,7 @@
 package eu.gpefrance.tenders.analysis;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,9 +13,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import eu.gpefrance.tenders.analysis.AnalysisReport.JournalEntry;
+import eu.gpefrance.tenders.analysis.AnalysisReport.Quality;
 import eu.gpefrance.tenders.analysis.AnalysisResponse.TenderAnalysis;
 import eu.gpefrance.tenders.user.AppUserPrincipal;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
 @RestController
@@ -25,10 +31,31 @@ public class AnalysisController {
 
 	private final ValidationService validation;
 
-	public AnalysisController(AnalysisService service, AnalysisQueries queries, ValidationService validation) {
+	private final AnalysisReports reports;
+
+	public AnalysisController(AnalysisService service, AnalysisQueries queries, ValidationService validation,
+			AnalysisReports reports) {
 		this.service = service;
 		this.queries = queries;
 		this.validation = validation;
+		this.reports = reports;
+	}
+
+	/**
+	 * Latest analyses with their cost and errors (administrator).
+	 */
+	@GetMapping("/api/analyses")
+	public List<JournalEntry> journal(@RequestParam(defaultValue = "30") @Min(1) @Max(200) int limit) {
+		return reports.journal(limit);
+	}
+
+	/**
+	 * Answers of the model compared with the decisions of the users
+	 * (administrator).
+	 */
+	@GetMapping("/api/analyses/quality")
+	public Quality quality() {
+		return reports.quality();
 	}
 
 	@GetMapping("/api/tenders/{tenderId}/analysis")

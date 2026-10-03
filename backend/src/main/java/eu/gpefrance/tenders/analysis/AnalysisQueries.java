@@ -1,7 +1,6 @@
 package eu.gpefrance.tenders.analysis;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +25,6 @@ import eu.gpefrance.tenders.tender.TenderRepository;
  */
 @Service
 public class AnalysisQueries {
-
-	private static final BigDecimal MILLION = BigDecimal.valueOf(1_000_000);
 
 	private final AnalysisRepository analyses;
 
@@ -102,19 +99,9 @@ public class AnalysisQueries {
 		return dossiers.findById(analysis.getDossierId()).orElseThrow();
 	}
 
-	/**
-	 * @return the cost in euros, or null when unknown
-	 */
-	BigDecimal cost(Analysis analysis) {
-		if (analysis.getInputTokens() == null || properties.inputPricePerMillion() == null
-				|| properties.outputPricePerMillion() == null
-				|| properties.inputPricePerMillion().signum() == 0 && properties.outputPricePerMillion().signum() == 0) {
-			return null;
-		}
-		return properties.inputPricePerMillion()
-			.multiply(BigDecimal.valueOf(analysis.getInputTokens()))
-			.add(properties.outputPricePerMillion().multiply(BigDecimal.valueOf(analysis.getOutputTokens())))
-			.divide(MILLION, 4, RoundingMode.HALF_UP);
+	private BigDecimal cost(Analysis analysis) {
+		return analysis.getInputTokens() == null ? null
+				: properties.cost(analysis.getInputTokens(), analysis.getOutputTokens());
 	}
 
 }

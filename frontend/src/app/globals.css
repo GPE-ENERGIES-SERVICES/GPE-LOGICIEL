@@ -661,3 +661,7 @@ td.actions a + a {
 .documents-read {
   margin-top: 0.25rem;
 }
+
+.journal-title {
+  margin-top: 1.5rem;
+}

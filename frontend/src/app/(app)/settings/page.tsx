@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/AuthProvider";
+import { AnalysisJournal } from "@/components/settings/AnalysisJournal";
 import { CollectJournal } from "@/components/settings/CollectJournal";
 import { CriteriaForm } from "@/components/settings/CriteriaForm";
 import { UsersPanel } from "@/components/settings/UsersPanel";
@@ -22,6 +23,10 @@ export default function SettingsPage() {
       <section className="card">
         <h2>Journal de collecte</h2>
         <CollectJournal />
+      </section>
+      <section className="card">
+        <h2>Analyses par IA : journal et qualité</h2>
+        <AnalysisJournal />
       </section>
       <section className="card">
         <h2>Comptes utilisateurs</h2>

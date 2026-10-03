@@ -1,6 +1,7 @@
 package eu.gpefrance.tenders.analysis;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -13,4 +14,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("analysis")
 public record AnalysisProperties(int maxCharacters, BigDecimal inputPricePerMillion,
 		BigDecimal outputPricePerMillion) {
+
+	private static final BigDecimal MILLION = BigDecimal.valueOf(1_000_000);
+
+	/**
+	 * @return the cost in euros, or null when the prices are not set
+	 */
+	BigDecimal cost(long inputTokens, long outputTokens) {
+		if (inputPricePerMillion == null || outputPricePerMillion == null
+				|| inputPricePerMillion.signum() == 0 && outputPricePerMillion.signum() == 0) {
+			return null;
+		}
+		return inputPricePerMillion.multiply(BigDecimal.valueOf(inputTokens))
+			.add(outputPricePerMillion.multiply(BigDecimal.valueOf(outputTokens)))
+			.divide(MILLION, 4, RoundingMode.HALF_UP);
+	}
+
 }
