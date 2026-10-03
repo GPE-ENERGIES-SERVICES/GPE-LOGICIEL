@@ -122,8 +122,9 @@ public class BoampNoticeParser {
 
 	/**
 	 * The description of the whole consultation: the project description in
-	 * eForms, otherwise the first plain-text description (lots come later in
-	 * a breadth-first search), or the main characteristics of a MAPA notice.
+	 * eForms, otherwise the first plain-text description outside the lots, or
+	 * the main characteristics of a MAPA notice. A lot description is never
+	 * shown as the description of the whole tender.
 	 */
 	private static String description(JsonNode donnees) {
 		for (JsonNode notice : donnees.path("EFORMS").values()) {
@@ -132,9 +133,9 @@ public class BoampNoticeParser {
 				return TextCleaner.clean(description);
 			}
 		}
-		JsonNode description = findFirst(donnees, "description"::equals, JsonNode::isString);
+		JsonNode description = findFirstOutsideLots(donnees, "description"::equals);
 		if (description == null) {
-			description = findFirst(donnees, "principales"::equals, JsonNode::isString);
+			description = findFirstOutsideLots(donnees, "principales"::equals);
 		}
 		return TextCleaner.clean(text(description));
 	}
@@ -432,7 +433,21 @@ public class BoampNoticeParser {
 		return findFirst(root, key, value -> !value.isNull());
 	}
 
+	/**
+	 * Same search outside the lots, for a value that describes the whole
+	 * consultation and must not be taken from one of its lots.
+	 */
+	private static JsonNode findFirstOutsideLots(JsonNode root, Predicate<String> key) {
+		return findFirst(root, key, JsonNode::isString, property -> !LOT_KEYS.contains(property)
+				&& !property.equals("lots"));
+	}
+
 	private static JsonNode findFirst(JsonNode root, Predicate<String> key, Predicate<JsonNode> value) {
+		return findFirst(root, key, value, property -> true);
+	}
+
+	private static JsonNode findFirst(JsonNode root, Predicate<String> key, Predicate<JsonNode> value,
+			Predicate<String> descendInto) {
 		Deque<JsonNode> queue = new ArrayDeque<>();
 		queue.add(root);
 		while (!queue.isEmpty()) {
@@ -442,7 +457,9 @@ public class BoampNoticeParser {
 					if (key.test(property.getKey()) && value.test(property.getValue())) {
 						return property.getValue();
 					}
-					queue.add(property.getValue());
+					if (descendInto.test(property.getKey())) {
+						queue.add(property.getValue());
+					}
 				}
 			}
 			else if (node.isArray()) {

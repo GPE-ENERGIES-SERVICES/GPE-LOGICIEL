@@ -168,6 +168,24 @@ class BoampNoticeParserTests {
 	}
 
 	@Test
+	void neverTakesALotDescriptionForTheWholeTender() {
+		String donnees = """
+				{"FNSimple": {"initial": {"natureMarche": {"intitule": "Travaux"}, "lots": {"lot": [
+				{"description": "1 : Gros oeuvre"}, {"description": "2 : Electricite"}]}}}}""";
+		ParsedNotice notice = parser.parse(JsonMapper.builder()
+			.build()
+			.createObjectNode()
+			.put("idweb", "26-3")
+			.put("nature", "APPEL_OFFRE")
+			.put("objet", "Travaux")
+			.put("donnees", donnees)
+			.toString());
+
+		assertThat(notice.details().description()).isNull();
+		assertThat(notice.details().lots()).hasSize(2);
+	}
+
+	@Test
 	void neverKeepsAZeroAmount() {
 		ParsedNotice notice = parser.parse("""
 				{"idweb": "26-2", "nature": "APPEL_OFFRE", "objet": "Travaux",
