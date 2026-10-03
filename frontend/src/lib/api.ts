@@ -50,6 +50,23 @@ async function errorMessage(response: Response): Promise<string> {
   }
 }
 
+/**
+ * Sends files as multipart form data.
+ */
+export async function upload<T>(path: string, form: FormData): Promise<T> {
+  const token = await ensureCsrfToken();
+  const response = await fetch(path, {
+    method: "POST",
+    headers: token ? { "X-XSRF-TOKEN": token, Accept: "application/json" } : { Accept: "application/json" },
+    credentials: "same-origin",
+    body: form,
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, await errorMessage(response));
+  }
+  return (await response.json()) as T;
+}
+
 export async function api<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const method = options.method ?? "GET";
   const headers: Record<string, string> = { Accept: "application/json" };

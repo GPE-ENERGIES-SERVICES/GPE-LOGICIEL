@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { DocumentsSection } from "@/components/DocumentsSection";
 import { FollowUpForm } from "@/components/FollowUpForm";
 import { api } from "@/lib/api";
 import {
@@ -114,6 +115,11 @@ export default function TenderPage() {
         <h2>Suivi</h2>
         <FollowUpForm tender={tender} onSaved={setSaved} key={tender.followUpAt ?? "new"} />
         {tender.filterReason && <p className="reason">{tender.filterReason}</p>}
+      </section>
+
+      <section className="card">
+        <h2>Dossier de consultation (DCE)</h2>
+        <DocumentsSection tenderId={tender.id} />
       </section>
 
       <section className="card">

@@ -524,3 +524,43 @@ th {
   font-size: 1.3rem;
   text-align: center;
 }
+
+/* Documents */
+
+.upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.upload .hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.dossier {
+  margin-top: 0.5rem;
+}
+
+.file-name {
+  overflow-wrap: anywhere;
+}
+
+td.actions {
+  white-space: nowrap;
+}
+
+td.actions a + a {
+  margin-left: 0.75rem;
+}
+
+.previous-dossier {
+  margin-top: 1rem;
+}
+
+.previous-dossier summary {
+  cursor: pointer;
+  color: var(--muted);
+}

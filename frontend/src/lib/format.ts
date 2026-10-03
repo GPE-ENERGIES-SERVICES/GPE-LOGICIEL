@@ -1,4 +1,13 @@
-import type { FollowUpStatus, MarketType, NoticeKind, ProcedureType, TenderStatus } from "./types";
+import type {
+  DocumentState,
+  DossierStatus,
+  FollowUpStatus,
+  MarketType,
+  NoticeKind,
+  PieceType,
+  ProcedureType,
+  TenderStatus,
+} from "./types";
 
 export const NOT_INDICATED = "Non indiqué";
 
@@ -105,3 +114,38 @@ export const NOTICE_KIND_LABELS: Record<NoticeKind, string> = {
   AWARD: "Avis d'attribution",
   CANCELLATION: "Avis d'annulation",
 };
+
+export const PIECE_TYPE_LABELS: Record<PieceType, string> = {
+  RC: "Règlement de consultation (RC)",
+  CCAP: "CCAP",
+  CCTP: "CCTP",
+  AE: "Acte d'engagement (AE)",
+  DPGF: "DPGF",
+  BPU: "BPU",
+  DQE: "DQE",
+  PLAN: "Plan",
+  NOTICE: "Avis",
+  OTHER: "Autre pièce",
+};
+
+export const DOCUMENT_STATE_LABELS: Record<DocumentState, string> = {
+  PENDING: "En attente de lecture",
+  READ: "Lu",
+  SCANNED: "Lu en partie (scan)",
+  FAILED: "Non analysé (échec)",
+  NOT_ANALYZED: "Non analysé",
+};
+
+export const DOSSIER_STATUS_LABELS: Record<DossierStatus, string> = {
+  PENDING: "En attente",
+  PROCESSING: "Lecture en cours",
+  DONE: "Lecture terminée",
+  FAILED: "Échec de la lecture",
+};
+
+export function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
+}
