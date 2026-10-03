@@ -24,3 +24,6 @@ frontend/next-env.d.ts
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Backups
+backups/
