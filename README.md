@@ -20,16 +20,26 @@ renvoie à sa source (document et page).
 ```text
 backend/    API Spring Boot
 frontend/   Interface Next.js
+scripts/    Sauvegarde et restauration
+docs/       Documentation technique et guide utilisateur
 ```
 
 Le backend est découpé par module :
 
-| Package       | Rôle                                                                 |
-|---------------|----------------------------------------------------------------------|
-| `collect`     | Collecte BOAMP planifiée, journal, conversion vers le format commun  |
-| `tender`      | Appels d'offres, lots, historique des avis, suivi, clôture           |
-| `filter`      | Critères de l'entreprise et filtrage par règles                      |
-| `user`        | Comptes, rôles, connexion                                            |
+| Package       | Rôle                                                                      |
+|---------------|---------------------------------------------------------------------------|
+| `collect`     | Collecte BOAMP planifiée, journal, conversion vers le format commun       |
+| `tender`      | Appels d'offres, lots, historique des avis, suivi, clôture                |
+| `filter`      | Critères de l'entreprise et filtrage par règles                           |
+| `document`    | Dépôt du DCE, décompression, classement des pièces, texte page par page   |
+| `analysis`    | Grille d'extraction, appel à l'IA, vérification des citations, validation |
+| `user`        | Comptes, rôles, connexion                                                 |
+
+Documentation :
+
+- [Documentation technique](docs/technique.md) : architecture, installation, configuration,
+  sauvegarde et restauration, ajout d'une source, d'un champ ou d'un fournisseur d'IA.
+- [Guide utilisateur](docs/guide-utilisateur.md) : parcours, signification des états, limites.
 
 ## Configuration
 
@@ -53,6 +63,9 @@ exposé : l'interface lui transmet les appels `/api`. La base n'écoute que sur 
 
 En production, servir l'interface derrière un reverse proxy HTTPS et passer
 `SESSION_COOKIE_SECURE=true`.
+
+Le service `backup` sauvegarde chaque nuit la base et les fichiers déposés dans `BACKUP_DIR`
+(voir [la documentation technique](docs/technique.md#sauvegarde-et-restauration)).
 
 ## Développement
 
@@ -92,6 +105,21 @@ cd frontend && npm run lint && npx tsc --noEmit
    consultables.
 4. **Suivi** : chaque appel d'offres peut être classé (à étudier, en réponse, écarté) avec un
    commentaire. Un appel d'offres dont la date limite est dépassée passe au statut « clos ».
+5. **Documents** : l'utilisateur dépose le DCE (ZIP ou fichiers). Les archives sont
+   décompressées, chaque pièce est classée d'après son nom (corrigeable), le texte des PDF et
+   des documents Word est extrait page par page. Un document illisible est signalé « non
+   analysé ».
+6. **Analyse** : pour un appel d'offres retenu, la lecture terminée lance l'analyse. Le
+   règlement de consultation, l'avis et l'acte d'engagement sont envoyés au modèle d'IA, qui
+   remplit une grille fixe d'une vingtaine d'informations en citant l'extrait, le document et
+   la page. Le code retrouve chaque extrait dans la page citée : seule une information dont
+   l'extrait est retrouvé est marquée « source vérifiée ». Un contenu déjà analysé n'est pas
+   réanalysé sans demande explicite.
+7. **Validation** : sur la fiche de synthèse, l'utilisateur valide, corrige ou rejette chaque
+   information (la valeur de l'IA et l'auteur sont conservés), puis valide la fiche.
+
+Tant qu'aucun fournisseur d'IA n'est branché, l'étape 6 est indisponible et l'interface le
+signale ; voir la documentation technique.
 
 Les dates limites sont lues telles que publiées par l'acheteur et interprétées en heure de
 Paris : l'heure indexée par l'API est parfois décalée.
