@@ -18,3 +18,14 @@ export type Alert = {
   /** Last time the user opened the results: tenders published since are new. */
   lastViewedAt: string | null;
 };
+
+/** What the user sets on a saved search. */
+export type AlertInput = Omit<Alert, "id" | "createdAt" | "lastViewedAt">;
+
+/** A saved search with its results among the open consultations. */
+export type AlertSummary = Alert & {
+  /** Open consultations matching the criteria. */
+  matchCount: number;
+  /** Those published since the user last opened the results. */
+  newCount: number;
+};

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 
@@ -8,6 +9,7 @@ import { FILTER_KEYS, TenderFilters } from "@/components/TenderFilters";
 import { TenderRow } from "@/components/TenderRow";
 import { TENDER_TAB_LABELS } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
+import { getAlerts } from "@/services/alertApi";
 import { getTenderCounts, getTenders, updateFollowUp } from "@/services/tenderApi";
 import type { FollowUpStatus, TenderSummary, TenderTab } from "@/types/tender";
 
@@ -47,7 +49,8 @@ function TenderList() {
   const movedTo = tabParam ? MOVED_TABS[tabParam] : undefined;
   const page = Number(searchParams.get("page") ?? "0");
   const text = searchParams.get("q") ?? "";
-  const filtered = Boolean(text) || FILTER_KEYS.some((key) => searchParams.get(key));
+  const alertId = searchParams.get("alert");
+  const filtered = Boolean(text || alertId) || FILTER_KEYS.some((key) => searchParams.get(key));
   const query = searchParams.toString();
   const [busyId, setBusyId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -65,6 +68,12 @@ function TenderList() {
     return getTenders(params);
   }, query);
   const counts = useLoader(() => getTenderCounts(countQuery), countQuery);
+  const alerts = useLoader(() => (alertId ? getAlerts() : Promise.resolve([])), alertId ?? "");
+  const alert = alerts.data?.find((candidate) => String(candidate.id) === alertId);
+
+  // A saved search started from the current search and filters.
+  const alertParams = new URLSearchParams(countParams);
+  alertParams.set("new", "1");
 
   useEffect(() => {
     if (movedTo) {
@@ -128,7 +137,19 @@ function TenderList() {
             Effacer la recherche
           </button>
         )}
+        {filtered && !alertId && <Link href={`/alerts?${alertParams}`}>Enregistrer comme veille</Link>}
       </form>
+
+      {alertId && (
+        <p className="banner info">
+          {alerts.data && !alert ? "Cette veille n'existe plus." : `Résultats de la veille « ${alert?.name ?? "…"} ».`}{" "}
+          <Link href="/alerts">Mes veilles</Link>
+          {" · "}
+          <button type="button" className="link-button" onClick={() => navigate({ alert: null, page: null })}>
+            Quitter la veille
+          </button>
+        </p>
+      )}
 
       <TenderFilters params={searchParams} onApply={navigate} />
 

@@ -30,6 +30,7 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 | `PUT /api/tenders/{id}/follow-up` | existe | accepter le statut `SUBMITTED` |
 | `PUT /api/tenders/{id}/follow` | absent | **nouveau** : suivre (étoile), par utilisateur |
 | `DELETE /api/tenders/{id}/follow` | absent | **nouveau** : ne plus suivre |
+| `/api/alerts` | absent | **nouveau** : veilles de l'utilisateur (voir plus bas) |
 | Autres appels (connexion, DCE, analyse, paramètres) | existent | aucun changement |
 
 ## Statuts
@@ -99,6 +100,7 @@ il suffit qu'une valeur corresponde.
 | `minLots` | non | nombre de lots minimum |
 | `status` | non | liste de `FollowUpStatus` |
 | `followed` | non | `true` : suivis par l'utilisateur connecté |
+| `alert` | non | identifiant d'une veille de l'utilisateur : ses critères s'ajoutent aux autres filtres |
 | `sort` | non | voir ci-dessous |
 | `page`, `size` | oui | `size` de 1 à 100, l'interface propose 20, 50 et 100 |
 
@@ -122,6 +124,23 @@ Un `-` devant la clé trie dans l'ordre décroissant. Les valeurs absentes sont 
 | `-relevance` | pertinence décroissante |
 | `-amount`, `amount` | montant décroissant, croissant |
 | `distance` | plus proche du siège |
+
+## Veilles (`/api/alerts`)
+
+Une veille est une recherche enregistrée par un utilisateur (type `Alert` de
+`frontend/src/types/alert.ts`). Ses critères se combinent ; ses mots-clés sont des alternatives
+(un seul suffit), avec les synonymes métier.
+
+| Appel | Réponse |
+|-------|---------|
+| `GET /api/alerts` | les veilles de l'utilisateur, chacune avec `matchCount` (consultations de l'onglet `ALL` qui correspondent) et `newCount` (celles publiées après le jour de `lastViewedAt`) |
+| `POST /api/alerts` | crée une veille (`AlertInput`) ; `lastViewedAt` vaut `null` |
+| `PUT /api/alerts/{id}` | modifie une veille, dont `active` |
+| `DELETE /api/alerts/{id}` | supprime une veille ; `204` |
+| `POST /api/alerts/{id}/viewed` | l'utilisateur ouvre les résultats : `lastViewedAt` passe à maintenant |
+
+Table à créer : `alert` (utilisateur, nom, critères, active, dates). Plus tard, le backend pourra
+exécuter les veilles actives après chaque collecte et prévenir l'utilisateur.
 
 ## `GET /api/tenders/counts`
 

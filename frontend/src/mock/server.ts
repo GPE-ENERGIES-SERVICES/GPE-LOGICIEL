@@ -8,6 +8,7 @@
 import { ACTIVITY_LABELS, formatAmount, MARKET_TYPE_LABELS, TENDER_TAB_LABELS } from "@/lib/format";
 import { REGIONS } from "@/lib/regions";
 import { ApiError } from "@/services/http";
+import type { Alert, AlertInput, AlertSummary } from "@/types/alert";
 import type { TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
 import type { DocumentInfo, PieceType } from "@/types/document";
@@ -22,6 +23,7 @@ import type {
 } from "@/types/tender";
 import type { CurrentUser } from "@/types/user";
 
+import { MOCK_ALERTS } from "./alerts";
 import { MOCK_AWARDS } from "./awardedContracts";
 import { MOCK_DOSSIERS } from "./documents";
 import { SEARCH_SYNONYMS } from "./reference";
@@ -43,6 +45,8 @@ type FollowUp = Pick<TenderDetail, "followUpStatus" | "followUpComment" | "follo
 type SavedState = {
   followUps: Record<number, FollowUp>;
   followed: Record<number, boolean>;
+  /** Saved searches, once the user changed them. */
+  alerts?: Alert[];
 };
 
 function loadState(): SavedState {
@@ -64,6 +68,8 @@ const tenders: TenderDetail[] = MOCK_TENDERS.map((tender) => ({
   ...state.followUps[tender.id],
   followed: state.followed[tender.id] ?? tender.followed,
 }));
+
+const alerts: Alert[] = state.alerts ?? structuredClone(MOCK_ALERTS);
 
 function saveState() {
   try {
@@ -254,7 +260,14 @@ function time(value: string | null | undefined): number | null {
  */
 function matches(tender: TenderDetail, params: URLSearchParams): boolean {
   const tab = (params.get("tab") as TenderTab | null) ?? "NEW";
+  return inTab(tender, tab) && matchesFilters(tender, params);
+}
+
+/** The filters of GET /api/tenders, without the tab. */
+function matchesFilters(tender: TenderDetail, params: URLSearchParams): boolean {
   const q = params.get("q")?.trim();
+  const alertId = number(params.get("alert"));
+  const alert = alerts.find((candidate) => candidate.id === alertId);
   const departments = list(params.get("department"));
   const region = params.get("region");
   const city = params.get("city")?.trim();
@@ -285,8 +298,8 @@ function matches(tender: TenderDetail, params: URLSearchParams): boolean {
   const lotCount = tender.lots.length;
 
   return (
-    inTab(tender, tab) &&
     (!q || matchesText(tender, q)) &&
+    (alertId === null || (alert !== undefined && matchesAlert(tender, alert))) &&
     (departments.length === 0 || tender.departments.some((code) => departments.includes(code))) &&
     (!region || tender.departments.some((code) => REGIONS[region]?.includes(code))) &&
     (!city || normalize(tender.location ?? "").includes(normalize(city)) || (tender.postalCode ?? "").startsWith(city)) &&
@@ -397,6 +410,96 @@ function stats(): TenderStats {
   };
 }
 
+// --- Saved searches ---------------------------------------------------------
+
+/**
+ * Criteria of a saved search, all combined. Its keywords are alternatives:
+ * one of them is enough, with the synonyms of the trade.
+ */
+function matchesAlert(tender: TenderDetail, alert: Alert): boolean {
+  const params = new URLSearchParams();
+  const set = (key: string, value: string | number | null) => {
+    if (value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  };
+  set("region", alert.region);
+  set("department", alert.departments.join(","));
+  set("marketType", alert.marketTypes.join(","));
+  set("activity", alert.activities.join(","));
+  set("minAmount", alert.minAmount);
+  set("maxAmount", alert.maxAmount);
+  return (
+    matchesFilters(tender, params) &&
+    (alert.keywords.length === 0 || alert.keywords.some((keyword) => matchesText(tender, keyword))) &&
+    (alert.cpvPrefixes.length === 0 ||
+      tender.cpvCodes.some((code) => alert.cpvPrefixes.some((prefix) => code.startsWith(prefix))))
+  );
+}
+
+/** Results among the open consultations; those published after the day of the last visit are new. */
+function alertSummary(alert: Alert): AlertSummary {
+  const found = tenders.filter((tender) => inTab(tender, "ALL") && matchesAlert(tender, alert));
+  const lastVisit = alert.lastViewedAt ? new Date(alert.lastViewedAt).toLocaleDateString("sv-SE") : "";
+  return {
+    ...alert,
+    matchCount: found.length,
+    newCount: found.filter((tender) => (tender.publishedAt ?? "") > lastVisit).length,
+  };
+}
+
+function findAlert(id: string): Alert {
+  const alert = alerts.find((candidate) => candidate.id === Number(id));
+  if (!alert) {
+    throw new ApiError(404, "Élément introuvable.");
+  }
+  return alert;
+}
+
+function alertInput(body: unknown): AlertInput {
+  const input = body as AlertInput;
+  if (!input.name?.trim()) {
+    throw new ApiError(400, "Le nom de la veille est obligatoire.");
+  }
+  return { ...input, name: input.name.trim() };
+}
+
+function saveAlerts() {
+  state.alerts = alerts;
+  saveState();
+}
+
+function createAlert(body: unknown): AlertSummary {
+  const alert: Alert = {
+    ...alertInput(body),
+    id: Math.max(0, ...alerts.map((candidate) => candidate.id)) + 1,
+    createdAt: new Date().toISOString(),
+    lastViewedAt: null,
+  };
+  alerts.push(alert);
+  saveAlerts();
+  return alertSummary(alert);
+}
+
+function updateAlert(id: string, body: unknown): AlertSummary {
+  const alert = Object.assign(findAlert(id), alertInput(body));
+  saveAlerts();
+  return alertSummary(alert);
+}
+
+function deleteAlert(id: string): undefined {
+  alerts.splice(alerts.indexOf(findAlert(id)), 1);
+  saveAlerts();
+  return undefined;
+}
+
+function markAlertViewed(id: string): AlertSummary {
+  const alert = findAlert(id);
+  alert.lastViewedAt = new Date().toISOString();
+  saveAlerts();
+  return alertSummary(alert);
+}
+
 // --- Decisions --------------------------------------------------------------
 
 function followUp(id: string, body: unknown): TenderDetail {
@@ -483,6 +586,11 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id] ?? []],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
   ["PUT", /^\/api\/documents\/(\d+)\/piece-type$/, (id, _, body) => changePieceType(id, body)],
+  ["GET", /^\/api\/alerts$/, () => alerts.map(alertSummary)],
+  ["POST", /^\/api\/alerts$/, (_, __, body) => createAlert(body)],
+  ["PUT", /^\/api\/alerts\/(\d+)$/, (id, _, body) => updateAlert(id, body)],
+  ["DELETE", /^\/api\/alerts\/(\d+)$/, (id) => deleteAlert(id)],
+  ["POST", /^\/api\/alerts\/(\d+)\/viewed$/, (id) => markAlertViewed(id)],
 ];
 
 export async function mockApi<T>(method: string, path: string, body?: unknown): Promise<T> {

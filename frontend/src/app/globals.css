@@ -199,7 +199,25 @@ label.inline {
 
 .checkboxes {
   display: flex;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-grid .hint {
+  margin: 0;
+  font-weight: 400;
+}
+
+/* A disabled saved search. */
+.card.inactive {
+  color: var(--muted);
 }
 
 .row {
