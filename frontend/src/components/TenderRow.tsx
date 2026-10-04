@@ -12,7 +12,7 @@ import {
   PROCEDURE_LABELS,
   STATUS_LABELS,
 } from "@/lib/format";
-import type { FollowUpStatus, TenderSummary } from "@/lib/types";
+import type { FollowUpStatus, TenderSummary } from "@/types/tender";
 
 import { DeadlineBadge } from "./DeadlineBadge";
 import { FollowButton } from "./FollowButton";

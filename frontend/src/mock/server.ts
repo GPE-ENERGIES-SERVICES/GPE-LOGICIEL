@@ -5,24 +5,36 @@
  * browser so that they survive a reload.
  */
 
-import { ApiError } from "../api";
-import { ACTIVITY_LABELS, TENDER_TAB_LABELS } from "../format";
-import { REGIONS } from "../regions";
+import { ACTIVITY_LABELS, formatAmount, TENDER_TAB_LABELS } from "@/lib/format";
+import { REGIONS } from "@/lib/regions";
+import { ApiError } from "@/services/http";
+import type { TenderAnalysis } from "@/types/analysis";
+import type { Page } from "@/types/common";
+import type { DocumentInfo, PieceType } from "@/types/document";
+import type { CollectJournal } from "@/types/settings";
 import type {
-  CollectJournal,
-  DocumentInfo,
   FollowUpStatus,
-  Page,
-  PieceType,
-  TenderAnalysis,
+  TenderConditions,
   TenderDetail,
   TenderStats,
   TenderSummary,
   TenderTab,
-} from "../types";
-import { MOCK_DOSSIERS, MOCK_TENDERS, MOCK_USER } from "./data";
+} from "@/types/tender";
+import type { CurrentUser } from "@/types/user";
 
-const STORAGE_KEY = "gpe-demo-state";
+import { MOCK_AWARDS } from "./awardedContracts";
+import { MOCK_DOSSIERS } from "./documents";
+import { MOCK_TENDERS } from "./tenders";
+
+const MOCK_USER: CurrentUser = {
+  id: 1,
+  email: "demo@gpefrance.eu",
+  displayName: "Compte de démonstration",
+  role: "ADMIN",
+};
+
+// Versioned: decisions saved for an older demo data set no longer apply.
+const STORAGE_KEY = "gpe-demo-state-v2";
 const LATENCY_MS = 150;
 
 type FollowUp = Pick<TenderDetail, "followUpStatus" | "followUpComment" | "followUpBy" | "followUpAt">;
@@ -86,12 +98,44 @@ function toSummary(tender: TenderDetail): TenderSummary {
     reference: tender.reference,
     procedureType: tender.procedureType,
     source: tender.source,
-    lotCount: tender.lotCount,
+    lotCount: tender.lots.length,
     activities: tender.activities,
     distanceKm: tender.distanceKm,
     relevanceScore: tender.relevanceScore,
     followed: tender.followed,
-    documentCount: tender.documentCount,
+    documentCount: MOCK_DOSSIERS[tender.id]?.[0]?.documents.length ?? 0,
+    postalCode: tender.postalCode,
+    result: tender.result,
+  };
+}
+
+/** Conditions shown by the current details page, taken from the key information. */
+function conditionsOf(tender: TenderDetail): TenderConditions | null {
+  const info = tender.keyInfo;
+  if (!info) {
+    return null;
+  }
+  const criteria = (tender.awardCriteria ?? []).map((c) => (c.weight === null ? c.label : `${c.label} ${c.weight} %`));
+  return {
+    qualifications: [...info.qualifications, ...info.certifications],
+    siteVisit: info.siteVisit ? (info.siteVisit.required ? "Obligatoire" : "Facultative") : null,
+    selectionCriteria: criteria.length ? criteria.join(", ") : null,
+    constraints: info.specialConditions,
+  };
+}
+
+/** The details, with the award notice completed from the awarded contracts. */
+function toDetail(tender: TenderDetail): TenderDetail {
+  const awarded = MOCK_AWARDS.filter((award) => award.tenderId === tender.id)
+    .map((award) => `${award.lot ? `${award.lot} : ` : ""}${award.winner} (${formatAmount(award.amount)})`)
+    .join(" ; ");
+  return {
+    ...tender,
+    ...toSummary(tender),
+    conditions: conditionsOf(tender),
+    notices: tender.notices.map((notice) =>
+      notice.kind === "AWARD" && !notice.details && awarded ? { ...notice, details: `Attribution — ${awarded}.` } : notice,
+    ),
   };
 }
 
@@ -387,11 +431,11 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/tenders$/, (_, url) => search(url.searchParams)],
   ["GET", /^\/api\/tenders\/counts$/, (_, url) => counts(url.searchParams)],
   ["GET", /^\/api\/tenders\/stats$/, () => stats()],
-  ["GET", /^\/api\/tenders\/(\d+)$/, (id) => find(id)],
-  ["PUT", /^\/api\/tenders\/(\d+)\/follow-up$/, (id, _, body) => followUp(id, body)],
+  ["GET", /^\/api\/tenders\/(\d+)$/, (id) => toDetail(find(id))],
+  ["PUT", /^\/api\/tenders\/(\d+)\/follow-up$/, (id, _, body) => toDetail(followUp(id, body))],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, true)],
   ["DELETE", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, false)],
-  ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id]],
+  ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id] ?? []],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
   ["PUT", /^\/api\/documents\/(\d+)\/piece-type$/, (id, _, body) => changePieceType(id, body)],
 ];

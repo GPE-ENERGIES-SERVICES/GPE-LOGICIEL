@@ -2,10 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 
-import { api } from "@/lib/api";
 import { formatDateTime, MARKET_TYPE_LABELS } from "@/lib/format";
-import type { FilterCriteria, MarketType } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { getFilterCriteria, saveFilterCriteria } from "@/services/settingsApi";
+import type { FilterCriteria } from "@/types/settings";
+import type { MarketType } from "@/types/tender";
 
 /** One value per line or separated by commas. */
 function toList(text: string): string[] {
@@ -39,18 +40,15 @@ function CriteriaFields({ criteria, onSaved }: { criteria: FilterCriteria; onSav
     setSaving(true);
     setMessage(null);
     try {
-      await api<FilterCriteria>("/api/filter-criteria", {
-        method: "PUT",
-        body: {
-          departments: toList(departments),
-          marketTypes,
-          minDaysBeforeDeadline: toNumber(minDays),
-          cpvPrefixes: toList(cpvPrefixes),
-          keywords: toList(keywords),
-          excludedKeywords: toList(excludedKeywords),
-          minAmount: toNumber(minAmount),
-          maxAmount: toNumber(maxAmount),
-        },
+      await saveFilterCriteria({
+        departments: toList(departments),
+        marketTypes,
+        minDaysBeforeDeadline: toNumber(minDays),
+        cpvPrefixes: toList(cpvPrefixes),
+        keywords: toList(keywords),
+        excludedKeywords: toList(excludedKeywords),
+        minAmount: toNumber(minAmount),
+        maxAmount: toNumber(maxAmount),
       });
       setMessage({ error: false, text: "Critères enregistrés. Tous les appels d'offres ont été filtrés à nouveau." });
       onSaved();
@@ -147,7 +145,7 @@ function CriteriaFields({ criteria, onSaved }: { criteria: FilterCriteria; onSav
 }
 
 export function CriteriaForm() {
-  const { data, error, reload } = useLoader(() => api<FilterCriteria>("/api/filter-criteria"), "criteria");
+  const { data, error, reload } = useLoader(() => getFilterCriteria(), "criteria");
   if (error) {
     return <p className="error">{error}</p>;
   }

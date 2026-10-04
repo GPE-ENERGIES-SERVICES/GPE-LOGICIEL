@@ -3,10 +3,9 @@
 import Link from "next/link";
 
 import { ANALYSIS_STATUS_LABELS } from "@/lib/analysis";
-import { api } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import type { AnalysisJournalEntry, AnalysisQuality } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { getAnalysisJournal, getAnalysisQuality } from "@/services/analysisApi";
 
 const costFormat = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 4 });
 
@@ -19,8 +18,8 @@ function cost(value: number | null): string {
  * quality from the decisions of the users.
  */
 export function AnalysisJournal() {
-  const journal = useLoader(() => api<AnalysisJournalEntry[]>("/api/analyses?limit=30"), "analyses");
-  const quality = useLoader(() => api<AnalysisQuality>("/api/analyses/quality"), "quality");
+  const journal = useLoader(() => getAnalysisJournal(30), "analyses");
+  const quality = useLoader(() => getAnalysisQuality(), "quality");
 
   return (
     <div>

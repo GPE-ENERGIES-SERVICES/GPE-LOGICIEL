@@ -2,9 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 
-import { api } from "@/lib/api";
 import { FOLLOW_UP_LABELS, formatDateTime } from "@/lib/format";
-import type { FollowUpStatus, TenderDetail } from "@/lib/types";
+import { updateFollowUp } from "@/services/tenderApi";
+import type { FollowUpStatus, TenderDetail } from "@/types/tender";
 
 type Props = {
   tender: TenderDetail;
@@ -25,12 +25,7 @@ export function FollowUpForm({ tender, onSaved }: Props) {
     setSaving(true);
     setError(null);
     try {
-      onSaved(
-        await api<TenderDetail>(`/api/tenders/${tender.id}/follow-up`, {
-          method: "PUT",
-          body: { status, comment },
-        }),
-      );
+      onSaved(await updateFollowUp(tender.id, status, comment));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Enregistrement impossible.");
     } finally {

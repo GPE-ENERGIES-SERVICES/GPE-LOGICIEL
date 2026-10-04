@@ -11,10 +11,11 @@ import {
   formatValue,
   NOT_IN_DOCUMENTS,
 } from "@/lib/analysis";
-import { api } from "@/lib/api";
 import { DOCUMENT_STATE_LABELS, formatDateTime, PIECE_TYPE_LABELS } from "@/lib/format";
-import type { Analysis, Dossier, GridField, SummarySection, TenderAnalysis } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { getTenderAnalysis, startAnalysis, validateAnalysis } from "@/services/analysisApi";
+import { getDossiers } from "@/services/documentApi";
+import type { Analysis, GridField, SummarySection, TenderAnalysis } from "@/types/analysis";
 
 const costFormat = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 4 });
 
@@ -88,7 +89,7 @@ function SummarySheet({
     setValidating(true);
     setError(null);
     try {
-      onValidated(await api<TenderAnalysis>(`/api/analyses/${analysis.id}/validation`, { method: "POST" }));
+      onValidated(await validateAnalysis(analysis.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Validation impossible.");
     } finally {
@@ -200,8 +201,8 @@ function notAnalysedReason(document: Analysis["documents"][number]): string {
  * extracted information with their sources, and the human validation.
  */
 export function AnalysisSection({ tenderId }: { tenderId: number }) {
-  const loaded = useLoader(() => api<TenderAnalysis>(`/api/tenders/${tenderId}/analysis`), String(tenderId));
-  const dossiers = useLoader(() => api<Dossier[]>(`/api/tenders/${tenderId}/dossiers`), String(tenderId));
+  const loaded = useLoader(() => getTenderAnalysis(tenderId), String(tenderId));
+  const dossiers = useLoader(() => getDossiers(tenderId), String(tenderId));
   // The analysis as returned by the last decision, until the next reload.
   const [saved, setSaved] = useState<TenderAnalysis | null>(null);
   const [starting, setStarting] = useState(false);
@@ -236,7 +237,7 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
     // Content already analysed is analysed again only on an explicit request (RM9).
     const force = analysis?.dossierId === latestDossier.id;
     try {
-      await api(`/api/dossiers/${latestDossier.id}/analyses?force=${force}`, { method: "POST" });
+      await startAnalysis(latestDossier.id, force);
       setSaved(null);
       reloadAnalysis();
     } catch (err) {

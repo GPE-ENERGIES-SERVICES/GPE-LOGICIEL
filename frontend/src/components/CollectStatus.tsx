@@ -1,16 +1,15 @@
 "use client";
 
-import { api } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import type { CollectJournal } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { getCollectJournal } from "@/services/settingsApi";
 
 /**
  * State of the last collection, shown above the list. A failure is never
  * silent.
  */
 export function CollectStatus() {
-  const { data } = useLoader(() => api<CollectJournal>("/api/collect-runs?limit=1"), "last-run");
+  const { data } = useLoader(() => getCollectJournal(1), "last-run");
   if (!data) {
     return null;
   }

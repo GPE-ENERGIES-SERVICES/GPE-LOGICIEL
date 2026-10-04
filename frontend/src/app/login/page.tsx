@@ -3,7 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
-import { api, ApiError } from "@/lib/api";
+import { login } from "@/services/authApi";
+import { ApiError } from "@/services/http";
 
 function LoginForm() {
   const router = useRouter();
@@ -18,7 +19,7 @@ function LoginForm() {
     setSubmitting(true);
     setError(null);
     try {
-      await api("/api/auth/login", { method: "POST", body: { email, password } });
+      await login(email, password);
       const next = searchParams.get("next");
       // Only local paths: never redirect to another site.
       router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");

@@ -1,5 +1,6 @@
+import type { Analysis, AnalysisStatus, ExtractedField, FieldDecision, FieldState, GridField } from "@/types/analysis";
+
 import { formatAmount, formatDate, formatDateTime } from "./format";
-import type { Analysis, AnalysisStatus, ExtractedField, FieldDecision, FieldState, GridField } from "./types";
 
 /** Shown when the documents read do not contain an information. */
 export const NOT_IN_DOCUMENTS = "Non indiqué dans les documents analysés";

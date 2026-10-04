@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { api } from "@/lib/api";
+import { setFollowed } from "@/services/tenderApi";
 
 type Props = {
   tenderId: number;
@@ -19,7 +19,7 @@ export function FollowButton({ tenderId, followed, onChanged }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/tenders/${tenderId}/follow`, { method: followed ? "DELETE" : "PUT" });
+      await setFollowed(tenderId, !followed);
       onChanged(!followed);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Action impossible.");

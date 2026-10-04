@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { api, DEMO_DATA, upload } from "@/lib/api";
 import {
   DOCUMENT_STATE_LABELS,
   DOSSIER_STATUS_LABELS,
@@ -10,8 +9,10 @@ import {
   formatSize,
   PIECE_TYPE_LABELS,
 } from "@/lib/format";
-import type { DocumentInfo, Dossier, PieceType } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { changePieceType, getDossiers, retryDossier, uploadDossier } from "@/services/documentApi";
+import { DEMO_DATA } from "@/services/http";
+import type { DocumentInfo, Dossier, PieceType } from "@/types/document";
 
 const ACCEPTED = ".zip,.pdf,.doc,.docx,.odt,.rtf,.xls,.xlsx,.xlsm,.ods,.csv,.dwg,.dxf,.jpg,.jpeg,.png,.tif,.tiff";
 
@@ -22,7 +23,7 @@ function DocumentRow({ document, onChanged }: { document: DocumentInfo; onChange
   const changeType = async (pieceType: PieceType) => {
     setError(null);
     try {
-      await api(`/api/documents/${document.id}/piece-type`, { method: "PUT", body: { pieceType } });
+      await changePieceType(document.id, pieceType);
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Modification impossible.");
@@ -78,7 +79,7 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
   const retry = async () => {
     setRetrying(true);
     try {
-      await api(`/api/dossiers/${dossier.id}/retry`, { method: "POST" });
+      await retryDossier(dossier.id);
       onChanged();
     } finally {
       setRetrying(false);
@@ -138,7 +139,7 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
  * of each document.
  */
 export function DocumentsSection({ tenderId }: { tenderId: number }) {
-  const { data, error, reload } = useLoader(() => api<Dossier[]>(`/api/tenders/${tenderId}/dossiers`), String(tenderId));
+  const { data, error, reload } = useLoader(() => getDossiers(tenderId), String(tenderId));
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -160,12 +161,10 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
       setUploadError("Choisissez au moins un fichier.");
       return;
     }
-    const form = new FormData();
-    Array.from(files).forEach((file) => form.append("files", file));
     setUploading(true);
     setUploadError(null);
     try {
-      await upload(`/api/tenders/${tenderId}/dossiers`, form);
+      await uploadDossier(tenderId, files);
       if (fileInput.current) {
         fileInput.current.value = "";
       }

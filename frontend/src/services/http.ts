@@ -4,10 +4,11 @@
  * XSRF-TOKEN cookie.
  *
  * With NEXT_PUBLIC_DATA_SOURCE=mock, the calls are answered by the simulated
- * backend (lib/mock) instead: same URLs, same responses.
+ * backend (src/mock) instead: same URLs, same responses. The services call
+ * these functions and never know where the data comes from.
  */
 
-/** True when the screens run on the demo data of lib/mock. */
+/** True when the screens run on the demo data of src/mock. */
 export const DEMO_DATA = process.env.NEXT_PUBLIC_DATA_SOURCE === "mock";
 
 export class ApiError extends Error {
@@ -80,7 +81,7 @@ export async function api<T>(path: string, options: { method?: string; body?: un
   const method = options.method ?? "GET";
   if (DEMO_DATA) {
     // Loaded on demand: the demo data is never downloaded with the real backend.
-    const { mockApi } = await import("./mock/handler");
+    const { mockApi } = await import("@/mock/server");
     return mockApi<T>(method, path, options.body);
   }
   const headers: Record<string, string> = { Accept: "application/json" };

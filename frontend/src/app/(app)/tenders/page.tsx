@@ -6,10 +6,10 @@ import { Suspense, useState, type FormEvent } from "react";
 import { CollectStatus } from "@/components/CollectStatus";
 import { FILTER_KEYS, TenderFilters } from "@/components/TenderFilters";
 import { TenderRow } from "@/components/TenderRow";
-import { api } from "@/lib/api";
 import { TENDER_TAB_LABELS } from "@/lib/format";
-import type { FollowUpStatus, Page, TenderSummary, TenderTab } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { getTenderCounts, getTenders, updateFollowUp } from "@/services/tenderApi";
+import type { FollowUpStatus, TenderSummary, TenderTab } from "@/types/tender";
 
 /** Values of the sort parameter of GET /api/tenders; "-" sorts in descending order. */
 const SORT_OPTIONS = [
@@ -56,9 +56,9 @@ function TenderList() {
   const list = useLoader(() => {
     const params = new URLSearchParams(searchParams);
     params.set("tab", tab);
-    return api<Page<TenderSummary>>(`/api/tenders?${params}`);
+    return getTenders(params);
   }, query);
-  const counts = useLoader(() => api<Record<TenderTab, number>>(`/api/tenders/counts?${countQuery}`), countQuery);
+  const counts = useLoader(() => getTenderCounts(countQuery), countQuery);
 
   const navigate = (changes: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -81,7 +81,7 @@ function TenderList() {
     setBusyId(tender.id);
     setActionError(null);
     try {
-      await api(`/api/tenders/${tender.id}/follow-up`, { method: "PUT", body: { status } });
+      await updateFollowUp(tender.id, status);
       list.reload();
       counts.reload();
     } catch (err) {

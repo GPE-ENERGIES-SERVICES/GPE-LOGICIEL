@@ -4,7 +4,6 @@ import Link from "next/link";
 
 import { CollectStatus } from "@/components/CollectStatus";
 import { DeadlineBadge } from "@/components/DeadlineBadge";
-import { api } from "@/lib/api";
 import {
   ACTIVITY_LABELS,
   formatDate,
@@ -12,8 +11,9 @@ import {
   FOLLOW_UP_LABELS,
   TENDER_TAB_LABELS,
 } from "@/lib/format";
-import type { FollowUpStatus, Page, TenderStats, TenderSummary, TenderTab } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { getTenderCounts, getTenders, getTenderStats } from "@/services/tenderApi";
+import type { FollowUpStatus, TenderSummary, TenderTab } from "@/types/tender";
 
 /** Open tenders whose deadline is within a week and on which the team may still answer. */
 const DEADLINES_QUERY = "tab=ALL&status=NEW,TO_STUDY,RESPONDING&maxDaysLeft=7";
@@ -60,13 +60,10 @@ function TenderLink({ tender }: { tender: TenderSummary }) {
 }
 
 export default function DashboardPage() {
-  const counts = useLoader(() => api<Record<TenderTab, number>>("/api/tenders/counts"), "counts");
-  const deadlines = useLoader(
-    () => api<Page<TenderSummary>>(`/api/tenders?${DEADLINES_QUERY}&size=${LIST_SIZE}`),
-    "deadlines",
-  );
-  const latest = useLoader(() => api<Page<TenderSummary>>(`/api/tenders?${LATEST_QUERY}&size=${LIST_SIZE}`), "latest");
-  const stats = useLoader(() => api<TenderStats>("/api/tenders/stats"), "stats");
+  const counts = useLoader(() => getTenderCounts(), "counts");
+  const deadlines = useLoader(() => getTenders(`${DEADLINES_QUERY}&size=${LIST_SIZE}`), "deadlines");
+  const latest = useLoader(() => getTenders(`${LATEST_QUERY}&size=${LIST_SIZE}`), "latest");
+  const stats = useLoader(() => getTenderStats(), "stats");
   const error = counts.error ?? deadlines.error ?? latest.error ?? stats.error;
 
   const figures: { label: string; value: number | undefined; href: string }[] = [

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ApiError } from "./api";
+import { ApiError } from "@/services/http";
 
 type LoaderState<T> = {
   data: T | null;

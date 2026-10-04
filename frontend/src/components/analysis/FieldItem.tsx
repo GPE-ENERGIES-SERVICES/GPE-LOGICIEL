@@ -10,9 +10,9 @@ import {
   isReliable,
   NOT_IN_DOCUMENTS,
 } from "@/lib/analysis";
-import { api } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import type { ExtractedField, FieldDecision, GridField, TenderAnalysis } from "@/lib/types";
+import { decideField } from "@/services/analysisApi";
+import type { ExtractedField, FieldDecision, GridField, TenderAnalysis } from "@/types/analysis";
 
 type Props = {
   field: ExtractedField;
@@ -36,12 +36,7 @@ export function FieldItem({ field, grid, readable, onChanged }: Props) {
     setSaving(true);
     setError(null);
     try {
-      onChanged(
-        await api<TenderAnalysis>(`/api/extracted-fields/${field.id}/decision`, {
-          method: "PUT",
-          body: { decision, value: correctedValue ?? null },
-        }),
-      );
+      onChanged(await decideField(field.id, decision, correctedValue ?? null));
       setCorrecting(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Enregistrement impossible.");

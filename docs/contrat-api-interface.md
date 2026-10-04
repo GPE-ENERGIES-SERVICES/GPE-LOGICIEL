@@ -1,10 +1,10 @@
 # Contrat d'API attendu par l'interface
 
 L'interface fonctionne aujourd'hui sur des données de démonstration servies par une API
-simulée (`frontend/src/lib/mock`). Cette API simulée répond aux **mêmes URL avec le même JSON**
+simulée (`frontend/src/mock`). Cette API simulée répond aux **mêmes URL avec le même JSON**
 que le backend devra fournir : ce document liste ce qui existe déjà dans le backend Spring Boot
-et ce qu'il reste à y ajouter. Les types TypeScript de `frontend/src/lib/types.ts` font foi pour
-le format des réponses ; `frontend/src/lib/mock/handler.ts` est une implémentation de référence
+et ce qu'il reste à y ajouter. Les types TypeScript de `frontend/src/types/` font foi pour
+le format des réponses ; `frontend/src/mock/server.ts` est une implémentation de référence
 exécutable des règles ci-dessous.
 
 ## Passer des données de démonstration au backend
@@ -15,7 +15,9 @@ exécutable des règles ci-dessous.
 | Backend réel  | variable absente (valeur par défaut, utilisée par l'image Docker) |
 
 La variable est lue à la construction de l'interface (`npm run dev` ou `npm run build`). Aucun
-écran ne sait d'où viennent les données : seul `lib/api.ts` aiguille les appels.
+écran ne sait d'où viennent les données : les écrans appellent les fonctions de
+`frontend/src/services/` (`getTenders`, `getTender`…), qui passent toutes par `services/http.ts`,
+seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 
 ## Récapitulatif
 
@@ -152,8 +154,9 @@ l'interface affiche « Non indiqué » ou « – ».
 | `conditions` (détail seulement) | objet ou `null` | qualifications, visite, critères d'attribution et contraintes, repris des valeurs validées de la fiche de synthèse |
 
 Codes de types de travaux utilisés par l'interface (`ACTIVITY_LABELS` dans
-`frontend/src/lib/format.ts`) : `ELECTRICITY`, `PHOTOVOLTAIC`, `EV_CHARGING`, `HVAC`,
-`ENERGY_RENOVATION`, `PUBLIC_LIGHTING`, `VRD`, `MAINTENANCE`, `STUDIES`. Un code inconnu de
+`frontend/src/lib/format.ts`) : `ELECTRICITY`, `PHOTOVOLTAIC`, `EV_CHARGING`, `HEATING`,
+`AIR_CONDITIONING`, `ENERGY_RENOVATION`, `PUBLIC_LIGHTING`, `NETWORKS`, `VRD`, `MAINTENANCE`,
+`STUDIES`. Un code inconnu de
 l'interface s'affiche tel quel : la liste peut s'enrichir côté backend.
 
 ### Distance

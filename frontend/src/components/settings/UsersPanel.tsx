@@ -2,9 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 
-import { api } from "@/lib/api";
-import type { Role, User } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { createUser, getUsers, updateUser } from "@/services/settingsApi";
+import type { Role, User } from "@/types/user";
 
 const ROLE_LABELS: Record<Role, string> = { USER: "Utilisateur", ADMIN: "Administrateur" };
 
@@ -20,10 +20,7 @@ function UserRow({ user, onSaved }: { user: User; onSaved: () => void }) {
   const save = async () => {
     setError(null);
     try {
-      await api(`/api/users/${user.id}`, {
-        method: "PUT",
-        body: { displayName, role, enabled, password: password || null },
-      });
+      await updateUser(user.id, { displayName, role, enabled, password: password || null });
       setPassword("");
       onSaved();
     } catch (err) {
@@ -81,14 +78,11 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
     const form = new FormData(formElement);
     setError(null);
     try {
-      await api("/api/users", {
-        method: "POST",
-        body: {
-          email: form.get("email"),
-          displayName: form.get("displayName"),
-          password: form.get("password"),
-          role: form.get("role"),
-        },
+      await createUser({
+        email: String(form.get("email")),
+        displayName: String(form.get("displayName")),
+        password: String(form.get("password")),
+        role: form.get("role") as Role,
       });
       formElement.reset();
       onCreated();
@@ -125,7 +119,7 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
 }
 
 export function UsersPanel() {
-  const { data, error, reload } = useLoader(() => api<User[]>("/api/users"), "users");
+  const { data, error, reload } = useLoader(() => getUsers(), "users");
 
   return (
     <div>

@@ -1,14 +1,12 @@
+import type { DocumentState, DossierStatus, PieceType } from "@/types/document";
 import type {
-  DocumentState,
-  DossierStatus,
   FollowUpStatus,
   MarketType,
   NoticeKind,
-  PieceType,
   ProcedureType,
   TenderStatus,
   TenderTab,
-} from "./types";
+} from "@/types/tender";
 
 export const NOT_INDICATED = "Non indiqué";
 
@@ -151,10 +149,12 @@ export const TENDER_TAB_LABELS: Record<TenderTab, string> = {
 export const ACTIVITY_LABELS: Record<string, string> = {
   ELECTRICITY: "Électricité",
   PHOTOVOLTAIC: "Photovoltaïque",
-  EV_CHARGING: "Bornes de recharge",
-  HVAC: "CVC",
+  EV_CHARGING: "IRVE (bornes de recharge)",
+  HEATING: "Chauffage",
+  AIR_CONDITIONING: "Climatisation",
   ENERGY_RENOVATION: "Rénovation énergétique",
   PUBLIC_LIGHTING: "Éclairage public",
+  NETWORKS: "Réseaux",
   VRD: "VRD",
   MAINTENANCE: "Maintenance",
   STUDIES: "Études",

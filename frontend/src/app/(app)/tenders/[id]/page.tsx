@@ -9,7 +9,6 @@ import { DeadlineBadge } from "@/components/DeadlineBadge";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { FollowButton } from "@/components/FollowButton";
 import { FollowUpForm } from "@/components/FollowUpForm";
-import { api } from "@/lib/api";
 import {
   ACTIVITY_LABELS,
   formatAmount,
@@ -24,8 +23,9 @@ import {
   PROCEDURE_LABELS,
   STATUS_LABELS,
 } from "@/lib/format";
-import type { TenderDetail } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { getTender } from "@/services/tenderApi";
+import type { TenderDetail } from "@/types/tender";
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -42,7 +42,7 @@ function listOrNotIndicated(values: string[]): string {
 
 export default function TenderPage() {
   const { id } = useParams<{ id: string }>();
-  const loaded = useLoader(() => api<TenderDetail>(`/api/tenders/${id}`), id);
+  const loaded = useLoader(() => getTender(id), id);
   // The tender as last saved on this page, or as loaded.
   const [saved, setSaved] = useState<TenderDetail | null>(null);
   const tender = saved ?? loaded.data;

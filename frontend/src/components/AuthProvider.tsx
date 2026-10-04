@@ -3,8 +3,9 @@
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { api, ApiError } from "@/lib/api";
-import type { CurrentUser } from "@/lib/types";
+import { getCurrentUser, logout as endSession } from "@/services/authApi";
+import { ApiError } from "@/services/http";
+import type { CurrentUser } from "@/types/user";
 
 type AuthContextValue = {
   user: CurrentUser;
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api<CurrentUser>("/api/auth/me")
+    getCurrentUser()
       .then(setUser)
       .catch((err: unknown) => {
         if (err instanceof ApiError && err.status === 401) {
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    await api("/api/auth/logout", { method: "POST" });
+    await endSession();
     router.replace("/login");
   };
 

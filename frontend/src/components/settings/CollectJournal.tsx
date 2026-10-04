@@ -2,17 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-import { api } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/format";
-import type { CollectJournal as Journal } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
+import { getCollectJournal, startCollect } from "@/services/settingsApi";
 
 const STATUS_LABELS = { RUNNING: "En cours", SUCCESS: "Réussie", FAILED: "Échec" };
 
 const TRIGGER_LABELS = { SCHEDULED: "Planifiée", MANUAL: "Manuelle" };
 
 export function CollectJournal() {
-  const { data, error, reload } = useLoader(() => api<Journal>("/api/collect-runs?limit=30"), "journal");
+  const { data, error, reload } = useLoader(() => getCollectJournal(30), "journal");
   const [starting, setStarting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const running = starting || Boolean(data?.running);
@@ -23,7 +22,7 @@ export function CollectJournal() {
       return;
     }
     const timer = window.setInterval(async () => {
-      const journal = await api<Journal>("/api/collect-runs?limit=1").catch(() => null);
+      const journal = await getCollectJournal(1).catch(() => null);
       if (journal && !journal.running) {
         setStarting(false);
         reload();
@@ -36,7 +35,7 @@ export function CollectJournal() {
     setStarting(true);
     setActionError(null);
     try {
-      await api("/api/collect-runs", { method: "POST" });
+      await startCollect();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Impossible de lancer la collecte.");
       setStarting(false);
