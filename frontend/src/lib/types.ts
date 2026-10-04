@@ -20,7 +20,7 @@ export type ProcedureType =
 
 export type TenderStatus = "ACTIVE" | "CLOSED" | "CANCELLED" | "UNSUCCESSFUL";
 
-export type FollowUpStatus = "NEW" | "TO_STUDY" | "RESPONDING" | "DISMISSED";
+export type FollowUpStatus = "NEW" | "TO_STUDY" | "RESPONDING" | "SUBMITTED" | "DISMISSED";
 
 export type TenderTab = "NEW" | "TO_STUDY" | "RESPONDING" | "DISMISSED" | "FILTERED_OUT";
 
@@ -40,6 +40,31 @@ export type TenderSummary = {
   followUpStatus: FollowUpStatus;
   retained: boolean | null;
   filterReason: string | null;
+  // Provided by the simulated API; the backend does not send them yet.
+  reference?: string | null;
+  procedureType?: ProcedureType | null;
+  source?: string;
+  lotCount?: number;
+  /** Activity codes, see ACTIVITY_LABELS. */
+  activities?: string[];
+  /** Distance from the company's headquarters, null when the place is unknown. */
+  distanceKm?: number | null;
+  /** 0 to 100, null when not computed. */
+  relevanceScore?: number | null;
+  /** Followed by the logged-in user; the follow-up status is shared by the team. */
+  followed?: boolean;
+  documentCount?: number;
+};
+
+/**
+ * Conditions of participation. Later filled from the validated analysis of
+ * the consultation file.
+ */
+export type TenderConditions = {
+  qualifications: string[];
+  siteVisit: string | null;
+  selectionCriteria: string | null;
+  constraints: string | null;
 };
 
 export type TenderDetail = TenderSummary & {
@@ -48,6 +73,7 @@ export type TenderDetail = TenderSummary & {
   description: string | null;
   reference: string | null;
   procedureType: ProcedureType | null;
+  conditions?: TenderConditions | null;
   cpvCodes: string[];
   noticeUrl: string | null;
   platformUrl: string | null;

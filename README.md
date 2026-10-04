@@ -82,6 +82,10 @@ npm install
 npm run dev
 ```
 
+Sans backend, l'interface peut tourner sur des données de démonstration : créer
+`frontend/.env.local` contenant `NEXT_PUBLIC_DATA_SOURCE=mock`, puis relancer `npm run dev`.
+Les appels `/api` sont alors traités par `frontend/src/lib/mock` (mêmes URL, mêmes réponses).
+
 Tests :
 
 ```bash

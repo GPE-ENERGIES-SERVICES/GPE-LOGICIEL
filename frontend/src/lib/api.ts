@@ -2,7 +2,12 @@
  * Calls the backend through the same-origin proxy. The session travels in a
  * cookie; requests that change data carry the CSRF token read from the
  * XSRF-TOKEN cookie.
+ *
+ * With NEXT_PUBLIC_DATA_SOURCE=mock, the calls are answered by the simulated
+ * backend (lib/mock) instead: same URLs, same responses.
  */
+
+const USE_MOCK = process.env.NEXT_PUBLIC_DATA_SOURCE === "mock";
 
 export class ApiError extends Error {
   constructor(
@@ -54,6 +59,9 @@ async function errorMessage(response: Response): Promise<string> {
  * Sends files as multipart form data.
  */
 export async function upload<T>(path: string, form: FormData): Promise<T> {
+  if (USE_MOCK) {
+    throw new ApiError(501, "Le dépôt de fichiers n'est pas disponible avec les données de démonstration.");
+  }
   const token = await ensureCsrfToken();
   const response = await fetch(path, {
     method: "POST",
@@ -69,6 +77,11 @@ export async function upload<T>(path: string, form: FormData): Promise<T> {
 
 export async function api<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const method = options.method ?? "GET";
+  if (USE_MOCK) {
+    // Loaded on demand: the demo data is never downloaded with the real backend.
+    const { mockApi } = await import("./mock/handler");
+    return mockApi<T>(method, path, options.body);
+  }
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";

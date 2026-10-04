@@ -105,7 +105,21 @@ export const FOLLOW_UP_LABELS: Record<FollowUpStatus, string> = {
   NEW: "Nouveau",
   TO_STUDY: "À étudier",
   RESPONDING: "En réponse",
+  SUBMITTED: "Réponse envoyée",
   DISMISSED: "Écarté",
+};
+
+/** Kinds of work the company answers; the list will grow with the business. */
+export const ACTIVITY_LABELS: Record<string, string> = {
+  ELECTRICITY: "Électricité",
+  PHOTOVOLTAIC: "Photovoltaïque",
+  EV_CHARGING: "Bornes de recharge",
+  HVAC: "CVC",
+  ENERGY_RENOVATION: "Rénovation énergétique",
+  PUBLIC_LIGHTING: "Éclairage public",
+  VRD: "VRD",
+  MAINTENANCE: "Maintenance",
+  STUDIES: "Études",
 };
 
 export const NOTICE_KIND_LABELS: Record<NoticeKind, string> = {
