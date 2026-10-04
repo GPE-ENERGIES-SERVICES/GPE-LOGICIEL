@@ -84,13 +84,21 @@ export function formatDaysLeft(deadline: string | null, now: Date = new Date()):
   return days === 1 ? "1 jour restant" : `${days} jours restants`;
 }
 
-/** Deadlines in less than a week are highlighted. */
-export function isDeadlineClose(deadline: string | null, now: Date = new Date()): boolean {
+export type DeadlineLevel = "unknown" | "passed" | "critical" | "close" | "normal";
+
+/** A deadline in less than 3 days is critical, in less than a week it is close. */
+export function deadlineLevel(deadline: string | null, now: Date = new Date()): DeadlineLevel {
   if (!deadline) {
-    return false;
+    return "unknown";
   }
   const remaining = new Date(deadline).getTime() - now.getTime();
-  return remaining >= 0 && remaining < 7 * 86_400_000;
+  if (remaining < 0) {
+    return "passed";
+  }
+  if (remaining < 3 * 86_400_000) {
+    return "critical";
+  }
+  return remaining < 7 * 86_400_000 ? "close" : "normal";
 }
 
 export function orNotIndicated(value: string | null | undefined): string {

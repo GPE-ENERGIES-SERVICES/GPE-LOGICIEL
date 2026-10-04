@@ -7,15 +7,14 @@ import {
   formatAmount,
   formatDate,
   formatDateTime,
-  formatDaysLeft,
   FOLLOW_UP_LABELS,
-  isDeadlineClose,
   NOT_INDICATED,
   PROCEDURE_LABELS,
   STATUS_LABELS,
 } from "@/lib/format";
 import type { FollowUpStatus, TenderSummary } from "@/lib/types";
 
+import { DeadlineBadge } from "./DeadlineBadge";
 import { FollowButton } from "./FollowButton";
 
 type Props = {
@@ -67,9 +66,7 @@ export function TenderRow({ tender, onFollowUp, onFollowChanged, busy }: Props) 
       <td className="nowrap">
         {tender.deadline ? formatDateTime(tender.deadline) : NOT_INDICATED}
         <div>
-          <span className={isDeadlineClose(tender.deadline) ? "badge urgent" : "badge"}>
-            {formatDaysLeft(tender.deadline)}
-          </span>
+          <DeadlineBadge deadline={tender.deadline} />
         </div>
       </td>
       <td className="nowrap">

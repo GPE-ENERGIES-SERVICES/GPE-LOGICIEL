@@ -23,7 +23,9 @@ aide à décider ; la décision reste humaine.
      pas disparaître de bons marchés.
 
    Chaque ligne donne l'essentiel : étoile de suivi, acheteur, lieu et distance, travaux, lots,
-   procédure, montant, dates, jours restants, pertinence et statut (modifiable sur place). Survoler « Retenu » ou « Hors critères »
+   procédure, montant, dates, jours restants, pertinence et statut (modifiable sur place).
+   Les jours restants sont en rouge à moins de 3 jours, en orange à moins de 7 jours, et
+   « Date limite dépassée » ensuite ; la même règle s'applique sur la fiche et le tableau de bord. Survoler « Retenu » ou « Hors critères »
    affiche la raison donnée par le filtre.
 
    La **recherche** porte sur le titre, la référence, l'acheteur, la ville, la description et

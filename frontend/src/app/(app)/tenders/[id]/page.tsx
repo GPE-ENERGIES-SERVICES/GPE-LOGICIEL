@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import { AnalysisSection } from "@/components/analysis/AnalysisSection";
+import { DeadlineBadge } from "@/components/DeadlineBadge";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { FollowButton } from "@/components/FollowButton";
 import { FollowUpForm } from "@/components/FollowUpForm";
@@ -14,10 +15,8 @@ import {
   formatAmount,
   formatDate,
   formatDateTime,
-  formatDaysLeft,
   formatLongDateTime,
   FOLLOW_UP_LABELS,
-  isDeadlineClose,
   MARKET_TYPE_LABELS,
   NOT_INDICATED,
   NOTICE_KIND_LABELS,
@@ -90,9 +89,7 @@ export default function TenderPage() {
           <Fact label="Date limite de réponse">
             <strong>{formatLongDateTime(tender.deadline)}</strong>
             <br />
-            <span className={isDeadlineClose(tender.deadline) ? "badge urgent" : "badge"}>
-              {formatDaysLeft(tender.deadline)}
-            </span>
+            <DeadlineBadge deadline={tender.deadline} />
             {deadlineChanged && <span className="badge urgent">Modifiée par un rectificatif</span>}
           </Fact>
           <Fact label="Montant estimé">{formatAmount(tender.estimatedAmount)}</Fact>

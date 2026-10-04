@@ -3,14 +3,13 @@
 import Link from "next/link";
 
 import { CollectStatus } from "@/components/CollectStatus";
+import { DeadlineBadge } from "@/components/DeadlineBadge";
 import { api } from "@/lib/api";
 import {
   ACTIVITY_LABELS,
   formatDate,
   formatDateTime,
-  formatDaysLeft,
   FOLLOW_UP_LABELS,
-  isDeadlineClose,
   TENDER_TAB_LABELS,
 } from "@/lib/format";
 import type { FollowUpStatus, Page, TenderStats, TenderSummary, TenderTab } from "@/lib/types";
@@ -110,9 +109,7 @@ export default function DashboardPage() {
                     <td className="nowrap">
                       {formatDateTime(tender.deadline)}
                       <div>
-                        <span className={isDeadlineClose(tender.deadline) ? "badge urgent" : "badge"}>
-                          {formatDaysLeft(tender.deadline)}
-                        </span>
+                        <DeadlineBadge deadline={tender.deadline} />
                       </div>
                     </td>
                     <td className="nowrap">{FOLLOW_UP_LABELS[tender.followUpStatus]}</td>
