@@ -6,8 +6,11 @@ aide à décider ; la décision reste humaine.
 
 ## Parcours
 
-1. **Tableau de bord** : l'état de la dernière collecte et le nombre d'appels d'offres de chaque
-   onglet à traiter ; un clic ouvre l'onglet correspondant.
+1. **Tableau de bord** : l'état de la dernière collecte ; le nombre de nouveaux appels
+   d'offres, de ceux à traiter, de vos suivis, des échéances dans les 7 jours et des avis hors
+   critères (un clic ouvre la liste correspondante) ; les échéances des 7 prochains jours ; les
+   derniers appels d'offres retenus ; la répartition des appels d'offres en cours par statut, type
+   de travaux et département.
 2. **Liste** (« Appels d'offres ») : les appels d'offres retenus par les critères de
    l'entreprise. Les onglets :
    - **Nouveaux** : retenus par le filtre, sans décision ;

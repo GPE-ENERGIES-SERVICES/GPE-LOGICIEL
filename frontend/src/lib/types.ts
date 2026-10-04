@@ -90,6 +90,15 @@ export type TenderDetail = TenderSummary & {
   }[];
 };
 
+/** Breakdown of the open tenders (active, not excluded by the filter), for the dashboard. */
+export type TenderStats = {
+  byStatus: Record<FollowUpStatus, number>;
+  /** By activity code. */
+  byActivity: Record<string, number>;
+  /** By department code. */
+  byDepartment: Record<string, number>;
+};
+
 export type Page<T> = {
   content: T[];
   page: number;

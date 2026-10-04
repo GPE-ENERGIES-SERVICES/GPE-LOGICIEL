@@ -16,6 +16,7 @@ import type {
   PieceType,
   TenderAnalysis,
   TenderDetail,
+  TenderStats,
   TenderSummary,
   TenderTab,
 } from "../types";
@@ -289,6 +290,24 @@ function counts(params: URLSearchParams): Record<TenderTab, number> {
   ) as Record<TenderTab, number>;
 }
 
+function stats(): TenderStats {
+  const open = tenders.filter((tender) => tender.status === "ACTIVE" && inTab(tender, "ALL"));
+  const countBy = (keys: (tender: TenderDetail) => string[]) => {
+    const counts: Record<string, number> = {};
+    for (const tender of open) {
+      for (const key of keys(tender)) {
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+    }
+    return counts;
+  };
+  return {
+    byStatus: countBy((tender) => [tender.followUpStatus]) as Record<FollowUpStatus, number>,
+    byActivity: countBy((tender) => tender.activities ?? []),
+    byDepartment: countBy((tender) => tender.departments),
+  };
+}
+
 // --- Decisions --------------------------------------------------------------
 
 function followUp(id: string, body: unknown): TenderDetail {
@@ -367,6 +386,7 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/collect-runs$/, () => collectJournal()],
   ["GET", /^\/api\/tenders$/, (_, url) => search(url.searchParams)],
   ["GET", /^\/api\/tenders\/counts$/, (_, url) => counts(url.searchParams)],
+  ["GET", /^\/api\/tenders\/stats$/, () => stats()],
   ["GET", /^\/api\/tenders\/(\d+)$/, (id) => find(id)],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow-up$/, (id, _, body) => followUp(id, body)],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, true)],

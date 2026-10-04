@@ -378,6 +378,17 @@ legend {
   border-color: var(--primary);
 }
 
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 0 1rem;
+  margin-top: 1rem;
+}
+
+td.number {
+  text-align: right;
+}
+
 /* Tender list */
 
 .tabs {
