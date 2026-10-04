@@ -104,8 +104,8 @@ export const STATUS_LABELS: Record<TenderStatus, string> = {
 
 export const FOLLOW_UP_LABELS: Record<FollowUpStatus, string> = {
   NEW: "Nouveau",
-  TO_STUDY: "À étudier",
-  RESPONDING: "En réponse",
+  TO_STUDY: "À analyser",
+  RESPONDING: "En préparation",
   SUBMITTED: "Réponse envoyée",
   DISMISSED: "Écarté",
 };

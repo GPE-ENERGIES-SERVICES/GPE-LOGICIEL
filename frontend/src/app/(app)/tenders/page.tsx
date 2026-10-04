@@ -26,7 +26,7 @@ const SORT_OPTIONS = [
 const PAGE_SIZES = [20, 50, 100];
 
 const TAB_HINTS: Partial<Record<TenderTab, string>> = {
-  TO_PROCESS: "Appels d'offres en cours d'analyse ou de préparation.",
+  TO_PROCESS: "Appels d'offres à analyser ou en préparation.",
   FOLLOWED: "Appels d'offres que vous suivez. Le suivi est propre à chaque utilisateur.",
   ARCHIVED: "Appels d'offres clos, annulés ou sans suite.",
   FILTERED_OUT:
@@ -180,6 +180,7 @@ function TenderList() {
               <table className="tender-table">
                 <thead>
                   <tr>
+                    <th aria-label="Suivi" />
                     <th>Appel d&apos;offres</th>
                     <th>Lieu</th>
                     <th>Travaux</th>
@@ -197,6 +198,10 @@ function TenderList() {
                       tender={tender}
                       busy={busyId === tender.id}
                       onFollowUp={(status) => followUp(tender, status)}
+                      onFollowChanged={() => {
+                        list.reload();
+                        counts.reload();
+                      }}
                     />
                   ))}
                 </tbody>

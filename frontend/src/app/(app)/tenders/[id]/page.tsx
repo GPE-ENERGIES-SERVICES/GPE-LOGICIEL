@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { AnalysisSection } from "@/components/analysis/AnalysisSection";
 import { DocumentsSection } from "@/components/DocumentsSection";
+import { FollowButton } from "@/components/FollowButton";
 import { FollowUpForm } from "@/components/FollowUpForm";
 import { api } from "@/lib/api";
 import {
@@ -50,7 +51,14 @@ export default function TenderPage() {
       </p>
 
       <header className="tender-header">
-        <h1>{tender.title}</h1>
+        <h1>
+          <FollowButton
+            tenderId={tender.id}
+            followed={tender.followed ?? false}
+            onChanged={(followed) => setSaved({ ...tender, followed })}
+          />{" "}
+          {tender.title}
+        </h1>
         <p className="muted">{orNotIndicated(tender.buyer)}</p>
         <div className="badges">
           <span className="badge">{STATUS_LABELS[tender.status]}</span>

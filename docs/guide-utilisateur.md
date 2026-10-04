@@ -19,8 +19,8 @@ aide à décider ; la décision reste humaine.
    - **Hors critères** : écartés par le filtre, à consulter pour vérifier que le filtre ne fait
      pas disparaître de bons marchés.
 
-   Chaque ligne donne l'essentiel : acheteur, lieu et distance, travaux, lots, procédure,
-   montant, dates, jours restants, pertinence et statut. Survoler « Retenu » ou « Hors critères »
+   Chaque ligne donne l'essentiel : étoile de suivi, acheteur, lieu et distance, travaux, lots,
+   procédure, montant, dates, jours restants, pertinence et statut (modifiable sur place). Survoler « Retenu » ou « Hors critères »
    affiche la raison donnée par le filtre.
 
    La **recherche** porte sur le titre, la référence, l'acheteur, la ville, la description et
@@ -51,8 +51,10 @@ aide à décider ; la décision reste humaine.
 6. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
    le document à la bonne page ; l'extrait cité est affiché sous la valeur. Valider, corriger
    ou rejeter les informations importantes, puis « Valider la fiche ».
-7. **Décision** : dans « Suivi », classer l'appel d'offres (à étudier, en réponse, écarté) avec
-   un commentaire.
+7. **Statut et suivi** : le statut est partagé par toute l'équipe : Nouveau, À analyser, En
+   préparation, Réponse envoyée ou Écarté. Il se change directement dans la liste, ou dans la
+   section « Suivi » de la fiche avec un commentaire. L'étoile ☆ sert à suivre un appel d'offres :
+   ce suivi est personnel et retrouvé dans l'onglet « Mes suivis ».
 
 ## La fiche de synthèse
 

@@ -475,14 +475,22 @@ legend {
   margin: 0.15rem 0.25rem 0 0;
 }
 
-.tender-actions {
-  min-width: 12rem;
+.tender-table select {
+  padding: 0.2rem 0.3rem;
+  font-size: 0.85rem;
 }
 
-.tender-actions button {
-  margin: 0.3rem 0.3rem 0 0;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.85rem;
+.star {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.star[aria-pressed="true"] {
+  color: var(--urgent);
 }
 
 .small {

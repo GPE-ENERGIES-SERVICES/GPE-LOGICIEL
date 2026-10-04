@@ -107,8 +107,9 @@ cd frontend && npm run lint && npx tsc --noEmit
    (zone, type de marché, délai, montant, mots-clés exclus) et au moins un critère métier
    (code CPV ou mot-clé). La raison est enregistrée et affichée ; les avis écartés restent
    consultables.
-4. **Suivi** : chaque appel d'offres peut être classé (à étudier, en réponse, écarté) avec un
-   commentaire. Un appel d'offres dont la date limite est dépassée passe au statut « clos ».
+4. **Suivi** : chaque appel d'offres reçoit un statut partagé par l'équipe (nouveau, à analyser,
+   en préparation, réponse envoyée, écarté) avec un commentaire ; chaque utilisateur peut en plus
+   suivre les appels d'offres qui l'intéressent (étoile). Un appel d'offres dont la date limite est dépassée passe au statut « clos ».
 5. **Documents** : l'utilisateur dépose le DCE (ZIP ou fichiers). Les archives sont
    décompressées, chaque pièce est classée d'après son nom (corrigeable), le texte des PDF et
    des documents Word est extrait page par page. Un document illisible est signalé « non

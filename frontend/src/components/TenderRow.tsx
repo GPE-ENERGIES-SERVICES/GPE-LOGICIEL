@@ -16,14 +16,17 @@ import {
 } from "@/lib/format";
 import type { FollowUpStatus, TenderSummary } from "@/lib/types";
 
+import { FollowButton } from "./FollowButton";
+
 type Props = {
   tender: TenderSummary;
   onFollowUp: (status: FollowUpStatus) => void;
+  onFollowChanged: () => void;
   busy: boolean;
 };
 
 /** One line of the tender table: what is needed to sort out many tenders quickly. */
-export function TenderRow({ tender, onFollowUp, busy }: Props) {
+export function TenderRow({ tender, onFollowUp, onFollowChanged, busy }: Props) {
   const place = [tender.location, tender.departments.length ? `(${tender.departments.join(", ")})` : null]
     .filter(Boolean)
     .join(" ");
@@ -35,6 +38,9 @@ export function TenderRow({ tender, onFollowUp, busy }: Props) {
 
   return (
     <tr>
+      <td>
+        <FollowButton tenderId={tender.id} followed={tender.followed ?? false} onChanged={onFollowChanged} />
+      </td>
       <td className="tender-title">
         <Link href={`/tenders/${tender.id}`}>{tender.title}</Link>
         <div className="small muted">{about}</div>
@@ -66,31 +72,24 @@ export function TenderRow({ tender, onFollowUp, busy }: Props) {
           {tender.retained === false ? "Hors critères" : "Retenu"}
         </div>
       </td>
-      <td className="tender-actions">
-        <span className="badge">{FOLLOW_UP_LABELS[tender.followUpStatus]}</span>
-        {tender.status !== "ACTIVE" && <span className="badge">{STATUS_LABELS[tender.status]}</span>}
-        {/* Nothing left to decide on a closed tender. */}
-        <div hidden={tender.status !== "ACTIVE"}>
-          {tender.followUpStatus === "NEW" && (
-            <button type="button" disabled={busy} onClick={() => onFollowUp("TO_STUDY")}>
-              À étudier
-            </button>
-          )}
-          {tender.followUpStatus === "TO_STUDY" && (
-            <button type="button" disabled={busy} onClick={() => onFollowUp("RESPONDING")}>
-              En réponse
-            </button>
-          )}
-          {tender.followUpStatus !== "DISMISSED" ? (
-            <button type="button" className="secondary" disabled={busy} onClick={() => onFollowUp("DISMISSED")}>
-              Écarter
-            </button>
-          ) : (
-            <button type="button" className="secondary" disabled={busy} onClick={() => onFollowUp("NEW")}>
-              Rétablir
-            </button>
-          )}
-        </div>
+      <td>
+        <select
+          value={tender.followUpStatus}
+          disabled={busy}
+          aria-label="Statut"
+          onChange={(e) => onFollowUp(e.target.value as FollowUpStatus)}
+        >
+          {(Object.keys(FOLLOW_UP_LABELS) as FollowUpStatus[]).map((status) => (
+            <option key={status} value={status}>
+              {FOLLOW_UP_LABELS[status]}
+            </option>
+          ))}
+        </select>
+        {tender.status !== "ACTIVE" && (
+          <div>
+            <span className="badge">{STATUS_LABELS[tender.status]}</span>
+          </div>
+        )}
       </td>
     </tr>
   );

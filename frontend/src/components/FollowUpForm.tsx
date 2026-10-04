@@ -41,7 +41,7 @@ export function FollowUpForm({ tender, onSaved }: Props) {
   return (
     <form className="follow-up" onSubmit={submit}>
       <label>
-        Décision
+        Statut
         <select value={status} onChange={(e) => setStatus(e.target.value as FollowUpStatus)}>
           {(Object.keys(FOLLOW_UP_LABELS) as FollowUpStatus[]).map((value) => (
             <option key={value} value={value}>
