@@ -38,6 +38,24 @@ export function formatDateTime(value: string | null): string {
   return `${parts.day}/${parts.month}/${parts.year} à ${parts.hour}:${parts.minute}`;
 }
 
+const longDateTimeFormat = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: TIME_ZONE,
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** An instant shown in full in Paris time, for example "15 novembre 2026 à 12:00". */
+export function formatLongDateTime(value: string | null): string {
+  if (!value) {
+    return NOT_INDICATED;
+  }
+  const parts = Object.fromEntries(longDateTimeFormat.formatToParts(new Date(value)).map((p) => [p.type, p.value]));
+  return `${parts.day} ${parts.month} ${parts.year} à ${parts.hour}:${parts.minute}`;
+}
+
 /** A calendar date (yyyy-MM-dd), shown as dd/MM/yyyy. */
 export function formatDate(value: string | null): string {
   if (!value) {

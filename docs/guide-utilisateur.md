@@ -38,9 +38,12 @@ aide à décider ; la décision reste humaine.
    Le **tri** se choisit au-dessus du tableau : date limite (la plus proche par défaut ; les
    dates dépassées passent alors après les appels d'offres encore ouverts), publication,
    pertinence, montant ou distance. On peut afficher 20, 50 ou 100 lignes par page.
-3. **Fiche** : ouvrir un appel d'offres pour voir les informations de l'avis, l'historique des
-   publications (un rectificatif qui change la date limite est signalé) et le lien vers la
-   plateforme de l'acheteur.
+3. **Fiche** : ouvrir un appel d'offres. Les informations sont rangées par section :
+   informations générales (date limite, montant, pertinence, référence, procédure, lieu, source,
+   raison du filtre, liens vers la plateforme de l'acheteur et l'avis), suivi, travaux
+   (types de travaux, codes CPV, description, lots), conditions de participation
+   (qualifications, visite, critères, contraintes), documents, fiche de synthèse et historique
+   des publications (un rectificatif qui change la date limite est signalé).
 4. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
    dans la section « Dossier de consultation » (archive ZIP ou fichiers). Chaque dépôt crée une
    nouvelle version. Vérifier le type de chaque pièce (RC, CCAP, CCTP…) et le corriger si besoin :
