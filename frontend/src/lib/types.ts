@@ -22,7 +22,7 @@ export type TenderStatus = "ACTIVE" | "CLOSED" | "CANCELLED" | "UNSUCCESSFUL";
 
 export type FollowUpStatus = "NEW" | "TO_STUDY" | "RESPONDING" | "SUBMITTED" | "DISMISSED";
 
-export type TenderTab = "NEW" | "TO_STUDY" | "RESPONDING" | "DISMISSED" | "FILTERED_OUT";
+export type TenderTab = "NEW" | "TO_PROCESS" | "FOLLOWED" | "ALL" | "DISMISSED" | "ARCHIVED" | "FILTERED_OUT";
 
 export type NoticeKind = "INITIAL" | "RECTIFICATION" | "AWARD" | "CANCELLATION";
 

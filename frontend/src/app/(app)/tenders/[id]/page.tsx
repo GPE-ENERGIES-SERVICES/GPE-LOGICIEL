@@ -46,7 +46,7 @@ export default function TenderPage() {
   return (
     <article className="tender-page">
       <p>
-        <Link href="/">← Retour à la liste</Link>
+        <Link href="/tenders">← Retour à la liste</Link>
       </p>
 
       <header className="tender-header">

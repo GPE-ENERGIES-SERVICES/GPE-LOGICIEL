@@ -6,7 +6,7 @@
  */
 
 import { ApiError } from "../api";
-import { ACTIVITY_LABELS } from "../format";
+import { ACTIVITY_LABELS, TENDER_TAB_LABELS } from "../format";
 import { REGIONS } from "../regions";
 import type {
   CollectJournal,
@@ -94,18 +94,29 @@ function toSummary(tender: TenderDetail): TenderSummary {
 
 // --- Search -----------------------------------------------------------------
 
-/** Same tabs as the backend (TenderSearch.tabPredicates). */
+/**
+ * Tabs of the list. A tender excluded by the filter stays out of the other
+ * tabs until a user takes a decision on it.
+ */
 function inTab(tender: TenderDetail, tab: TenderTab): boolean {
   const active = tender.status === "ACTIVE";
+  const status = tender.followUpStatus;
+  const filteredOut = tender.retained === false && status === "NEW";
   switch (tab) {
     case "NEW":
-      return tender.retained === true && tender.followUpStatus === "NEW" && active;
+      return tender.retained === true && status === "NEW" && active;
+    case "TO_PROCESS":
+      return (status === "TO_STUDY" || status === "RESPONDING") && active;
+    case "FOLLOWED":
+      return tender.followed === true;
+    case "ALL":
+      return !filteredOut;
+    case "DISMISSED":
+      return status === "DISMISSED";
+    case "ARCHIVED":
+      return !active && !filteredOut && status !== "DISMISSED";
     case "FILTERED_OUT":
-      return tender.retained === false && tender.followUpStatus === "NEW" && active;
-    case "TO_STUDY":
-      return tender.followUpStatus === "TO_STUDY" && active;
-    default:
-      return tender.followUpStatus === tab;
+      return filteredOut && active;
   }
 }
 
@@ -246,9 +257,11 @@ function search(params: URLSearchParams): Page<TenderSummary> {
 }
 
 function counts(): Record<TenderTab, number> {
-  const tabs: TenderTab[] = ["NEW", "TO_STUDY", "RESPONDING", "DISMISSED", "FILTERED_OUT"];
   return Object.fromEntries(
-    tabs.map((tab) => [tab, tenders.filter((tender) => inTab(tender, tab)).length]),
+    (Object.keys(TENDER_TAB_LABELS) as TenderTab[]).map((tab) => [
+      tab,
+      tenders.filter((tender) => inTab(tender, tab)).length,
+    ]),
   ) as Record<TenderTab, number>;
 }
 

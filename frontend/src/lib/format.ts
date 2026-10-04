@@ -7,6 +7,7 @@ import type {
   PieceType,
   ProcedureType,
   TenderStatus,
+  TenderTab,
 } from "./types";
 
 export const NOT_INDICATED = "Non indiqué";
@@ -107,6 +108,17 @@ export const FOLLOW_UP_LABELS: Record<FollowUpStatus, string> = {
   RESPONDING: "En réponse",
   SUBMITTED: "Réponse envoyée",
   DISMISSED: "Écarté",
+};
+
+/** Tabs of the tender list, in display order. */
+export const TENDER_TAB_LABELS: Record<TenderTab, string> = {
+  NEW: "Nouveaux",
+  TO_PROCESS: "À traiter",
+  FOLLOWED: "Mes suivis",
+  ALL: "Tous",
+  DISMISSED: "Écartés",
+  ARCHIVED: "Archivés",
+  FILTERED_OUT: "Hors critères",
 };
 
 /** Kinds of work the company answers; the list will grow with the business. */

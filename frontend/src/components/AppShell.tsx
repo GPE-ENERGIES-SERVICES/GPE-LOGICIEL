@@ -9,7 +9,7 @@ import { useAuth } from "./AuthProvider";
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const isSettings = pathname.startsWith("/settings");
+  const navClass = (active: boolean) => (active ? "active" : "");
 
   return (
     <>
@@ -18,11 +18,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           Veille appels d&apos;offres
         </Link>
         <nav className="app-nav">
-          <Link href="/" className={isSettings ? "" : "active"}>
+          <Link href="/" className={navClass(pathname === "/")}>
+            Tableau de bord
+          </Link>
+          <Link href="/tenders" className={navClass(pathname.startsWith("/tenders"))}>
             Appels d&apos;offres
           </Link>
           {user.role === "ADMIN" && (
-            <Link href="/settings" className={isSettings ? "active" : ""}>
+            <Link href="/settings" className={navClass(pathname.startsWith("/settings"))}>
               Paramètres
             </Link>
           )}

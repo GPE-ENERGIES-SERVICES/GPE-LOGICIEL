@@ -376,6 +376,11 @@ function noon(daysFromToday: number): string {
   return date.toISOString();
 }
 
+/** "de Marseille", "d'Avignon". */
+function ofCity(city: string): string {
+  return /^[AEIOUH]/.test(city) ? `d'${city}` : `de ${city}`;
+}
+
 function pickActivity(): Activity {
   let draw = random() * ACTIVITIES.reduce((sum, activity) => sum + activity.weight, 0);
   for (const activity of ACTIVITIES) {
@@ -475,7 +480,10 @@ function makeTender(id: number): { tender: TenderDetail; dossier: Dossier | null
   const place = regionWide || chance(0.05) ? null : pick(PLACES);
   const city = place?.city ?? "la commune";
   const site = pick(SITES);
-  const title = pick(activity.titles).replace("{site}", site).replace("{city}", city);
+  const title = pick(activity.titles)
+    .replace("{site}", site)
+    .replace("de {city}", ofCity(city))
+    .replace("{city}", city);
 
   let buyer: string | null;
   if (regionWide) {
@@ -483,8 +491,7 @@ function makeTender(id: number): { tender: TenderDetail; dossier: Dossier | null
   } else if (!place) {
     buyer = chance(0.5) ? null : pick(DEPARTMENT_BUYERS["13"]);
   } else if (chance(0.45)) {
-    const of = /^[AEIOUH]/.test(place.city) ? "d'" : "de ";
-    buyer = place.city === "Marseille" ? "Ville de Marseille" : `Commune ${of}${place.city}`;
+    buyer = place.city === "Marseille" ? "Ville de Marseille" : `Commune ${ofCity(place.city)}`;
   } else {
     buyer = pick(DEPARTMENT_BUYERS[place.department]);
   }

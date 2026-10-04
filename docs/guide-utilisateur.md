@@ -6,24 +6,34 @@ aide à décider ; la décision reste humaine.
 
 ## Parcours
 
-1. **Liste** : les appels d'offres retenus par les critères de l'entreprise, triés par date
-   limite. Les onglets séparent les nouveaux, ceux à étudier, en réponse, écartés, et les avis
-   écartés par le filtre (à consulter pour vérifier que le filtre ne fait pas disparaître de
-   bons marchés). Chaque carte indique la raison pour laquelle l'appel d'offres a été retenu.
-2. **Fiche** : ouvrir un appel d'offres pour voir les informations de l'avis, l'historique des
+1. **Tableau de bord** : l'état de la dernière collecte et le nombre d'appels d'offres de chaque
+   onglet à traiter ; un clic ouvre l'onglet correspondant.
+2. **Liste** (« Appels d'offres ») : les appels d'offres retenus par les critères de
+   l'entreprise, triés par date limite. Les onglets :
+   - **Nouveaux** : retenus par le filtre, sans décision ;
+   - **À traiter** : en cours d'analyse ou de préparation ;
+   - **Mes suivis** : ceux que vous suivez (le suivi est propre à chaque utilisateur) ;
+   - **Tous** : tous les appels d'offres, sauf ceux hors critères sans décision ;
+   - **Écartés** : écartés par un utilisateur ;
+   - **Archivés** : clos, annulés ou sans suite ;
+   - **Hors critères** : écartés par le filtre, à consulter pour vérifier que le filtre ne fait
+     pas disparaître de bons marchés.
+
+   Chaque carte indique la raison pour laquelle l'appel d'offres a été retenu.
+3. **Fiche** : ouvrir un appel d'offres pour voir les informations de l'avis, l'historique des
    publications (un rectificatif qui change la date limite est signalé) et le lien vers la
    plateforme de l'acheteur.
-3. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
+4. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
    dans la section « Dossier de consultation » (archive ZIP ou fichiers). Chaque dépôt crée une
    nouvelle version. Vérifier le type de chaque pièce (RC, CCAP, CCTP…) et le corriger si besoin :
    l'analyse se fonde sur le règlement de consultation.
-4. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
+5. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
    et prend quelques minutes. Pour un appel d'offres écarté par le filtre, utiliser « Lancer
    l'analyse ».
-5. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
+6. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
    le document à la bonne page ; l'extrait cité est affiché sous la valeur. Valider, corriger
    ou rejeter les informations importantes, puis « Valider la fiche ».
-6. **Décision** : dans « Suivi », classer l'appel d'offres (à étudier, en réponse, écarté) avec
+7. **Décision** : dans « Suivi », classer l'appel d'offres (à étudier, en réponse, écarté) avec
    un commentaire.
 
 ## La fiche de synthèse
