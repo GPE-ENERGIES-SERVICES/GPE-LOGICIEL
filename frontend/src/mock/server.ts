@@ -5,7 +5,7 @@
  * browser so that they survive a reload.
  */
 
-import { ACTIVITY_LABELS, formatAmount, TENDER_TAB_LABELS } from "@/lib/format";
+import { ACTIVITY_LABELS, formatAmount, MARKET_TYPE_LABELS, TENDER_TAB_LABELS } from "@/lib/format";
 import { REGIONS } from "@/lib/regions";
 import { ApiError } from "@/services/http";
 import type { TenderAnalysis } from "@/types/analysis";
@@ -24,6 +24,7 @@ import type { CurrentUser } from "@/types/user";
 
 import { MOCK_AWARDS } from "./awardedContracts";
 import { MOCK_DOSSIERS } from "./documents";
+import { SEARCH_SYNONYMS } from "./reference";
 import { MOCK_TENDERS } from "./tenders";
 
 const MOCK_USER: CurrentUser = {
@@ -142,8 +143,10 @@ function toDetail(tender: TenderDetail): TenderDetail {
 // --- Search -----------------------------------------------------------------
 
 /**
- * Tabs of the list. A tender excluded by the filter stays out of the other
- * tabs until a user takes a decision on it.
+ * Views of the tenders. The tender list shows the open ones (NEW to
+ * FILTERED_OUT); followed and past tenders have their own sections. A tender
+ * excluded by the filter stays out of the other views until a user takes a
+ * decision on it.
  */
 function inTab(tender: TenderDetail, tab: TenderTab): boolean {
   const active = tender.status === "ACTIVE";
@@ -157,9 +160,9 @@ function inTab(tender: TenderDetail, tab: TenderTab): boolean {
     case "FOLLOWED":
       return tender.followed === true;
     case "ALL":
-      return !filteredOut;
+      return !filteredOut && active;
     case "DISMISSED":
-      return status === "DISMISSED";
+      return status === "DISMISSED" && active;
     case "ARCHIVED":
       return !active && !filteredOut && status !== "DISMISSED";
     case "FILTERED_OUT":
@@ -174,22 +177,62 @@ function normalize(text: string): string {
     .toLowerCase();
 }
 
-/** Every word must appear in one of the searched fields, ignoring case and accents. */
-function matchesText(tender: TenderDetail, text: string): boolean {
-  const searched = normalize(
+function searchedText(tender: TenderDetail): string {
+  return normalize(
     [
       tender.title,
-      tender.buyer,
       tender.reference,
       tender.externalId,
-      tender.location,
+      tender.buyer,
       tender.description,
+      tender.location,
+      tender.postalCode,
+      ...tender.marketTypes.map((type) => MARKET_TYPE_LABELS[type]),
       ...(tender.activities ?? []).map((code) => ACTIVITY_LABELS[code] ?? code),
-    ].join(" "),
+      ...tender.cpvCodes,
+      ...(tender.cpv ?? []).map((cpv) => cpv.label),
+    ]
+      .filter(Boolean)
+      .join(" "),
   );
-  return normalize(text)
-    .split(/\s+/)
-    .every((word) => searched.includes(word));
+}
+
+/** Expressions of several words of the trade vocabulary, the longest first. */
+const EXPRESSIONS = Object.keys(SEARCH_SYNONYMS)
+  .filter((term) => term.includes(" "))
+  .sort((a, b) => b.length - a.length);
+
+/**
+ * Terms of a search, each one with the words that satisfy it: the
+ * expressions of the trade vocabulary first, then the remaining words.
+ */
+function searchTerms(text: string): string[][] {
+  let rest = ` ${normalize(text)} `;
+  const terms: string[][] = [];
+  for (const expression of EXPRESSIONS) {
+    if (rest.includes(` ${expression} `)) {
+      terms.push([expression, ...SEARCH_SYNONYMS[expression]]);
+      rest = rest.replace(` ${expression} `, " ");
+    }
+  }
+  for (const word of rest.split(/\s+/).filter(Boolean)) {
+    terms.push([word, ...(SEARCH_SYNONYMS[word] ?? [])]);
+  }
+  return terms;
+}
+
+/** The word starts a word of the text: "college" finds "colleges", not "decollege". */
+function startsWord(text: string, word: string): boolean {
+  return new RegExp(`(^|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(text);
+}
+
+/**
+ * Every term must be found in the searched fields, ignoring case and accents;
+ * a synonym of the trade vocabulary counts as the term.
+ */
+function matchesText(tender: TenderDetail, text: string): boolean {
+  const searched = searchedText(tender);
+  return searchTerms(text).every((words) => words.some((word) => startsWord(searched, word)));
 }
 
 function list(value: string | null): string[] {
@@ -217,6 +260,7 @@ function matches(tender: TenderDetail, params: URLSearchParams): boolean {
   const city = params.get("city")?.trim();
   const maxDistanceKm = number(params.get("maxDistanceKm"));
   const activities = list(params.get("activity"));
+  const marketTypes = list(params.get("marketType"));
   const publishedWithinDays = number(params.get("publishedWithinDays"));
   const publishedFrom =
     publishedWithinDays === null
@@ -238,16 +282,17 @@ function matches(tender: TenderDetail, params: URLSearchParams): boolean {
   const deadline = time(tender.deadline);
   const daysLeft = deadline === null ? null : (deadline - Date.now()) / 86_400_000;
   const amount = tender.estimatedAmount;
-  const lotCount = tender.lotCount ?? 0;
+  const lotCount = tender.lots.length;
 
   return (
     inTab(tender, tab) &&
     (!q || matchesText(tender, q)) &&
     (departments.length === 0 || tender.departments.some((code) => departments.includes(code))) &&
     (!region || tender.departments.some((code) => REGIONS[region]?.includes(code))) &&
-    (!city || normalize(tender.location ?? "").includes(normalize(city))) &&
+    (!city || normalize(tender.location ?? "").includes(normalize(city)) || (tender.postalCode ?? "").startsWith(city)) &&
     (maxDistanceKm === null || (tender.distanceKm != null && tender.distanceKm <= maxDistanceKm)) &&
     (activities.length === 0 || (tender.activities ?? []).some((code) => activities.includes(code))) &&
+    (marketTypes.length === 0 || tender.marketTypes.some((type) => marketTypes.includes(type))) &&
     (!publishedFrom || (tender.publishedAt !== null && tender.publishedAt >= publishedFrom)) &&
     (!publishedTo || (tender.publishedAt !== null && tender.publishedAt <= publishedTo)) &&
     (deadlineFrom === null || (deadline !== null && deadline >= deadlineFrom)) &&
@@ -335,7 +380,7 @@ function counts(params: URLSearchParams): Record<TenderTab, number> {
 }
 
 function stats(): TenderStats {
-  const open = tenders.filter((tender) => tender.status === "ACTIVE" && inTab(tender, "ALL"));
+  const open = tenders.filter((tender) => inTab(tender, "ALL"));
   const countBy = (keys: (tender: TenderDetail) => string[]) => {
     const counts: Record<string, number> = {};
     for (const tender of open) {

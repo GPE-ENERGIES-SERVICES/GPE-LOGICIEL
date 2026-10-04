@@ -15,34 +15,38 @@ Mes veilles, Mes suivis, Archives et Marchés attribués sont en cours de constr
    critères (un clic ouvre la liste correspondante) ; les échéances des 7 prochains jours ; les
    derniers appels d'offres retenus ; la répartition des appels d'offres en cours par statut, type
    de travaux et département.
-2. **Liste** (« Appels d'offres ») : les appels d'offres retenus par les critères de
-   l'entreprise. Les onglets :
-   - **Nouveaux** : retenus par le filtre, sans décision ;
-   - **À traiter** : en cours d'analyse ou de préparation ;
-   - **Mes suivis** : ceux que vous suivez (le suivi est propre à chaque utilisateur) ;
-   - **Tous** : tous les appels d'offres, sauf ceux hors critères sans décision ;
-   - **Écartés** : écartés par un utilisateur ;
-   - **Archivés** : clos, annulés ou sans suite ;
-   - **Hors critères** : écartés par le filtre, à consulter pour vérifier que le filtre ne fait
+2. **Appels d'offres** : les consultations en cours. Les onglets :
+   - **Nouveaux** : retenues par le filtre, sans décision ;
+   - **À traiter** : à analyser ou en préparation ;
+   - **Tous** : toutes les consultations en cours, sauf celles hors critères sans décision ;
+   - **Écartés** : écartées par un utilisateur ;
+   - **Hors critères** : écartées par le filtre, à consulter pour vérifier que le filtre ne fait
      pas disparaître de bons marchés.
 
-   Chaque ligne donne l'essentiel : étoile de suivi, acheteur, lieu et distance, travaux, lots,
-   procédure, montant, dates, jours restants, pertinence et statut (modifiable sur place).
+   Les consultations suivies et les consultations passées ont leurs propres rubriques (Mes suivis,
+   Archives).
+
+   Chaque ligne donne l'essentiel : étoile de suivi, acheteur, lieu, code postal et distance,
+   travaux, type de marché, lots, procédure, montant, dates, jours restants, pertinence et statut
+   (modifiable sur place).
    Les jours restants sont en rouge à moins de 3 jours, en orange à moins de 7 jours, et
    « Date limite dépassée » ensuite ; la même règle s'applique sur la fiche et le tableau de bord. Survoler « Retenu » ou « Hors critères »
    affiche la raison donnée par le filtre.
 
-   La **recherche** porte sur le titre, la référence, l'acheteur, la ville, la description et
-   le type de travaux, sans tenir compte des majuscules ni des accents ; tous les mots saisis
-   doivent être trouvés. Les compteurs des onglets suivent la recherche : un résultat rangé dans
-   un autre onglet reste visible.
+   La **recherche** porte sur l'objet, la référence, l'acheteur, la description, la ville, le code
+   postal, le type de marché, le type de travaux et les codes CPV, sans tenir compte des
+   majuscules ni des accents ; tous les mots saisis doivent être trouvés, en début de mot. Les
+   synonymes du métier sont pris en compte : « panneaux solaires » trouve les consultations
+   photovoltaïques, « bornes de recharge » celles d'IRVE, « CVC » le chauffage et la
+   climatisation. Les compteurs des onglets suivent la recherche : un résultat rangé dans un autre
+   onglet reste visible.
 
-   Les **filtres** (panneau « Filtres », ouvert dès qu'un filtre est actif) se combinent entre
-   eux et avec la recherche : localisation (région, départements, ville, distance du siège),
-   type de travaux, dates (publication récente, date limite, échéance proche, délai minimum),
-   montant (minimum, maximum, indiqué ou non), procédure, lots et statut. Dans un même groupe de
-   cases, il suffit qu'une case corresponde. Un montant non indiqué ne masque pas un appel
-   d'offres, sauf si l'on choisit « Montant : Indiqué ».
+   Les **filtres**, sous la recherche, se combinent entre eux et avec la recherche : type de
+   travaux, type de marché, région, départements, ville ou code postal, distance du siège,
+   procédure, statut, date limite, publication, montant minimum et maximum, lots. Une liste
+   s'applique dès qu'on la change ; un champ saisi s'applique avec Entrée ou « Appliquer ». Le
+   nombre de filtres actifs est affiché, « Effacer les filtres » les retire tous. Un montant non
+   indiqué ne masque pas une consultation.
 
    Le **tri** se choisit au-dessus du tableau : date limite (la plus proche par défaut ; les
    dates dépassées passent alors après les appels d'offres encore ouverts), publication,

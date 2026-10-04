@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 
 import { CollectStatus } from "@/components/CollectStatus";
 import { FILTER_KEYS, TenderFilters } from "@/components/TenderFilters";
@@ -25,10 +25,15 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZES = [20, 50, 100];
 
+/** Views of the open consultations; followed and past ones have their own sections. */
+const TABS: TenderTab[] = ["NEW", "TO_PROCESS", "ALL", "DISMISSED", "FILTERED_OUT"];
+
+/** Former tabs of this page, now sections of their own. */
+const MOVED_TABS: Partial<Record<TenderTab, string>> = { FOLLOWED: "/follows", ARCHIVED: "/archives" };
+
 const TAB_HINTS: Partial<Record<TenderTab, string>> = {
-  TO_PROCESS: "Appels d'offres à analyser ou en préparation.",
-  FOLLOWED: "Appels d'offres que vous suivez. Le suivi est propre à chaque utilisateur.",
-  ARCHIVED: "Appels d'offres clos, annulés ou sans suite.",
+  TO_PROCESS: "Consultations à analyser ou en préparation.",
+  ALL: "Toutes les consultations en cours, sauf celles écartées par les critères de l'entreprise.",
   FILTERED_OUT:
     "Avis écartés par les critères de l'entreprise. Vérifiez ici que le filtre ne fait pas disparaître de bons marchés.",
 };
@@ -38,7 +43,8 @@ function TenderList() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab") as TenderTab | null;
-  const tab = tabParam && tabParam in TENDER_TAB_LABELS ? tabParam : "NEW";
+  const tab = tabParam && TABS.includes(tabParam) ? tabParam : "NEW";
+  const movedTo = tabParam ? MOVED_TABS[tabParam] : undefined;
   const page = Number(searchParams.get("page") ?? "0");
   const text = searchParams.get("q") ?? "";
   const filtered = Boolean(text) || FILTER_KEYS.some((key) => searchParams.get(key));
@@ -59,6 +65,12 @@ function TenderList() {
     return getTenders(params);
   }, query);
   const counts = useLoader(() => getTenderCounts(countQuery), countQuery);
+
+  useEffect(() => {
+    if (movedTo) {
+      router.replace(movedTo);
+    }
+  }, [movedTo, router]);
 
   const navigate = (changes: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -91,6 +103,10 @@ function TenderList() {
     }
   };
 
+  if (movedTo) {
+    return null;
+  }
+
   return (
     <>
       <h1>Appels d&apos;offres</h1>
@@ -101,7 +117,7 @@ function TenderList() {
           name="q"
           type="search"
           aria-label="Rechercher"
-          placeholder="Rechercher par titre, référence, acheteur, ville ou type de travaux"
+          placeholder="Rechercher : objet, référence, acheteur, ville, code postal, type de travaux, CPV…"
           defaultValue={text}
         />
         <button type="submit" className="primary">
@@ -114,8 +130,10 @@ function TenderList() {
         )}
       </form>
 
+      <TenderFilters params={searchParams} onApply={navigate} />
+
       <div className="tabs" role="tablist">
-        {(Object.entries(TENDER_TAB_LABELS) as [TenderTab, string][]).map(([value, label]) => (
+        {TABS.map((value) => (
           <button
             key={value}
             type="button"
@@ -124,13 +142,12 @@ function TenderList() {
             className={tab === value ? "tab active" : "tab"}
             onClick={() => navigate({ tab: value, page: null })}
           >
-            {label}
+            {TENDER_TAB_LABELS[value]}
             {counts.data && <span className="count">{counts.data[value]}</span>}
           </button>
         ))}
       </div>
 
-      <TenderFilters params={searchParams} onApply={navigate} />
 
       {TAB_HINTS[tab] && <p className="hint">{TAB_HINTS[tab]}</p>}
       {actionError && <p className="banner error">{actionError}</p>}

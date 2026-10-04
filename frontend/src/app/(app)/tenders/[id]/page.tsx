@@ -69,6 +69,7 @@ export default function TenderPage() {
       <header className="tender-header">
         <h1>
           <FollowButton
+            key={String(tender.followed)}
             tenderId={tender.id}
             followed={tender.followed ?? false}
             onChanged={(followed) => setSaved({ ...tender, followed })}

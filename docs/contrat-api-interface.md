@@ -66,8 +66,8 @@ Chaque utilisateur suit ses propres appels d'offres, indépendamment du statut.
 | `NEW` | retenu par le filtre, statut `NEW`, actif |
 | `TO_PROCESS` | statut `TO_STUDY` ou `RESPONDING`, actif |
 | `FOLLOWED` | suivi par l'utilisateur connecté |
-| `ALL` | tout, sauf les avis écartés par le filtre au statut `NEW` |
-| `DISMISSED` | statut `DISMISSED` |
+| `ALL` | actif, sauf les avis écartés par le filtre au statut `NEW` |
+| `DISMISSED` | statut `DISMISSED`, actif |
 | `ARCHIVED` | non actif (clos, annulé, sans suite), hors `DISMISSED` et hors écartés par le filtre au statut `NEW` |
 | `FILTERED_OUT` | écarté par le filtre, statut `NEW`, actif |
 
@@ -79,12 +79,13 @@ il suffit qu'une valeur corresponde.
 | Paramètre | Existe | Règle |
 |-----------|--------|-------|
 | `tab` | oui (valeurs à changer) | voir ci-dessus, `NEW` par défaut |
-| `q` | oui | chaque mot doit apparaître, sans tenir compte de la casse ni des accents, dans le titre, l'acheteur, la référence, la description (existant) **et** l'identifiant de l'avis, le lieu, le libellé des types de travaux (à ajouter) |
+| `q` | oui | chaque terme doit commencer un mot, sans tenir compte de la casse ni des accents, du titre, de l'acheteur, de la référence, de la description (existant) **et** de l'identifiant de l'avis, de la ville, du code postal, du type de marché, du libellé des types de travaux, des codes et libellés CPV (à ajouter) ; les synonymes métier comptent (voir plus bas) |
 | `department` | oui (un seul) | **liste** de codes ; un département de l'appel d'offres doit y figurer |
 | `region` | non | nom de région (voir `frontend/src/lib/regions.ts`) ; un département de l'appel d'offres doit en faire partie |
-| `city` | non | texte contenu dans le lieu d'exécution |
+| `city` | non | texte contenu dans le lieu d'exécution, ou début du code postal |
 | `maxDistanceKm` | non | distance connue et inférieure ou égale |
 | `activity` | non | liste de codes de types de travaux |
+| `marketType` | non | liste de `MarketType` |
 | `publishedWithinDays` | non | publié depuis N jours au plus |
 | `publishedFrom`, `publishedTo` | non | dates `yyyy-MM-dd` incluses |
 | `deadlineFrom`, `deadlineTo` | non | dates `yyyy-MM-dd` incluses, en heure de Paris |
@@ -100,6 +101,13 @@ il suffit qu'une valeur corresponde.
 | `followed` | non | `true` : suivis par l'utilisateur connecté |
 | `sort` | non | voir ci-dessous |
 | `page`, `size` | oui | `size` de 1 à 100, l'interface propose 20, 50 et 100 |
+
+### Synonymes métier
+
+Un terme ou une expression du vocabulaire métier trouve aussi ses synonymes : « photovoltaïque »
+trouve « solaire », « bornes de recharge » trouve « IRVE », « CVC » trouve « chauffage » et
+« climatisation »… La liste est `SEARCH_SYNONYMS` dans `frontend/src/mock/reference.ts` ; le
+backend devra la reprendre (table de synonymes ou dictionnaire de la recherche plein texte).
 
 ### Tri (`sort`)
 

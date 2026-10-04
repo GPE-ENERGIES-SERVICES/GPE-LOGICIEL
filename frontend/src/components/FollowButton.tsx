@@ -10,18 +10,25 @@ type Props = {
   onChanged: (followed: boolean) => void;
 };
 
-/** Star to follow a tender. The follow is personal; the status stays shared by the team. */
-export function FollowButton({ tenderId, followed, onChanged }: Props) {
+/**
+ * Star to follow a tender. The follow is personal; the status stays shared by
+ * the team. The star changes at once and comes back if the follow cannot be
+ * saved.
+ */
+export function FollowButton({ tenderId, followed: initial, onChanged }: Props) {
+  const [followed, setFollowedState] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const toggle = async () => {
     setBusy(true);
     setError(null);
+    setFollowedState(!followed);
     try {
       await setFollowed(tenderId, !followed);
       onChanged(!followed);
     } catch (err) {
+      setFollowedState(followed);
       setError(err instanceof Error ? err.message : "Action impossible.");
     } finally {
       setBusy(false);

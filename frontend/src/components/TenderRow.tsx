@@ -8,6 +8,7 @@ import {
   formatDate,
   formatDateTime,
   FOLLOW_UP_LABELS,
+  MARKET_TYPE_LABELS,
   NOT_INDICATED,
   PROCEDURE_LABELS,
   STATUS_LABELS,
@@ -26,9 +27,9 @@ type Props = {
 
 /** One line of the tender table: what is needed to sort out many tenders quickly. */
 export function TenderRow({ tender, onFollowUp, onFollowChanged, busy }: Props) {
-  const place = [tender.location, tender.departments.length ? `(${tender.departments.join(", ")})` : null]
-    .filter(Boolean)
-    .join(" ");
+  // The postal code when known, otherwise the departments.
+  const area = tender.postalCode ?? (tender.departments.length ? tender.departments.join(", ") : null);
+  const place = [tender.location, area && `(${area})`].filter(Boolean).join(" ");
   const documentCount = tender.documentCount ?? 0;
   const about = [
     tender.buyer ?? "Acheteur non indiqué",
@@ -44,7 +45,12 @@ export function TenderRow({ tender, onFollowUp, onFollowChanged, busy }: Props) 
   return (
     <tr>
       <td>
-        <FollowButton tenderId={tender.id} followed={tender.followed ?? false} onChanged={onFollowChanged} />
+        <FollowButton
+          key={String(tender.followed)}
+          tenderId={tender.id}
+          followed={tender.followed ?? false}
+          onChanged={onFollowChanged}
+        />
       </td>
       <td className="tender-title">
         <Link href={`/tenders/${tender.id}`}>{tender.title}</Link>
@@ -57,8 +63,13 @@ export function TenderRow({ tender, onFollowUp, onFollowChanged, busy }: Props) 
       <td>
         {activities || NOT_INDICATED}
         <div className="small muted">
-          {lotCount > 0 ? `${lotCount} lot${lotCount > 1 ? "s" : ""}` : "Sans lots"}
-          {tender.procedureType && <> · {PROCEDURE_LABELS[tender.procedureType]}</>}
+          {[
+            tender.marketTypes.map((type) => MARKET_TYPE_LABELS[type]).join(", "),
+            lotCount > 0 ? `${lotCount} lot${lotCount > 1 ? "s" : ""}` : "Sans lots",
+            tender.procedureType && PROCEDURE_LABELS[tender.procedureType],
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </div>
       </td>
       <td className="nowrap">{formatAmount(tender.estimatedAmount)}</td>

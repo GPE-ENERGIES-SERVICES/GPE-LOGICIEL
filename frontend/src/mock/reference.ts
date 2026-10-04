@@ -384,3 +384,36 @@ export const COMPETITORS: { name: string; city: string; activities: string[] }[]
   { name: "Terrassements Méridionaux", city: "Salon-de-Provence", activities: ["VRD", "NETWORKS"] },
   { name: "BET Énergie Conseil", city: "Marseille", activities: ["STUDIES"] },
 ];
+
+/**
+ * Trade vocabulary of the search: a term, or an expression of several words,
+ * also finds the words listed. Written without accents, in lower case.
+ */
+export const SEARCH_SYNONYMS: Record<string, string[]> = {
+  photovoltaique: ["solaire", "panneaux solaires", "centrale solaire", "production solaire"],
+  pv: ["photovoltaique", "solaire"],
+  solaire: ["photovoltaique"],
+  "panneaux solaires": ["photovoltaique", "solaire"],
+  "panneau solaire": ["photovoltaique", "solaire"],
+  "centrale solaire": ["photovoltaique", "solaire"],
+  "production solaire": ["photovoltaique", "solaire"],
+  irve: ["recharge", "vehicules electriques"],
+  recharge: ["irve"],
+  "borne de recharge": ["irve", "recharge"],
+  "bornes de recharge": ["irve", "recharge"],
+  "vehicule electrique": ["irve", "recharge", "vehicules electriques"],
+  cvc: ["chauffage", "chaufferie", "pompes a chaleur", "climatisation", "rafraichissement", "groupes froids", "ventilation"],
+  chauffage: ["chaufferie", "chaudiere", "pompes a chaleur"],
+  pac: ["pompes a chaleur", "pompe a chaleur"],
+  "pompe a chaleur": ["pompes a chaleur"],
+  climatisation: ["rafraichissement", "groupes froids"],
+  eclairage: ["luminaires", "led"],
+  led: ["eclairage", "luminaires"],
+  electricite: ["electrique", "tgbt", "courants forts", "courants faibles"],
+  vrd: ["voirie", "reseaux divers", "terrassements"],
+  reseaux: ["enfouissement", "reseaux secs", "telecommunication"],
+  isolation: ["isolation thermique", "rehabilitation thermique"],
+  "renovation energetique": ["performance energetique", "rehabilitation thermique", "isolation"],
+  maintenance: ["entretien", "exploitation"],
+  audit: ["diagnostic", "etude"],
+};
