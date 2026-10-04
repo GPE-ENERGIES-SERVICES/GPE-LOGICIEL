@@ -19,7 +19,9 @@ aide à décider ; la décision reste humaine.
    - **Hors critères** : écartés par le filtre, à consulter pour vérifier que le filtre ne fait
      pas disparaître de bons marchés.
 
-   Chaque carte indique la raison pour laquelle l'appel d'offres a été retenu.
+   Chaque ligne donne l'essentiel : acheteur, lieu et distance, travaux, lots, procédure,
+   montant, dates, jours restants, pertinence et statut. Survoler « Retenu » ou « Hors critères »
+   affiche la raison donnée par le filtre.
 3. **Fiche** : ouvrir un appel d'offres pour voir les informations de l'avis, l'historique des
    publications (un rectificatif qui change la date limite est signalé) et le lien vers la
    plateforme de l'acheteur.

@@ -96,7 +96,7 @@ h3 {
 }
 
 .app-main {
-  max-width: 1100px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: 1.5rem 2rem 3rem;
 }
@@ -415,37 +415,49 @@ legend {
   margin: 0 0 0.5rem;
 }
 
-.tender-card {
-  display: flex;
-  gap: 1.5rem;
+.table-card {
+  padding: 0;
 }
 
-.tender-card-main {
-  flex: 1;
-  min-width: 0;
+.tender-table tbody tr:hover {
+  background: var(--bg);
 }
 
-.tender-card h3 a {
+.tender-title {
+  min-width: 18rem;
+}
+
+.tender-title a {
   color: var(--text);
+  font-weight: 600;
   text-decoration: none;
 }
 
-.tender-card h3 a:hover {
+.tender-title a:hover {
   color: var(--primary);
   text-decoration: underline;
 }
 
-.tender-card-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.4rem;
-  min-width: 8.5rem;
+.tender-table .badge {
+  margin: 0.15rem 0.25rem 0 0;
 }
 
-.tender-card-actions .badge {
-  margin: 0;
-  text-align: center;
+.tender-actions {
+  min-width: 12rem;
+}
+
+.tender-actions button {
+  margin: 0.3rem 0.3rem 0 0;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .pagination {

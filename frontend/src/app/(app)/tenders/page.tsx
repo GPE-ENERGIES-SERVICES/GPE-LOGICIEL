@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
 import { CollectStatus } from "@/components/CollectStatus";
-import { TenderCard } from "@/components/TenderCard";
+import { TenderRow } from "@/components/TenderRow";
 import { api } from "@/lib/api";
 import { TENDER_TAB_LABELS } from "@/lib/format";
 import type { FollowUpStatus, Page, TenderSummary, TenderTab } from "@/lib/types";
@@ -137,18 +137,38 @@ function TenderList() {
         <>
           <p className="muted result-count">
             {list.data.totalElements} appel{list.data.totalElements > 1 ? "s" : ""} d&apos;offres
+            {list.loading && " · chargement…"}
           </p>
-          {list.data.content.length === 0 && <p className="page-message">Aucun appel d&apos;offres dans cet onglet.</p>}
-          <div className="tender-list">
-            {list.data.content.map((tender) => (
-              <TenderCard
-                key={tender.id}
-                tender={tender}
-                busy={busyId === tender.id}
-                onFollowUp={(status) => followUp(tender, status)}
-              />
-            ))}
-          </div>
+          {list.data.content.length === 0 ? (
+            <p className="page-message">Aucun appel d&apos;offres dans cet onglet.</p>
+          ) : (
+            <div className="card table-card">
+              <table className="tender-table">
+                <thead>
+                  <tr>
+                    <th>Appel d&apos;offres</th>
+                    <th>Lieu</th>
+                    <th>Travaux</th>
+                    <th>Montant estimé</th>
+                    <th>Publication</th>
+                    <th>Date limite</th>
+                    <th>Pertinence</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.data.content.map((tender) => (
+                    <TenderRow
+                      key={tender.id}
+                      tender={tender}
+                      busy={busyId === tender.id}
+                      onFollowUp={(status) => followUp(tender, status)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           {list.data.totalPages > 1 && (
             <nav className="pagination">
               <button
