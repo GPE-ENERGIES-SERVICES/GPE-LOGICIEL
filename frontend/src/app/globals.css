@@ -411,6 +411,30 @@ legend {
   min-width: 14rem;
 }
 
+.filter-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.filter-panel form {
+  margin-top: 0.75rem;
+}
+
+.filter-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+.filter-groups fieldset {
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.filter-groups .hint {
+  margin: 0;
+}
+
 .result-count {
   margin: 0 0 0.5rem;
 }

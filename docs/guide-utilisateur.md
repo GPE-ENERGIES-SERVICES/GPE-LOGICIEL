@@ -27,6 +27,13 @@ aide à décider ; la décision reste humaine.
    le type de travaux, sans tenir compte des majuscules ni des accents ; tous les mots saisis
    doivent être trouvés. Les compteurs des onglets suivent la recherche : un résultat rangé dans
    un autre onglet reste visible.
+
+   Les **filtres** (panneau « Filtres », ouvert dès qu'un filtre est actif) se combinent entre
+   eux et avec la recherche : localisation (région, départements, ville, distance du siège),
+   type de travaux, dates (publication récente, date limite, échéance proche, délai minimum),
+   montant (minimum, maximum, indiqué ou non), procédure, lots et statut. Dans un même groupe de
+   cases, il suffit qu'une case corresponde. Un montant non indiqué ne masque pas un appel
+   d'offres, sauf si l'on choisit « Montant : Indiqué ».
 3. **Fiche** : ouvrir un appel d'offres pour voir les informations de l'avis, l'historique des
    publications (un rectificatif qui change la date limite est signalé) et le lien vers la
    plateforme de l'acheteur.

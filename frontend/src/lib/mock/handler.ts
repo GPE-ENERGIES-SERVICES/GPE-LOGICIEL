@@ -170,7 +170,11 @@ function matches(tender: TenderDetail, params: URLSearchParams): boolean {
   const city = params.get("city")?.trim();
   const maxDistanceKm = number(params.get("maxDistanceKm"));
   const activities = list(params.get("activity"));
-  const publishedFrom = params.get("publishedFrom");
+  const publishedWithinDays = number(params.get("publishedWithinDays"));
+  const publishedFrom =
+    publishedWithinDays === null
+      ? params.get("publishedFrom")
+      : new Date(Date.now() - publishedWithinDays * 86_400_000).toLocaleDateString("sv-SE");
   const publishedTo = params.get("publishedTo");
   const deadlineFrom = time(params.get("deadlineFrom") && `${params.get("deadlineFrom")}T00:00:00`);
   const deadlineTo = time(params.get("deadlineTo") && `${params.get("deadlineTo")}T23:59:59`);

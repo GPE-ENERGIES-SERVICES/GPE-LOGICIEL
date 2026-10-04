@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
 import { CollectStatus } from "@/components/CollectStatus";
+import { FILTER_KEYS, TenderFilters } from "@/components/TenderFilters";
 import { TenderRow } from "@/components/TenderRow";
 import { api } from "@/lib/api";
 import { TENDER_TAB_LABELS } from "@/lib/format";
@@ -18,8 +19,6 @@ const TAB_HINTS: Partial<Record<TenderTab, string>> = {
     "Avis écartés par les critères de l'entreprise. Vérifiez ici que le filtre ne fait pas disparaître de bons marchés.",
 };
 
-const FILTER_KEYS = ["department", "minDaysLeft", "maxAmount"] as const;
-
 function TenderList() {
   const router = useRouter();
   const pathname = usePathname();
@@ -28,6 +27,7 @@ function TenderList() {
   const tab = tabParam && tabParam in TENDER_TAB_LABELS ? tabParam : "NEW";
   const page = Number(searchParams.get("page") ?? "0");
   const text = searchParams.get("q") ?? "";
+  const filtered = Boolean(text) || FILTER_KEYS.some((key) => searchParams.get(key));
   const query = searchParams.toString();
   const [busyId, setBusyId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -61,16 +61,6 @@ function TenderList() {
   const search = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     navigate({ q: String(new FormData(event.currentTarget).get("q") ?? "").trim() || null, page: null });
-  };
-
-  const applyFilters = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const changes: Record<string, string | null> = { page: null };
-    for (const key of FILTER_KEYS) {
-      changes[key] = String(form.get(key) ?? "").trim() || null;
-    }
-    navigate(changes);
   };
 
   const followUp = async (tender: TenderSummary, status: FollowUpStatus) => {
@@ -125,38 +115,7 @@ function TenderList() {
         ))}
       </div>
 
-      <form className="filters" onSubmit={applyFilters} key={query}>
-        <input
-          name="department"
-          placeholder="Département"
-          size={10}
-          defaultValue={searchParams.get("department") ?? ""}
-        />
-        <input
-          name="minDaysLeft"
-          type="number"
-          min={0}
-          placeholder="Délai min. (jours)"
-          defaultValue={searchParams.get("minDaysLeft") ?? ""}
-        />
-        <input
-          name="maxAmount"
-          type="number"
-          min={0}
-          placeholder="Montant max. (€ HT)"
-          defaultValue={searchParams.get("maxAmount") ?? ""}
-        />
-        <button type="submit">Filtrer</button>
-        {FILTER_KEYS.some((key) => searchParams.get(key)) && (
-          <button
-            type="button"
-            className="link-button"
-            onClick={() => navigate({ department: null, minDaysLeft: null, maxAmount: null, page: null })}
-          >
-            Effacer les filtres
-          </button>
-        )}
-      </form>
+      <TenderFilters params={searchParams} onApply={navigate} />
 
       {TAB_HINTS[tab] && <p className="hint">{TAB_HINTS[tab]}</p>}
       {actionError && <p className="banner error">{actionError}</p>}
@@ -172,8 +131,8 @@ function TenderList() {
           </p>
           {list.data.content.length === 0 ? (
             <p className="page-message">
-              {text
-                ? `Aucun appel d'offres ne correspond à « ${text} » dans cet onglet.`
+              {filtered
+                ? "Aucun appel d'offres ne correspond à la recherche et aux filtres dans cet onglet."
                 : "Aucun appel d'offres dans cet onglet."}
             </p>
           ) : (
