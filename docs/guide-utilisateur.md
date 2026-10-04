@@ -8,7 +8,7 @@ aide à décider ; la décision reste humaine.
 
 Le bandeau du haut donne accès aux rubriques : Tableau de bord, Appels d'offres, Mes veilles,
 Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramètres. Les rubriques
-Mes suivis, Archives et Marchés attribués sont en cours de construction.
+Archives et Marchés attribués sont en cours de construction.
 
 1. **Tableau de bord** : l'état de la dernière collecte ; le nombre de nouveaux appels
    d'offres, de ceux à traiter, de vos suivis, des échéances dans les 7 jours et des avis hors
@@ -61,24 +61,28 @@ Mes suivis, Archives et Marchés attribués sont en cours de construction.
    « Voir les résultats » ouvre la liste des appels d'offres avec les critères de la veille, les
    plus récents d'abord, et remet le compteur des nouvelles consultations à zéro. Une veille peut
    être modifiée, désactivée ou supprimée.
-4. **Fiche** : ouvrir un appel d'offres. Les informations sont rangées par section :
+4. **Mes suivis** : les consultations que vous suivez avec l'étoile ☆, en cours ou passées (une
+   consultation close porte la mention « Clos »). Les onglets les rangent par statut, avec leur
+   nombre ; on peut y chercher, trier et changer le statut. Retirer l'étoile retire la
+   consultation de cette rubrique.
+5. **Fiche** : ouvrir un appel d'offres. Les informations sont rangées par section :
    informations générales (date limite, montant, pertinence, référence, procédure, lieu, source,
    raison du filtre, liens vers la plateforme de l'acheteur et l'avis), suivi, travaux
    (types de travaux, codes CPV, description, lots), conditions de participation
    (qualifications, visite, critères, contraintes), documents, fiche de synthèse et historique
    des publications (un rectificatif qui change la date limite est signalé).
-5. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
+6. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
    dans la section « Documents (DCE) » (archive ZIP ou fichiers). Chaque dépôt crée une
    nouvelle version. Chaque pièce (RC, CCAP, CCTP, AE, DPGF, BPU, DQE, plans…) peut être ouverte
    ou téléchargée. Vérifier son type et le corriger si besoin : l'analyse se fonde sur le
    règlement de consultation. Dans la liste, « DCE : n documents » signale un dossier déjà déposé.
-6. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
+7. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
    et prend quelques minutes. Pour un appel d'offres écarté par le filtre, utiliser « Lancer
    l'analyse ».
-7. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
+8. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
    le document à la bonne page ; l'extrait cité est affiché sous la valeur. Valider, corriger
    ou rejeter les informations importantes, puis « Valider la fiche ».
-8. **Statut et suivi** : le statut est partagé par toute l'équipe : Nouveau, À analyser, En
+9. **Statut et suivi** : le statut est partagé par toute l'équipe : Nouveau, À analyser, En
    préparation, Réponse envoyée ou Écarté. Il se change directement dans la liste, ou dans la
    section « Suivi » de la fiche avec un commentaire. L'étoile ☆ sert à suivre un appel d'offres :
    ce suivi est personnel et retrouvé dans l'onglet « Mes suivis ».

@@ -26,6 +26,7 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 | `GET /api/tenders` | 5 filtres, tri fixe | onglets, filtres, tri, nouveaux champs (voir plus bas) |
 | `GET /api/tenders/counts` | sans paramètre | accepter les mêmes filtres que la liste, nouveaux onglets |
 | `GET /api/tenders/stats` | absent | **nouveau** : répartition pour le tableau de bord |
+| `GET /api/tenders/status-counts` | absent | **nouveau** : nombre par statut, pour Mes suivis |
 | `GET /api/tenders/{id}` | existe | nouveaux champs (voir plus bas) |
 | `PUT /api/tenders/{id}/follow-up` | existe | accepter le statut `SUBMITTED` |
 | `PUT /api/tenders/{id}/follow` | absent | **nouveau** : suivre (étoile), par utilisateur |
@@ -147,6 +148,12 @@ exécuter les veilles actives après chaque collecte et prévenir l'utilisateur.
 Accepte les mêmes paramètres que la liste (sauf `tab`, `page`, `size`, `sort`) et renvoie, pour
 chaque onglet, le nombre d'appels d'offres qui correspondent : les compteurs des onglets suivent
 ainsi la recherche et les filtres.
+
+## `GET /api/tenders/status-counts` (nouveau)
+
+Mêmes paramètres que la liste, `tab` compris, sauf `status` qui est ignoré. Renvoie le nombre
+d'appels d'offres de chaque `FollowUpStatus` : Mes suivis l'appelle avec `tab=FOLLOWED` pour les
+compteurs de ses onglets.
 
 ## `GET /api/tenders/stats` (nouveau)
 

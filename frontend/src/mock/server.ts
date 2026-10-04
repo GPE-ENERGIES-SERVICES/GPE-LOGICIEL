@@ -392,6 +392,17 @@ function counts(params: URLSearchParams): Record<TenderTab, number> {
   ) as Record<TenderTab, number>;
 }
 
+/** Number of tenders of each status matching the search and filters, whatever the status filter. */
+function statusCounts(params: URLSearchParams): Record<FollowUpStatus, number> {
+  const others = new URLSearchParams(params);
+  others.delete("status");
+  const counts: Record<FollowUpStatus, number> = { NEW: 0, TO_STUDY: 0, RESPONDING: 0, SUBMITTED: 0, DISMISSED: 0 };
+  for (const tender of tenders.filter((candidate) => matches(candidate, others))) {
+    counts[tender.followUpStatus] += 1;
+  }
+  return counts;
+}
+
 function stats(): TenderStats {
   const open = tenders.filter((tender) => inTab(tender, "ALL"));
   const countBy = (keys: (tender: TenderDetail) => string[]) => {
@@ -579,6 +590,7 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/tenders$/, (_, url) => search(url.searchParams)],
   ["GET", /^\/api\/tenders\/counts$/, (_, url) => counts(url.searchParams)],
   ["GET", /^\/api\/tenders\/stats$/, () => stats()],
+  ["GET", /^\/api\/tenders\/status-counts$/, (_, url) => statusCounts(url.searchParams)],
   ["GET", /^\/api\/tenders\/(\d+)$/, (id) => toDetail(find(id))],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow-up$/, (id, _, body) => toDetail(followUp(id, body))],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, true)],

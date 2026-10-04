@@ -18,6 +18,11 @@ export function getTenderCounts(params: SearchParams = ""): Promise<Record<Tende
   return api(`/api/tenders/counts?${params}`);
 }
 
+/** Number of tenders of each status in a tab, with the same search and filters except the status. */
+export function getStatusCounts(params: SearchParams): Promise<Record<FollowUpStatus, number>> {
+  return api(`/api/tenders/status-counts?${params}`);
+}
+
 export function getTenderStats(): Promise<TenderStats> {
   return api("/api/tenders/stats");
 }

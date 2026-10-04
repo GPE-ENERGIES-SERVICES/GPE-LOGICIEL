@@ -70,7 +70,7 @@ export default function DashboardPage() {
     ...(["NEW", "TO_PROCESS", "FOLLOWED"] as TenderTab[]).map((tab) => ({
       label: TENDER_TAB_LABELS[tab],
       value: counts.data?.[tab],
-      href: `/tenders?tab=${tab}`,
+      href: tab === "FOLLOWED" ? "/follows" : `/tenders?tab=${tab}`,
     })),
     { label: "Échéances dans les 7 jours", value: deadlines.data?.totalElements, href: `/tenders?${DEADLINES_QUERY}` },
     { label: "Hors critères à vérifier", value: counts.data?.FILTERED_OUT, href: "/tenders?tab=FILTERED_OUT" },
