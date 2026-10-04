@@ -40,6 +40,8 @@ Documentation :
 - [Documentation technique](docs/technique.md) : architecture, installation, configuration,
   sauvegarde et restauration, ajout d'une source, d'un champ ou d'un fournisseur d'IA.
 - [Guide utilisateur](docs/guide-utilisateur.md) : parcours, signification des états, limites.
+- [Contrat d'API attendu par l'interface](docs/contrat-api-interface.md) : ce que le backend doit
+  fournir pour remplacer les données de démonstration.
 
 ## Configuration
 
@@ -84,7 +86,8 @@ npm run dev
 
 Sans backend, l'interface peut tourner sur des données de démonstration : créer
 `frontend/.env.local` contenant `NEXT_PUBLIC_DATA_SOURCE=mock`, puis relancer `npm run dev`.
-Les appels `/api` sont alors traités par `frontend/src/lib/mock` (mêmes URL, mêmes réponses).
+Les appels `/api` sont alors traités par `frontend/src/lib/mock` (mêmes URL, mêmes réponses ;
+voir le [contrat d'API](docs/contrat-api-interface.md)).
 
 Tests :
 
