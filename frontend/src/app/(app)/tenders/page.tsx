@@ -6,7 +6,7 @@ import { Suspense, useEffect } from "react";
 
 import { CollectStatus } from "@/components/CollectStatus";
 import { SearchForm } from "@/components/SearchForm";
-import { FILTER_KEYS, TenderFilters } from "@/components/TenderFilters";
+import { OPEN_FILTERS, TenderFilters } from "@/components/TenderFilters";
 import { TenderResults } from "@/components/TenderResults";
 import { TENDER_TAB_LABELS } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
@@ -36,7 +36,7 @@ function TenderList() {
   const movedTo = tabParam ? MOVED_TABS[tabParam] : undefined;
   const text = searchParams.get("q") ?? "";
   const alertId = searchParams.get("alert");
-  const filtered = Boolean(text || alertId) || FILTER_KEYS.some((key) => searchParams.get(key));
+  const filtered = Boolean(text || alertId) || OPEN_FILTERS.some((key) => searchParams.get(key));
   const query = searchParams.toString();
 
   // The tab counts follow the search and the filters, so a result in another tab is visible.
@@ -93,7 +93,7 @@ function TenderList() {
         </p>
       )}
 
-      <TenderFilters params={searchParams} onApply={navigate} />
+      <TenderFilters params={searchParams} onApply={navigate} fields={OPEN_FILTERS} />
 
       <div className="tabs" role="tablist">
         {TABS.map((value) => (

@@ -112,6 +112,20 @@ function toSummary(tender: TenderDetail): TenderSummary {
     documentCount: MOCK_DOSSIERS[tender.id]?.[0]?.documents.length ?? 0,
     postalCode: tender.postalCode,
     result: tender.result,
+    ...awardSummary(tender.id),
+  };
+}
+
+/** Winners of a past consultation and the total awarded. */
+function awardSummary(tenderId: number): Pick<TenderSummary, "winners" | "awardedAmount"> {
+  const awards = MOCK_AWARDS.filter((award) => award.tenderId === tenderId);
+  if (!awards.length) {
+    return {};
+  }
+  const amounts = awards.map((award) => award.amount);
+  return {
+    winners: [...new Set(awards.map((award) => award.winner))],
+    awardedAmount: amounts.includes(null) ? null : amounts.reduce<number>((sum, amount) => sum + (amount ?? 0), 0),
   };
 }
 
@@ -153,7 +167,7 @@ function inTab(tender: TenderDetail, tab: TenderTab): boolean {
     case "DISMISSED":
       return status === "DISMISSED" && active;
     case "ARCHIVED":
-      return !active && !filteredOut && status !== "DISMISSED";
+      return !active;
     case "FILTERED_OUT":
       return filteredOut && active;
   }
@@ -257,6 +271,9 @@ function matchesFilters(tender: TenderDetail, params: URLSearchParams): boolean 
   const maxDistanceKm = number(params.get("maxDistanceKm"));
   const activities = list(params.get("activity"));
   const marketTypes = list(params.get("marketType"));
+  const year = params.get("year");
+  const result = params.get("result");
+  const buyer = params.get("buyer")?.trim();
   const publishedWithinDays = number(params.get("publishedWithinDays"));
   const publishedFrom =
     publishedWithinDays === null
@@ -289,6 +306,9 @@ function matchesFilters(tender: TenderDetail, params: URLSearchParams): boolean 
     (maxDistanceKm === null || (tender.distanceKm != null && tender.distanceKm <= maxDistanceKm)) &&
     (activities.length === 0 || (tender.activities ?? []).some((code) => activities.includes(code))) &&
     (marketTypes.length === 0 || tender.marketTypes.some((type) => marketTypes.includes(type))) &&
+    (!year || (tender.publishedAt ?? "").startsWith(year)) &&
+    (!result || (tender.result?.kind ?? "UNKNOWN") === result) &&
+    (!buyer || normalize(tender.buyer ?? "").includes(normalize(buyer))) &&
     (!publishedFrom || (tender.publishedAt !== null && tender.publishedAt >= publishedFrom)) &&
     (!publishedTo || (tender.publishedAt !== null && tender.publishedAt <= publishedTo)) &&
     (deadlineFrom === null || (deadline !== null && deadline >= deadlineFrom)) &&

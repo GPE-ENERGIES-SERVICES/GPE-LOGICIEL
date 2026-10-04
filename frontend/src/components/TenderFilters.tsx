@@ -1,12 +1,31 @@
 "use client";
 
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 
 import { ACTIVITY_LABELS, FOLLOW_UP_LABELS, MARKET_TYPE_LABELS, PROCEDURE_LABELS } from "@/lib/format";
 import { REGIONS } from "@/lib/regions";
 
 /** URL parameters set by the filters, passed as is to GET /api/tenders. */
-export const FILTER_KEYS = [
+export type FilterKey =
+  | "activity"
+  | "marketType"
+  | "region"
+  | "department"
+  | "city"
+  | "maxDistanceKm"
+  | "procedure"
+  | "status"
+  | "maxDaysLeft"
+  | "publishedWithinDays"
+  | "minAmount"
+  | "maxAmount"
+  | "hasLots"
+  | "year"
+  | "result"
+  | "buyer";
+
+/** Filters of the open consultations. */
+export const OPEN_FILTERS: FilterKey[] = [
   "activity",
   "marketType",
   "region",
@@ -20,11 +39,26 @@ export const FILTER_KEYS = [
   "minAmount",
   "maxAmount",
   "hasLots",
-] as const;
+];
+
+/** Filters of the past consultations. */
+export const PAST_FILTERS: FilterKey[] = [
+  "year",
+  "result",
+  "activity",
+  "marketType",
+  "region",
+  "department",
+  "city",
+  "buyer",
+  "minAmount",
+  "maxAmount",
+];
 
 type Props = {
   params: URLSearchParams;
   onApply: (changes: Record<string, string | null>) => void;
+  fields: FilterKey[];
 };
 
 type SelectProps = {
@@ -64,22 +98,82 @@ function Select({ name, label, value, emptyLabel, options }: SelectProps) {
   );
 }
 
+type InputProps = { name: string; label: string; value: string; placeholder?: string; amount?: boolean };
+
+/** A typed value; an amount is a whole number of euros. */
+function Input({ name, label, value, placeholder, amount }: InputProps) {
+  const amountProps = amount ? { type: "number", min: 0, step: 1000 } : {};
+  return (
+    <label>
+      {label}
+      <input name={name} defaultValue={value} placeholder={placeholder} {...amountProps} />
+    </label>
+  );
+}
+
 const REGION_OPTIONS = Object.fromEntries(Object.keys(REGIONS).map((region) => [region, region]));
 const DISTANCE_OPTIONS = { "25": "Moins de 25 km", "50": "Moins de 50 km", "100": "Moins de 100 km", "200": "Moins de 200 km" };
 const DEADLINE_OPTIONS = { "3": "Dans moins de 3 jours", "7": "Dans moins de 7 jours", "30": "Dans moins de 30 jours" };
 const PUBLICATION_OPTIONS = { "1": "Aujourd'hui", "7": "7 derniers jours", "30": "30 derniers jours" };
 const LOT_OPTIONS = { true: "Allotis", false: "Sans lots" };
+const RESULT_OPTIONS = {
+  AWARDED: "Attribuées",
+  UNSUCCESSFUL: "Sans suite",
+  CANCELLED: "Annulées",
+  UNKNOWN: "Résultat non connu",
+};
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Object.fromEntries(
+  [0, 1, 2, 3].map((back) => [String(CURRENT_YEAR - back), String(CURRENT_YEAR - back)]),
+);
 
-/** Combinable filters of the tender list, all visible; a list applies as soon as it changes. */
-export function TenderFilters({ params, onApply }: Props) {
+function field(key: FilterKey, value: string): ReactNode {
+  switch (key) {
+    case "activity":
+      return <Select name={key} label="Type de travaux" value={value} emptyLabel="Tous" options={ACTIVITY_LABELS} />;
+    case "marketType":
+      return <Select name={key} label="Type de marché" value={value} emptyLabel="Tous" options={MARKET_TYPE_LABELS} />;
+    case "region":
+      return <Select name={key} label="Région" value={value} emptyLabel="Toutes" options={REGION_OPTIONS} />;
+    case "department":
+      return <Input name={key} label="Départements" value={value} placeholder="ex. 13, 83" />;
+    case "city":
+      return <Input name={key} label="Ville ou code postal" value={value} />;
+    case "maxDistanceKm":
+      return <Select name={key} label="Distance du siège" value={value} emptyLabel="Toutes" options={DISTANCE_OPTIONS} />;
+    case "procedure":
+      return <Select name={key} label="Procédure" value={value} emptyLabel="Toutes" options={PROCEDURE_LABELS} />;
+    case "status":
+      return <Select name={key} label="Statut" value={value} emptyLabel="Tous" options={FOLLOW_UP_LABELS} />;
+    case "maxDaysLeft":
+      return <Select name={key} label="Date limite" value={value} emptyLabel="Toutes" options={DEADLINE_OPTIONS} />;
+    case "publishedWithinDays":
+      return <Select name={key} label="Publication" value={value} emptyLabel="Toutes" options={PUBLICATION_OPTIONS} />;
+    case "minAmount":
+      return <Input name={key} label="Montant min. (€ HT)" value={value} amount />;
+    case "maxAmount":
+      return <Input name={key} label="Montant max. (€ HT)" value={value} amount />;
+    case "hasLots":
+      return <Select name={key} label="Lots" value={value} emptyLabel="Indifférent" options={LOT_OPTIONS} />;
+    case "year":
+      return <Select name={key} label="Année de publication" value={value} emptyLabel="Toutes" options={YEAR_OPTIONS} />;
+    case "result":
+      return <Select name={key} label="Résultat" value={value} emptyLabel="Tous" options={RESULT_OPTIONS} />;
+    case "buyer":
+      return <Input name={key} label="Acheteur" value={value} placeholder="ex. Département" />;
+  }
+}
+
+/** Combinable filters of a list of tenders, all visible; a list applies as soon as it changes. */
+export function TenderFilters({ params, onApply, fields }: Props) {
   const value = (key: string) => params.get(key) ?? "";
-  const activeCount = FILTER_KEYS.filter((key) => params.get(key)).length;
+  const activeCount = fields.filter((key) => params.get(key)).length;
 
   const apply = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const changes: Record<string, string | null> = { page: null };
-    for (const key of FILTER_KEYS) {
+    for (const key of fields) {
       changes[key] = String(form.get(key) ?? "").trim() || null;
     }
     onApply(changes);
@@ -91,72 +185,14 @@ export function TenderFilters({ params, onApply }: Props) {
     }
   };
 
-  const clear = () => onApply(Object.fromEntries([...FILTER_KEYS, "page"].map((key) => [key, null])));
+  const clear = () => onApply(Object.fromEntries([...fields, "page"].map((key) => [key, null])));
 
   return (
     <form className="card filter-bar" onSubmit={apply} onChange={applyList} key={params.toString()}>
       <div className="filter-fields">
-        <Select
-          name="activity"
-          label="Type de travaux"
-          value={value("activity")}
-          emptyLabel="Tous"
-          options={ACTIVITY_LABELS}
-        />
-        <Select
-          name="marketType"
-          label="Type de marché"
-          value={value("marketType")}
-          emptyLabel="Tous"
-          options={MARKET_TYPE_LABELS}
-        />
-        <Select name="region" label="Région" value={value("region")} emptyLabel="Toutes" options={REGION_OPTIONS} />
-        <label>
-          Départements
-          <input name="department" placeholder="ex. 13, 83" defaultValue={value("department")} />
-        </label>
-        <label>
-          Ville ou code postal
-          <input name="city" defaultValue={value("city")} />
-        </label>
-        <Select
-          name="maxDistanceKm"
-          label="Distance du siège"
-          value={value("maxDistanceKm")}
-          emptyLabel="Toutes"
-          options={DISTANCE_OPTIONS}
-        />
-        <Select
-          name="procedure"
-          label="Procédure"
-          value={value("procedure")}
-          emptyLabel="Toutes"
-          options={PROCEDURE_LABELS}
-        />
-        <Select name="status" label="Statut" value={value("status")} emptyLabel="Tous" options={FOLLOW_UP_LABELS} />
-        <Select
-          name="maxDaysLeft"
-          label="Date limite"
-          value={value("maxDaysLeft")}
-          emptyLabel="Toutes"
-          options={DEADLINE_OPTIONS}
-        />
-        <Select
-          name="publishedWithinDays"
-          label="Publication"
-          value={value("publishedWithinDays")}
-          emptyLabel="Toutes"
-          options={PUBLICATION_OPTIONS}
-        />
-        <label>
-          Montant min. (€ HT)
-          <input type="number" name="minAmount" min={0} step={1000} defaultValue={value("minAmount")} />
-        </label>
-        <label>
-          Montant max. (€ HT)
-          <input type="number" name="maxAmount" min={0} step={1000} defaultValue={value("maxAmount")} />
-        </label>
-        <Select name="hasLots" label="Lots" value={value("hasLots")} emptyLabel="Indifférent" options={LOT_OPTIONS} />
+        {fields.map((key) => (
+          <div key={key}>{field(key, value(key))}</div>
+        ))}
       </div>
       <div className="filter-actions">
         <span className="muted">
@@ -168,7 +204,9 @@ export function TenderFilters({ params, onApply }: Props) {
             Effacer les filtres
           </button>
         )}
-        <span className="hint">Un montant non indiqué ne masque pas une consultation.</span>
+        {fields.includes("minAmount") && (
+          <span className="hint">Un montant non indiqué ne masque pas une consultation.</span>
+        )}
       </div>
     </form>
   );

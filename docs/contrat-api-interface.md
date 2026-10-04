@@ -71,7 +71,7 @@ Chaque utilisateur suit ses propres appels d'offres, indépendamment du statut.
 | `FOLLOWED` | suivi par l'utilisateur connecté |
 | `ALL` | actif, sauf les avis écartés par le filtre au statut `NEW` |
 | `DISMISSED` | statut `DISMISSED`, actif |
-| `ARCHIVED` | non actif (clos, annulé, sans suite), hors `DISMISSED` et hors écartés par le filtre au statut `NEW` |
+| `ARCHIVED` | non actif : clos, annulé ou sans suite (rubrique Archives) |
 | `FILTERED_OUT` | écarté par le filtre, statut `NEW`, actif |
 
 ## `GET /api/tenders` : paramètres
@@ -89,6 +89,9 @@ il suffit qu'une valeur corresponde.
 | `maxDistanceKm` | non | distance connue et inférieure ou égale |
 | `activity` | non | liste de codes de types de travaux |
 | `marketType` | non | liste de `MarketType` |
+| `year` | non | année de publication (`2024`) |
+| `result` | non | `AWARDED`, `UNSUCCESSFUL`, `CANCELLED`, ou `UNKNOWN` pour une consultation passée sans résultat connu |
+| `buyer` | non | texte contenu dans le nom de l'acheteur |
 | `publishedWithinDays` | non | publié depuis N jours au plus |
 | `publishedFrom`, `publishedTo` | non | dates `yyyy-MM-dd` incluses |
 | `deadlineFrom`, `deadlineTo` | non | dates `yyyy-MM-dd` incluses, en heure de Paris |
@@ -191,6 +194,8 @@ l'interface affiche « Non indiqué » ou « – ».
 | `cpv` (détail seulement) | liste `{ code, label }` | libellés de la nomenclature CPV |
 | `awardCriteria` (détail seulement) | liste `{ label, weight }` | critères d'attribution et pondération en %, `null` si non pondéré |
 | `keyInfo` (détail seulement) | objet ou `null` | visite (`required`, `date`), documents demandés, conditions particulières, qualifications, certifications ; repris de l'avis puis des valeurs validées de la fiche de synthèse |
+| `winners` | liste de textes | attributaires d'une consultation attribuée (un par lot au plus) |
+| `awardedAmount` | nombre ou `null` | total attribué, `null` si un montant manque |
 | `platformName` (détail seulement) | texte ou `null` | nom de la plateforme de dépôt ; à défaut l'interface affiche l'adresse de `platformUrl` |
 
 Codes de types de travaux utilisés par l'interface (`ACTIVITY_LABELS` dans

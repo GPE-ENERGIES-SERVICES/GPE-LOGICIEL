@@ -8,7 +8,7 @@ aide à décider ; la décision reste humaine.
 
 Le bandeau du haut donne accès aux rubriques : Tableau de bord, Appels d'offres, Mes veilles,
 Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramètres. Les rubriques
-Archives et Marchés attribués sont en cours de construction.
+Marchés attribués est en cours de construction.
 
 1. **Tableau de bord** : l'état de la dernière collecte ; le nombre de nouveaux appels
    d'offres, de ceux à traiter, de vos suivis, des échéances dans les 7 jours et des avis hors
@@ -65,7 +65,12 @@ Archives et Marchés attribués sont en cours de construction.
    consultation close porte la mention « Clos »). Les onglets les rangent par statut, avec leur
    nombre ; on peut y chercher, trier et changer le statut. Retirer l'étoile retire la
    consultation de cette rubrique.
-5. **Fiche** : ouvrir une consultation. L'en-tête résume l'essentiel (acheteur, référence, lieu,
+5. **Archives** : toutes les consultations passées (closes, attribuées, sans suite ou annulées),
+   les plus récentes d'abord. Pour chacune : publication, montant estimé, résultat, attributaire
+   et montant attribué lorsqu'ils sont connus, et la mention « Réponse envoyée » si l'équipe avait
+   répondu. Recherche et filtres : année de publication, résultat, type de travaux, type de
+   marché, région, départements, ville ou code postal, acheteur, montant.
+6. **Fiche** : ouvrir une consultation. L'en-tête résume l'essentiel (acheteur, référence, lieu,
    type de marché, travaux, procédure, publication, date limite et jours restants, statut) ; les
    sections suivent : informations principales, objet, lots (avec leur total et, pour une
    consultation attribuée, l'attributaire de chaque lot), critères d'attribution et leur
@@ -75,18 +80,18 @@ Archives et Marchés attribués sont en cours de construction.
    change la date limite est signalé). Une information absente de l'avis n'est pas affichée ou est
    signalée comme non indiquée. « Retour aux résultats » ramène à la page d'où la fiche a été
    ouverte, avec sa recherche, ses filtres, son tri et sa page.
-6. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
+7. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
    dans la section « Documents (DCE) » (archive ZIP ou fichiers). Chaque dépôt crée une
    nouvelle version. Chaque pièce (RC, CCAP, CCTP, AE, DPGF, BPU, DQE, plans…) peut être ouverte
    ou téléchargée. Vérifier son type et le corriger si besoin : l'analyse se fonde sur le
    règlement de consultation. Dans la liste, « DCE : n documents » signale un dossier déjà déposé.
-7. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
+8. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
    et prend quelques minutes. Pour un appel d'offres écarté par le filtre, utiliser « Lancer
    l'analyse ».
-8. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
+9. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
    le document à la bonne page ; l'extrait cité est affiché sous la valeur. Valider, corriger
    ou rejeter les informations importantes, puis « Valider la fiche ».
-9. **Statut et suivi** : le statut est partagé par toute l'équipe : Nouveau, À analyser, En
+10. **Statut et suivi** : le statut est partagé par toute l'équipe : Nouveau, À analyser, En
    préparation, Réponse envoyée ou Écarté. Il se change directement dans la liste, ou dans la
    section « Suivi » de la fiche avec un commentaire. L'étoile ☆ sert à suivre un appel d'offres :
    ce suivi est personnel et retrouvé dans l'onglet « Mes suivis ».

@@ -8,6 +8,8 @@ import { updateFollowUp } from "@/services/tenderApi";
 import type { Page } from "@/types/common";
 import type { FollowUpStatus, TenderSummary } from "@/types/tender";
 
+import { ListToolbar } from "./ListToolbar";
+import { Pagination } from "./Pagination";
 import { TenderRow } from "./TenderRow";
 
 /** Values of the sort parameter of GET /api/tenders; "-" sorts in descending order. */
@@ -21,8 +23,6 @@ const SORT_OPTIONS = [
   { value: "amount", label: "Montant croissant" },
   { value: "distance", label: "Distance" },
 ];
-
-const PAGE_SIZES = [20, 50, 100];
 
 type Props = {
   data: Page<TenderSummary>;
@@ -62,34 +62,18 @@ export function TenderResults({ data, loading, params, onNavigate, caption, empt
   return (
     <>
       {actionError && <p className="banner error">{actionError}</p>}
-      <div className="list-toolbar">
-        <p className="muted result-count">
-          {data.totalElements} appel{data.totalElements > 1 ? "s" : ""} d&apos;offres
-          {caption}
-          {loading && " · chargement…"}
-        </p>
-        <label className="inline">
-          Trier par
-          <select value={params.get("sort") ?? ""} onChange={(e) => onNavigate({ sort: e.target.value, page: null })}>
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="inline">
-          Par page
-          <select
-            value={params.get("size") ?? "20"}
-            onChange={(e) => onNavigate({ size: e.target.value === "20" ? null : e.target.value, page: null })}
-          >
-            {PAGE_SIZES.map((size) => (
-              <option key={size}>{size}</option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <ListToolbar
+        summary={
+          <>
+            {data.totalElements} appel{data.totalElements > 1 ? "s" : ""} d&apos;offres
+            {caption}
+            {loading && " · chargement…"}
+          </>
+        }
+        sortOptions={SORT_OPTIONS}
+        params={params}
+        onNavigate={onNavigate}
+      />
       {data.content.length === 0 ? (
         <p className="page-message">{emptyMessage}</p>
       ) : (
@@ -123,23 +107,7 @@ export function TenderResults({ data, loading, params, onNavigate, caption, empt
           </table>
         </div>
       )}
-      {data.totalPages > 1 && (
-        <nav className="pagination">
-          <button type="button" disabled={page <= 0} onClick={() => onNavigate({ page: String(page - 1) })}>
-            Précédent
-          </button>
-          <span>
-            Page {page + 1} sur {data.totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={page + 1 >= data.totalPages}
-            onClick={() => onNavigate({ page: String(page + 1) })}
-          >
-            Suivant
-          </button>
-        </nav>
-      )}
+      <Pagination page={page} totalPages={data.totalPages} onNavigate={onNavigate} />
     </>
   );
 }

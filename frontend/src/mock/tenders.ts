@@ -681,6 +681,7 @@ function makeTender(id: number, past: boolean): TenderDetail {
     }
   } else if (rnd.chance(0.03)) {
     status = "CANCELLED";
+    result = { kind: "CANCELLED" };
   }
   if (status === "CANCELLED") {
     notices.push({

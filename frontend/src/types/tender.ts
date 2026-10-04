@@ -48,6 +48,10 @@ export type TenderSummary = {
   postalCode?: string | null;
   /** Outcome of a past consultation, null while it is open or when unknown. */
   result?: TenderResult | null;
+  /** Companies awarded, one per lot at most, for an awarded consultation. */
+  winners?: string[];
+  /** Total awarded, null when an amount is unknown. */
+  awardedAmount?: number | null;
 };
 
 /** Outcome of a past consultation; awarded contracts point to it by tenderId, one per lot. */
