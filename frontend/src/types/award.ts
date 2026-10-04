@@ -1,3 +1,4 @@
+import type { Page } from "./common";
 import type { MarketType } from "./tender";
 
 /** Result of an award notice: who won a contract or one of its lots, for how much. */
@@ -22,4 +23,12 @@ export type AwardedContract = {
   amount: number | null;
   awardedAt: string;
   offersReceived: number | null;
+};
+
+/** A page of awarded contracts, with figures on all the contracts found. */
+export type AwardSearch = Page<AwardedContract> & {
+  /** Distinct winners. */
+  winnerCount: number;
+  /** Sum of the known amounts. */
+  totalAmount: number;
 };

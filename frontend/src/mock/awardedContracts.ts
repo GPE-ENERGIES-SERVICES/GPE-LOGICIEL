@@ -21,6 +21,12 @@ const FIXED_WINNERS: Record<string, { winner: string; city: string; amount: numb
   "6/4": { winner: "Thermatec Méditerranée", city: "Marseille", amount: 196_300 },
 };
 
+/** Usual amount of a contract when the notice gave no estimate, by main activity. */
+const USUAL_AMOUNTS: Record<string, [number, number]> = {
+  STUDIES: [15_000, 90_000],
+  MAINTENANCE: [30_000, 300_000],
+};
+
 function winnerFor(tender: TenderDetail): { winner: string; city: string } {
   if (tender.followUpStatus === "SUBMITTED" && rnd.chance(0.45)) {
     return { winner: OWN_COMPANY, city: "Marseille" };
@@ -39,7 +45,8 @@ function awardsOf(tender: TenderDetail): Omit<AwardedContract, "id">[] {
   return lots.map((lot) => {
     const fixed = FIXED_WINNERS[`${tender.id}/${lot.number}`];
     const { winner, city } = fixed ? { winner: fixed.winner, city: fixed.city } : winnerFor(tender);
-    const estimate = lot.estimatedAmount ?? rnd.amount(60_000, 800_000);
+    const [min, max] = USUAL_AMOUNTS[tender.activities?.[0] ?? ""] ?? [60_000, 800_000];
+    const estimate = lot.estimatedAmount ?? rnd.amount(min, max);
     return {
       tenderId: tender.id,
       title: tender.title,

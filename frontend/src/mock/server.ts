@@ -9,6 +9,7 @@ import { ACTIVITY_LABELS, formatAmount, MARKET_TYPE_LABELS, TENDER_TAB_LABELS } 
 import { REGIONS } from "@/lib/regions";
 import { ApiError } from "@/services/http";
 import type { Alert, AlertInput, AlertSummary } from "@/types/alert";
+import type { AwardedContract, AwardSearch } from "@/types/award";
 import type { TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
 import type { DocumentInfo, PieceType } from "@/types/document";
@@ -368,20 +369,26 @@ function sort(found: TenderDetail[], sortParam: string | null): TenderDetail[] {
   });
 }
 
-function search(params: URLSearchParams): Page<TenderSummary> {
+/** The page asked by the page and size parameters, 20 lines by default and 100 at most. */
+function paginate<T>(found: T[], params: URLSearchParams): Page<T> {
   const page = Math.max(0, number(params.get("page")) ?? 0);
   const size = Math.min(100, Math.max(1, number(params.get("size")) ?? 20));
-  const found = sort(
-    tenders.filter((tender) => matches(tender, params)),
-    params.get("sort"),
-  );
   return {
-    content: found.slice(page * size, (page + 1) * size).map(toSummary),
+    content: found.slice(page * size, (page + 1) * size),
     page,
     size,
     totalElements: found.length,
     totalPages: Math.ceil(found.length / size),
   };
+}
+
+function search(params: URLSearchParams): Page<TenderSummary> {
+  const found = sort(
+    tenders.filter((tender) => matches(tender, params)),
+    params.get("sort"),
+  );
+  const result = paginate(found, params);
+  return { ...result, content: result.content.map(toSummary) };
 }
 
 /** Number of tenders of each tab matching the search and filters. */
@@ -421,6 +428,66 @@ function stats(): TenderStats {
     byStatus: countBy((tender) => [tender.followUpStatus]) as Record<FollowUpStatus, number>,
     byActivity: countBy((tender) => tender.activities ?? []),
     byDepartment: countBy((tender) => tender.departments),
+  };
+}
+
+// --- Awarded contracts ------------------------------------------------------
+
+/** Filters of GET /api/awards, all combinable; an unknown amount never hides a contract. */
+function matchesAward(award: AwardedContract, params: URLSearchParams): boolean {
+  const q = params.get("q")?.trim();
+  const text = (key: string) => normalize(params.get(key)?.trim() ?? "");
+  const departments = list(params.get("department"));
+  const activities = list(params.get("activity"));
+  const marketTypes = list(params.get("marketType"));
+  const region = params.get("region");
+  const city = params.get("city")?.trim();
+  const minAmount = number(params.get("minAmount"));
+  const maxAmount = number(params.get("maxAmount"));
+  const searched = normalize(
+    [
+      award.title,
+      award.lot,
+      award.buyer,
+      award.winner,
+      award.location,
+      award.postalCode,
+      ...award.activities.map((code) => ACTIVITY_LABELS[code] ?? code),
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+  return (
+    (!q || searchTerms(q).every((words) => words.some((word) => startsWord(searched, word)))) &&
+    normalize(award.winner).includes(text("winner")) &&
+    normalize(award.buyer).includes(text("buyer")) &&
+    (!params.get("year") || award.awardedAt.startsWith(params.get("year") ?? "")) &&
+    (departments.length === 0 || (award.department !== null && departments.includes(award.department))) &&
+    (!region || (award.department !== null && REGIONS[region]?.includes(award.department))) &&
+    (!city || normalize(award.location ?? "").includes(normalize(city)) || (award.postalCode ?? "").startsWith(city)) &&
+    (activities.length === 0 || award.activities.some((code) => activities.includes(code))) &&
+    (marketTypes.length === 0 || marketTypes.includes(award.marketType)) &&
+    (minAmount === null || award.amount === null || award.amount >= minAmount) &&
+    (maxAmount === null || award.amount === null || award.amount <= maxAmount)
+  );
+}
+
+/** The most recent first by default; "amount" and "awardedAt", "-" for descending. Unknown amounts last. */
+function searchAwards(params: URLSearchParams): AwardSearch {
+  const sortParam = params.get("sort") || "-awardedAt";
+  const descending = sortParam.startsWith("-");
+  const byAmount = sortParam.replace(/^-/, "") === "amount";
+  const found = MOCK_AWARDS.filter((award) => matchesAward(award, params)).sort((a, b) => {
+    if (byAmount && (a.amount === null || b.amount === null)) {
+      return a.amount === b.amount ? 0 : a.amount === null ? 1 : -1;
+    }
+    const order = byAmount ? (a.amount ?? 0) - (b.amount ?? 0) : a.awardedAt.localeCompare(b.awardedAt);
+    return descending ? -order : order;
+  });
+  return {
+    ...paginate(found, params),
+    winnerCount: new Set(found.map((award) => award.winner)).size,
+    totalAmount: found.reduce((sum, award) => sum + (award.amount ?? 0), 0),
   };
 }
 
@@ -602,6 +669,7 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
   ["GET", /^\/api\/tenders\/(\d+)\/awards$/, (id) => MOCK_AWARDS.filter((award) => award.tenderId === find(id).id)],
   ["PUT", /^\/api\/documents\/(\d+)\/piece-type$/, (id, _, body) => changePieceType(id, body)],
+  ["GET", /^\/api\/awards$/, (_, url) => searchAwards(url.searchParams)],
   ["GET", /^\/api\/alerts$/, () => alerts.map(alertSummary)],
   ["POST", /^\/api\/alerts$/, (_, __, body) => createAlert(body)],
   ["PUT", /^\/api\/alerts\/(\d+)$/, (id, _, body) => updateAlert(id, body)],

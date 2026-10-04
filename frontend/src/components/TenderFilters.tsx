@@ -22,7 +22,8 @@ export type FilterKey =
   | "hasLots"
   | "year"
   | "result"
-  | "buyer";
+  | "buyer"
+  | "winner";
 
 /** Filters of the open consultations. */
 export const OPEN_FILTERS: FilterKey[] = [
@@ -39,6 +40,20 @@ export const OPEN_FILTERS: FilterKey[] = [
   "minAmount",
   "maxAmount",
   "hasLots",
+];
+
+/** Filters of the awarded contracts; the year is the one of the award. */
+export const AWARD_FILTERS: FilterKey[] = [
+  "year",
+  "activity",
+  "marketType",
+  "region",
+  "department",
+  "city",
+  "buyer",
+  "winner",
+  "minAmount",
+  "maxAmount",
 ];
 
 /** Filters of the past consultations. */
@@ -156,11 +171,13 @@ function field(key: FilterKey, value: string): ReactNode {
     case "hasLots":
       return <Select name={key} label="Lots" value={value} emptyLabel="Indifférent" options={LOT_OPTIONS} />;
     case "year":
-      return <Select name={key} label="Année de publication" value={value} emptyLabel="Toutes" options={YEAR_OPTIONS} />;
+      return <Select name={key} label="Année" value={value} emptyLabel="Toutes" options={YEAR_OPTIONS} />;
     case "result":
       return <Select name={key} label="Résultat" value={value} emptyLabel="Tous" options={RESULT_OPTIONS} />;
     case "buyer":
       return <Input name={key} label="Acheteur" value={value} placeholder="ex. Département" />;
+    case "winner":
+      return <Input name={key} label="Attributaire" value={value} placeholder="ex. Sudelec" />;
   }
 }
 
@@ -205,7 +222,7 @@ export function TenderFilters({ params, onApply, fields }: Props) {
           </button>
         )}
         {fields.includes("minAmount") && (
-          <span className="hint">Un montant non indiqué ne masque pas une consultation.</span>
+          <span className="hint">Un montant non indiqué ne masque pas une ligne.</span>
         )}
       </div>
     </form>

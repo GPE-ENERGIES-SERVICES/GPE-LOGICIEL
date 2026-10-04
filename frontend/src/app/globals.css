@@ -556,6 +556,10 @@ td.number {
   margin: 0.15rem 0.25rem 0 0;
 }
 
+.tender-table .link-button {
+  text-align: left;
+}
+
 .tender-table select {
   padding: 0.2rem 0.3rem;
   font-size: 0.85rem;

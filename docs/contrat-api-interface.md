@@ -28,6 +28,7 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 | `GET /api/tenders/stats` | absent | **nouveau** : répartition pour le tableau de bord |
 | `GET /api/tenders/status-counts` | absent | **nouveau** : nombre par statut, pour Mes suivis |
 | `GET /api/tenders/{id}/awards` | absent | **nouveau** : marchés attribués de la consultation, un par lot (`AwardedContract`) |
+| `GET /api/awards` | absent | **nouveau** : recherche dans les marchés attribués (voir plus bas) |
 | `GET /api/tenders/{id}` | existe | nouveaux champs (voir plus bas) |
 | `PUT /api/tenders/{id}/follow-up` | existe | accepter le statut `SUBMITTED` |
 | `PUT /api/tenders/{id}/follow` | absent | **nouveau** : suivre (étoile), par utilisateur |
@@ -129,6 +130,26 @@ Un `-` devant la clé trie dans l'ordre décroissant. Les valeurs absentes sont 
 | `-relevance` | pertinence décroissante |
 | `-amount`, `amount` | montant décroissant, croissant |
 | `distance` | plus proche du siège |
+
+## Marchés attribués (`GET /api/awards`)
+
+Une ligne par lot attribué (type `AwardedContract` de `frontend/src/types/award.ts`), extraite des
+avis d'attribution déjà collectés : attributaire, montant, date, nombre d'offres reçues. La
+réponse est une page (`Page<AwardedContract>`) complétée de `winnerCount` (attributaires
+différents) et `totalAmount` (somme des montants connus) calculés sur toutes les lignes trouvées.
+
+| Paramètre | Règle |
+|-----------|-------|
+| `q` | comme pour la liste des appels d'offres, sur l'objet, le lot, l'acheteur, l'attributaire, le lieu et les types de travaux |
+| `winner`, `buyer` | texte contenu dans le nom de l'attributaire, de l'acheteur |
+| `year` | année d'attribution |
+| `activity`, `marketType`, `region`, `department`, `city` | comme pour la liste des appels d'offres |
+| `minAmount`, `maxAmount` | montant attribué ; un montant inconnu ne masque pas la ligne |
+| `sort` | `-awardedAt` par défaut, `awardedAt`, `-amount`, `amount` |
+| `page`, `size` | comme pour la liste |
+
+À faire côté backend : extraire l'attributaire, le montant et le nombre d'offres des avis
+d'attribution BOAMP (ils sont conservés bruts dans `raw_notice`).
 
 ## Veilles (`/api/alerts`)
 
