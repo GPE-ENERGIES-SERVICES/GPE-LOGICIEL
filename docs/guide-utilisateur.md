@@ -22,6 +22,11 @@ aide à décider ; la décision reste humaine.
    Chaque ligne donne l'essentiel : acheteur, lieu et distance, travaux, lots, procédure,
    montant, dates, jours restants, pertinence et statut. Survoler « Retenu » ou « Hors critères »
    affiche la raison donnée par le filtre.
+
+   La **recherche** porte sur le titre, la référence, l'acheteur, la ville, la description et
+   le type de travaux, sans tenir compte des majuscules ni des accents ; tous les mots saisis
+   doivent être trouvés. Les compteurs des onglets suivent la recherche : un résultat rangé dans
+   un autre onglet reste visible.
 3. **Fiche** : ouvrir un appel d'offres pour voir les informations de l'avis, l'historique des
    publications (un rectificatif qui change la date limite est signalé) et le lien vers la
    plateforme de l'acheteur.

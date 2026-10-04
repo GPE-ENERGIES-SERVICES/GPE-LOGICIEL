@@ -18,7 +18,7 @@ const TAB_HINTS: Partial<Record<TenderTab, string>> = {
     "Avis écartés par les critères de l'entreprise. Vérifiez ici que le filtre ne fait pas disparaître de bons marchés.",
 };
 
-const FILTER_KEYS = ["department", "q", "minDaysLeft", "maxAmount"] as const;
+const FILTER_KEYS = ["department", "minDaysLeft", "maxAmount"] as const;
 
 function TenderList() {
   const router = useRouter();
@@ -27,16 +27,24 @@ function TenderList() {
   const tabParam = searchParams.get("tab") as TenderTab | null;
   const tab = tabParam && tabParam in TENDER_TAB_LABELS ? tabParam : "NEW";
   const page = Number(searchParams.get("page") ?? "0");
+  const text = searchParams.get("q") ?? "";
   const query = searchParams.toString();
   const [busyId, setBusyId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // The tab counts follow the search and the filters, so a result in another tab is visible.
+  const countParams = new URLSearchParams(searchParams);
+  for (const key of ["tab", "page", "size", "sort"]) {
+    countParams.delete(key);
+  }
+  const countQuery = countParams.toString();
 
   const list = useLoader(() => {
     const params = new URLSearchParams(searchParams);
     params.set("tab", tab);
     return api<Page<TenderSummary>>(`/api/tenders?${params}`);
   }, query);
-  const counts = useLoader(() => api<Record<TenderTab, number>>("/api/tenders/counts"), "counts");
+  const counts = useLoader(() => api<Record<TenderTab, number>>(`/api/tenders/counts?${countQuery}`), countQuery);
 
   const navigate = (changes: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -48,6 +56,11 @@ function TenderList() {
       }
     }
     router.replace(`${pathname}?${params}`);
+  };
+
+  const search = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    navigate({ q: String(new FormData(event.currentTarget).get("q") ?? "").trim() || null, page: null });
   };
 
   const applyFilters = (event: FormEvent<HTMLFormElement>) => {
@@ -78,6 +91,24 @@ function TenderList() {
     <>
       <CollectStatus />
 
+      <form className="filters" role="search" onSubmit={search} key={text}>
+        <input
+          name="q"
+          type="search"
+          aria-label="Rechercher"
+          placeholder="Rechercher par titre, référence, acheteur, ville ou type de travaux"
+          defaultValue={text}
+        />
+        <button type="submit" className="primary">
+          Rechercher
+        </button>
+        {text && (
+          <button type="button" className="link-button" onClick={() => navigate({ q: null, page: null })}>
+            Effacer la recherche
+          </button>
+        )}
+      </form>
+
       <div className="tabs" role="tablist">
         {(Object.entries(TENDER_TAB_LABELS) as [TenderTab, string][]).map(([value, label]) => (
           <button
@@ -95,7 +126,6 @@ function TenderList() {
       </div>
 
       <form className="filters" onSubmit={applyFilters} key={query}>
-        <input name="q" placeholder="Mots-clés" defaultValue={searchParams.get("q") ?? ""} />
         <input
           name="department"
           placeholder="Département"
@@ -121,7 +151,7 @@ function TenderList() {
           <button
             type="button"
             className="link-button"
-            onClick={() => navigate({ department: null, q: null, minDaysLeft: null, maxAmount: null, page: null })}
+            onClick={() => navigate({ department: null, minDaysLeft: null, maxAmount: null, page: null })}
           >
             Effacer les filtres
           </button>
@@ -137,10 +167,15 @@ function TenderList() {
         <>
           <p className="muted result-count">
             {list.data.totalElements} appel{list.data.totalElements > 1 ? "s" : ""} d&apos;offres
+            {text && <> pour « {text} »</>}
             {list.loading && " · chargement…"}
           </p>
           {list.data.content.length === 0 ? (
-            <p className="page-message">Aucun appel d&apos;offres dans cet onglet.</p>
+            <p className="page-message">
+              {text
+                ? `Aucun appel d'offres ne correspond à « ${text} » dans cet onglet.`
+                : "Aucun appel d'offres dans cet onglet."}
+            </p>
           ) : (
             <div className="card table-card">
               <table className="tender-table">

@@ -256,12 +256,14 @@ function search(params: URLSearchParams): Page<TenderSummary> {
   };
 }
 
-function counts(): Record<TenderTab, number> {
+/** Number of tenders of each tab matching the search and filters. */
+function counts(params: URLSearchParams): Record<TenderTab, number> {
   return Object.fromEntries(
-    (Object.keys(TENDER_TAB_LABELS) as TenderTab[]).map((tab) => [
-      tab,
-      tenders.filter((tender) => inTab(tender, tab)).length,
-    ]),
+    (Object.keys(TENDER_TAB_LABELS) as TenderTab[]).map((tab) => {
+      const tabParams = new URLSearchParams(params);
+      tabParams.set("tab", tab);
+      return [tab, tenders.filter((tender) => matches(tender, tabParams)).length];
+    }),
   ) as Record<TenderTab, number>;
 }
 
@@ -328,7 +330,7 @@ const ROUTES: Route[] = [
   ["POST", /^\/api\/auth\/logout$/, () => undefined],
   ["GET", /^\/api\/collect-runs$/, () => collectJournal()],
   ["GET", /^\/api\/tenders$/, (_, url) => search(url.searchParams)],
-  ["GET", /^\/api\/tenders\/counts$/, () => counts()],
+  ["GET", /^\/api\/tenders\/counts$/, (_, url) => counts(url.searchParams)],
   ["GET", /^\/api\/tenders\/(\d+)$/, (id) => find(id)],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow-up$/, (id, _, body) => followUp(id, body)],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, true)],
