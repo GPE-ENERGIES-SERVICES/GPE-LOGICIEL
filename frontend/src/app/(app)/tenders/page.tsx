@@ -12,6 +12,7 @@ import { TENDER_TAB_LABELS } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { useUrlParams } from "@/lib/useUrlParams";
 import { getAlerts } from "@/services/alertApi";
+import { available } from "@/services/http";
 import { getTenderCounts, getTenders } from "@/services/tenderApi";
 import type { TenderTab } from "@/types/tender";
 
@@ -52,7 +53,7 @@ function TenderList() {
     return getTenders(params);
   }, query);
   const counts = useLoader(() => getTenderCounts(countQuery), countQuery);
-  const alerts = useLoader(() => (alertId ? getAlerts() : Promise.resolve([])), alertId ?? "");
+  const alerts = useLoader(() => (alertId && available("alerts") ? getAlerts() : Promise.resolve([])), alertId ?? "");
   const alert = alerts.data?.find((candidate) => String(candidate.id) === alertId);
 
   // A saved search started from the current search and filters.
@@ -79,7 +80,7 @@ function TenderList() {
         placeholder="Rechercher : objet, référence, acheteur, ville, code postal, type de travaux, CPV…"
         onSearch={(value) => navigate({ q: value, page: null })}
       >
-        {filtered && !alertId && <Link href={`/alerts?${alertParams}`}>Enregistrer comme veille</Link>}
+        {filtered && !alertId && available("alerts") && <Link href={`/alerts?${alertParams}`}>Enregistrer comme veille</Link>}
       </SearchForm>
 
       {alertId && (

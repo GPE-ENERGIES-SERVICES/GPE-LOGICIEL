@@ -7,16 +7,19 @@ import java.util.List;
 
 /**
  * A tender as shown in the list.
+ * @param followed followed by the logged-in user
  */
-public record TenderSummaryResponse(Long id, String title, String buyer, String location, List<String> departments,
-		List<MarketType> marketTypes, BigDecimal estimatedAmount, LocalDate publishedAt, Instant deadline,
-		TenderStatus status, FollowUpStatus followUpStatus, Boolean retained, String filterReason) {
+public record TenderSummaryResponse(Long id, String title, String buyer, String reference, String location,
+		List<String> departments, List<MarketType> marketTypes, ProcedureType procedureType, String source,
+		BigDecimal estimatedAmount, LocalDate publishedAt, Instant deadline, int lotCount, TenderStatus status,
+		FollowUpStatus followUpStatus, Boolean retained, String filterReason, boolean followed) {
 
-	static TenderSummaryResponse from(Tender tender) {
-		return new TenderSummaryResponse(tender.getId(), tender.getTitle(), tender.getBuyer(), tender.getLocation(),
-				tender.getDepartments(), tender.getMarketTypes(), tender.getEstimatedAmount(), tender.getPublishedAt(),
-				tender.getDeadline(), tender.getStatus(), tender.getFollowUpStatus(), tender.getRetained(),
-				tender.getFilterReason());
+	static TenderSummaryResponse from(Tender tender, boolean followed) {
+		return new TenderSummaryResponse(tender.getId(), tender.getTitle(), tender.getBuyer(), tender.getReference(),
+				tender.getLocation(), tender.getDepartments(), tender.getMarketTypes(), tender.getProcedureType(),
+				tender.getSource(), tender.getEstimatedAmount(), tender.getPublishedAt(), tender.getDeadline(),
+				tender.getLots().size(), tender.getStatus(), tender.getFollowUpStatus(), tender.getRetained(),
+				tender.getFilterReason(), followed);
 	}
 
 }

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -112,7 +113,9 @@ public class Tender {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
+	// The list counts the lots of a whole page: loaded for many tenders at once.
 	@OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
+	@BatchSize(size = 100)
 	@OrderBy("position")
 	private List<Lot> lots = new ArrayList<>();
 

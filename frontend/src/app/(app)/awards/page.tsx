@@ -10,9 +10,11 @@ import { SearchForm } from "@/components/SearchForm";
 import { AWARD_FILTERS, TenderFilters } from "@/components/TenderFilters";
 import { ACTIVITY_LABELS, formatAmount, formatDate, MARKET_TYPE_LABELS } from "@/lib/format";
 import { tenderHref } from "@/lib/navigation";
+import { NotConnected } from "@/components/NotConnected";
 import { useLoader } from "@/lib/useLoader";
 import { useUrlParams } from "@/lib/useUrlParams";
 import { getAwardedContracts } from "@/services/awardApi";
+import { available } from "@/services/http";
 import type { AwardedContract } from "@/types/award";
 
 /** The most recent award first by default. */
@@ -143,6 +145,9 @@ function AwardList() {
 }
 
 export default function AwardsPage() {
+  if (!available("awards")) {
+    return <NotConnected title="Marchés attribués" />;
+  }
   return (
     <Suspense>
       <AwardList />

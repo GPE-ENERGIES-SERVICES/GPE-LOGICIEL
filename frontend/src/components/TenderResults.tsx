@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import { tenderHref } from "@/lib/navigation";
+import { available } from "@/services/http";
 import { updateFollowUp } from "@/services/tenderApi";
 import type { Page } from "@/types/common";
 import type { FollowUpStatus, TenderSummary } from "@/types/tender";
@@ -18,10 +19,10 @@ const SORT_OPTIONS = [
   { value: "-deadline", label: "Date limite la plus éloignée" },
   { value: "-published", label: "Plus récents" },
   { value: "published", label: "Plus anciens" },
-  { value: "-relevance", label: "Pertinence" },
+  ...(available("relevance") ? [{ value: "-relevance", label: "Pertinence" }] : []),
   { value: "-amount", label: "Montant décroissant" },
   { value: "amount", label: "Montant croissant" },
-  { value: "distance", label: "Distance" },
+  ...(available("distance") ? [{ value: "distance", label: "Distance" }] : []),
 ];
 
 type Props = {

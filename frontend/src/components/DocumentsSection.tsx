@@ -12,7 +12,7 @@ import {
 } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { changePieceType, getDossiers, retryDossier, uploadDossier } from "@/services/documentApi";
-import { DEMO_DATA } from "@/services/http";
+import { available, DEMO_DATA } from "@/services/http";
 import type { DocumentInfo, Dossier, PieceType } from "@/types/document";
 
 import { DocumentSearch } from "./DocumentSearch";
@@ -196,7 +196,7 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
       </form>
       {error && <p className="error">{error}</p>}
       {data && data.length === 0 && <p className="muted">Aucun dossier déposé.</p>}
-      {data?.[0]?.status === "DONE" && <DocumentSearch tenderId={tenderId} />}
+      {data?.[0]?.status === "DONE" && available("documentSearch") && <DocumentSearch tenderId={tenderId} />}
       {data?.map((dossier, index) =>
         index === 0 ? (
           <DossierView key={dossier.id} dossier={dossier} onChanged={reload} />

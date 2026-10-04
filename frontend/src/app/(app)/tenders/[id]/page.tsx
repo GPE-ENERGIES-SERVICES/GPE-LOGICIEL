@@ -24,6 +24,7 @@ import {
 import { backLink } from "@/lib/navigation";
 import { useLoader } from "@/lib/useLoader";
 import { getTenderAwards } from "@/services/awardApi";
+import { available } from "@/services/http";
 import { getTender } from "@/services/tenderApi";
 import type { AwardedContract } from "@/types/award";
 import type { TenderDetail } from "@/types/tender";
@@ -68,7 +69,7 @@ function TenderDetails() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const loaded = useLoader(() => getTender(id), id);
-  const awards = useLoader(() => getTenderAwards(Number(id)), id);
+  const awards = useLoader(() => (available("awards") ? getTenderAwards(Number(id)) : Promise.resolve([])), id);
   // The tender as last saved on this page, or as loaded.
   const [saved, setSaved] = useState<TenderDetail | null>(null);
   const tender = saved ?? loaded.data;
@@ -102,7 +103,8 @@ function TenderDetails() {
   const deadlineChanged = announcedDeadlines.size > 1;
   const deadline = (
     <>
-      <strong>{formatLongDateTime(tender.deadline)}</strong> <DeadlineBadge deadline={tender.deadline} />
+      <strong>{formatLongDateTime(tender.deadline)}</strong>{" "}
+      {tender.status === "ACTIVE" && <DeadlineBadge deadline={tender.deadline} />}
       {deadlineChanged && <span className="badge urgent">Modifiée par un rectificatif</span>}
     </>
   );
@@ -235,62 +237,66 @@ function TenderDetails() {
         )}
       </section>
 
-      <section className="card">
-        <h2>Critères d&apos;attribution</h2>
-        {criteria.length === 0 ? (
-          <p className="muted">Critères non indiqués dans l&apos;avis.</p>
-        ) : (
-          <table className="criteria-table">
-            <tbody>
-              {criteria.map((criterion) => (
-                <tr key={criterion.label}>
-                  <td>{criterion.label}</td>
-                  <td className="number">{criterion.weight === null ? "Non pondéré" : `${criterion.weight} %`}</td>
-                </tr>
-              ))}
-            </tbody>
-            {allWeighted && (
-              <tfoot>
-                <tr>
-                  <td>Total</td>
-                  <td className="number">{weightTotal} %</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        )}
-        {criteria.length > 0 && allWeighted && weightTotal !== 100 && (
-          <p className="hint">Les pondérations publiées ne totalisent pas 100 % : vérifier le règlement de consultation.</p>
-        )}
-      </section>
-
-      <section className="card">
-        <h2>Informations importantes</h2>
-        {!info ? (
-          <p className="muted">Non renseignées dans l&apos;avis. Elles seront relevées dans le DCE lors de son analyse.</p>
-        ) : (
-          <dl className="facts rows">
-            <Fact label="Visite du site">
-              {visit?.required ? (
-                <>
-                  <span className="badge urgent">Obligatoire</span> {visit.date && `le ${formatDateTime(visit.date)}`}
-                  {visit.date && new Date(visit.date) < new Date() && <span className="muted"> (passée)</span>}
-                </>
-              ) : visit ? (
-                "Facultative"
-              ) : (
-                "Non mentionnée"
+      {available("noticeDetails") && (
+        <section className="card">
+          <h2>Critères d&apos;attribution</h2>
+          {criteria.length === 0 ? (
+            <p className="muted">Critères non indiqués dans l&apos;avis.</p>
+          ) : (
+            <table className="criteria-table">
+              <tbody>
+                {criteria.map((criterion) => (
+                  <tr key={criterion.label}>
+                    <td>{criterion.label}</td>
+                    <td className="number">{criterion.weight === null ? "Non pondéré" : `${criterion.weight} %`}</td>
+                  </tr>
+                ))}
+              </tbody>
+              {allWeighted && (
+                <tfoot>
+                  <tr>
+                    <td>Total</td>
+                    <td className="number">{weightTotal} %</td>
+                  </tr>
+                </tfoot>
               )}
-            </Fact>
-            <Fact label="Documents demandés">
-              {info.requiredDocuments.length > 0 && <List items={info.requiredDocuments} />}
-            </Fact>
-            <Fact label="Qualifications">{info.qualifications.length > 0 && <List items={info.qualifications} />}</Fact>
-            <Fact label="Certifications">{info.certifications.length > 0 && <List items={info.certifications} />}</Fact>
-            <Fact label="Conditions particulières">{info.specialConditions}</Fact>
-          </dl>
-        )}
-      </section>
+            </table>
+          )}
+          {criteria.length > 0 && allWeighted && weightTotal !== 100 && (
+            <p className="hint">Les pondérations publiées ne totalisent pas 100 % : vérifier le règlement de consultation.</p>
+          )}
+        </section>
+      )}
+
+      {available("noticeDetails") && (
+        <section className="card">
+          <h2>Informations importantes</h2>
+          {!info ? (
+            <p className="muted">Non renseignées dans l&apos;avis. Elles seront relevées dans le DCE lors de son analyse.</p>
+          ) : (
+            <dl className="facts rows">
+              <Fact label="Visite du site">
+                {visit?.required ? (
+                  <>
+                    <span className="badge urgent">Obligatoire</span> {visit.date && `le ${formatDateTime(visit.date)}`}
+                    {visit.date && new Date(visit.date) < new Date() && <span className="muted"> (passée)</span>}
+                  </>
+                ) : visit ? (
+                  "Facultative"
+                ) : (
+                  "Non mentionnée"
+                )}
+              </Fact>
+              <Fact label="Documents demandés">
+                {info.requiredDocuments.length > 0 && <List items={info.requiredDocuments} />}
+              </Fact>
+              <Fact label="Qualifications">{info.qualifications.length > 0 && <List items={info.qualifications} />}</Fact>
+              <Fact label="Certifications">{info.certifications.length > 0 && <List items={info.certifications} />}</Fact>
+              <Fact label="Conditions particulières">{info.specialConditions}</Fact>
+            </dl>
+          )}
+        </section>
+      )}
 
       <section className="card">
         <h2>Documents (DCE)</h2>

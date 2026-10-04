@@ -11,6 +11,7 @@ import { alertResultsHref, tenderHref } from "@/lib/navigation";
 import { useLoader } from "@/lib/useLoader";
 import { getAlerts, markAlertViewed } from "@/services/alertApi";
 import { getAwardedContracts } from "@/services/awardApi";
+import { available } from "@/services/http";
 import { getStatusCounts, getTenderCounts, getTenders } from "@/services/tenderApi";
 import type { TenderSummary } from "@/types/tender";
 
@@ -39,8 +40,8 @@ export default function DashboardPage() {
   const statuses = useLoader(() => getStatusCounts("tab=ALL"), "statuses");
   const deadlines = useLoader(() => getTenders(`${DEADLINES_QUERY}&size=${LIST_SIZE}`), "deadlines");
   const opportunities = useLoader(() => getTenders(`${OPPORTUNITIES_QUERY}&size=${LIST_SIZE}`), "opportunities");
-  const alerts = useLoader(getAlerts, "alerts");
-  const awards = useLoader(() => getAwardedContracts("size=5"), "awards");
+  const alerts = useLoader(() => (available("alerts") ? getAlerts() : Promise.resolve([])), "alerts");
+  const awards = useLoader(() => (available("awards") ? getAwardedContracts("size=5") : Promise.resolve(null)), "awards");
   const error = [recent, counts, statuses, deadlines, opportunities, alerts, awards].find((loader) => loader.error)?.error;
 
   // New consultations: those matching the company's criteria and those excluded by them.
@@ -145,70 +146,76 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      <div className="dashboard-grid">
-        <section className="card">
-          <h2>Mes veilles</h2>
-          {alerts.data && activeAlerts.length === 0 && <p className="muted">Aucune veille active.</p>}
-          {activeAlerts.length > 0 && (
-            <table>
-              <tbody>
-                {activeAlerts.map((alert) => (
-                  <tr key={alert.id}>
-                    <td>
-                      <button type="button" className="link-button" onClick={() => openAlert(alert.id)}>
-                        {alert.name}
-                      </button>
-                    </td>
-                    <td className="nowrap">
-                      {alert.newCount > 0 ? (
-                        <strong>
-                          {alert.newCount} nouvelle{alert.newCount > 1 ? "s" : ""}
-                        </strong>
-                      ) : (
-                        <span className="muted">Aucune nouvelle</span>
-                      )}
-                    </td>
-                    <td className="nowrap muted">{alert.matchCount} en cours</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {(available("alerts") || available("awards")) && (
+        <div className="dashboard-grid">
+          {available("alerts") && (
+            <section className="card">
+              <h2>Mes veilles</h2>
+              {alerts.data && activeAlerts.length === 0 && <p className="muted">Aucune veille active.</p>}
+              {activeAlerts.length > 0 && (
+                <table>
+                  <tbody>
+                    {activeAlerts.map((alert) => (
+                      <tr key={alert.id}>
+                        <td>
+                          <button type="button" className="link-button" onClick={() => openAlert(alert.id)}>
+                            {alert.name}
+                          </button>
+                        </td>
+                        <td className="nowrap">
+                          {alert.newCount > 0 ? (
+                            <strong>
+                              {alert.newCount} nouvelle{alert.newCount > 1 ? "s" : ""}
+                            </strong>
+                          ) : (
+                            <span className="muted">Aucune nouvelle</span>
+                          )}
+                        </td>
+                        <td className="nowrap muted">{alert.matchCount} en cours</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              <p>
+                <Link href="/alerts">Gérer mes veilles</Link>
+              </p>
+            </section>
           )}
-          <p>
-            <Link href="/alerts">Gérer mes veilles</Link>
-          </p>
-        </section>
 
-        <section className="card">
-          <h2>Derniers marchés attribués</h2>
-          {awards.data?.content.length === 0 && <p className="muted">Aucune attribution.</p>}
-          {awards.data && awards.data.content.length > 0 && (
-            <table>
-              <tbody>
-                {awards.data.content.map((award) => (
-                  <tr key={award.id}>
-                    <td>
-                      {award.tenderId ? (
-                        <Link href={tenderHref(award.tenderId, "/")}>{award.title}</Link>
-                      ) : (
-                        award.title
-                      )}
-                      <div className="small muted">
-                        {award.winner} · {award.buyer}
-                      </div>
-                    </td>
-                    <td className="nowrap">{formatAmount(award.amount)}</td>
-                    <td className="nowrap">{formatDate(award.awardedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {available("awards") && (
+            <section className="card">
+              <h2>Derniers marchés attribués</h2>
+              {awards.data?.content.length === 0 && <p className="muted">Aucune attribution.</p>}
+              {awards.data && awards.data.content.length > 0 && (
+                <table>
+                  <tbody>
+                    {awards.data.content.map((award) => (
+                      <tr key={award.id}>
+                        <td>
+                          {award.tenderId ? (
+                            <Link href={tenderHref(award.tenderId, "/")}>{award.title}</Link>
+                          ) : (
+                            award.title
+                          )}
+                          <div className="small muted">
+                            {award.winner} · {award.buyer}
+                          </div>
+                        </td>
+                        <td className="nowrap">{formatAmount(award.amount)}</td>
+                        <td className="nowrap">{formatDate(award.awardedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              <p>
+                <Link href="/awards">Voir les marchés attribués</Link>
+              </p>
+            </section>
           )}
-          <p>
-            <Link href="/awards">Voir les marchés attribués</Link>
-          </p>
-        </section>
-      </div>
+        </div>
+      )}
     </>
   );
 }

@@ -29,6 +29,12 @@ const RESULT_LABELS: Record<TenderResult["kind"], string> = {
   CANCELLED: "Annulée",
 };
 
+/** The backend gives the outcome in the detail only; the list falls back on the status of the consultation. */
+function resultLabel(tender: TenderSummary): string {
+  const kind = tender.result?.kind ?? (tender.status === "CLOSED" || tender.status === "ACTIVE" ? null : tender.status);
+  return kind ? RESULT_LABELS[kind] : "Close, résultat non connu";
+}
+
 function ArchiveRow({ tender, href }: { tender: TenderSummary; href: string }) {
   const area = tender.postalCode ?? tender.departments.join(", ");
   const about = [tender.buyer ?? "Acheteur non indiqué", tender.reference && `Réf. ${tender.reference}`]
@@ -51,7 +57,7 @@ function ArchiveRow({ tender, href }: { tender: TenderSummary; href: string }) {
       <td className="nowrap">{formatDate(tender.publishedAt)}</td>
       <td className="nowrap">{formatAmount(tender.estimatedAmount)}</td>
       <td className="nowrap">
-        {tender.result ? RESULT_LABELS[tender.result.kind] : "Close, résultat non connu"}
+        {resultLabel(tender)}
         {tender.followUpStatus === "SUBMITTED" && <div className="small muted">Réponse envoyée</div>}
       </td>
       <td>

@@ -32,7 +32,7 @@ class UserServiceTests {
 
 	@BeforeEach
 	void cleanDatabase() {
-		jdbc.execute("TRUNCATE app_user RESTART IDENTITY");
+		jdbc.execute("TRUNCATE tender_follow, app_user RESTART IDENTITY");
 	}
 
 	@Test

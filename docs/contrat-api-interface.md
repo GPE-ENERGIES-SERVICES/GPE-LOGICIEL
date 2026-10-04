@@ -19,20 +19,29 @@ La variable est lue à la construction de l'interface (`npm run dev` ou `npm run
 `frontend/src/services/` (`getTenders`, `getTender`…), qui passent toutes par `services/http.ts`,
 seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 
+Avec le backend réel, ce que le backend ne fournit pas encore est masqué plutôt que de produire
+une erreur : la liste `NOT_IN_BACKEND` de `services/http.ts`, lue par `available()`, en décide.
+Elle contient aujourd'hui les veilles (Mes veilles affiche « pas encore reliée au serveur »), les
+marchés attribués (même message ; la fiche ne les demande pas), la recherche dans le DCE, le
+filtre par type de travaux, la distance (filtre et tri), le tri par pertinence, les filtres année,
+résultat et acheteur des Archives, et les sections Critères d'attribution et Informations
+importantes de la fiche. Retirer une valeur de cette liste suffit à afficher la fonction une fois
+le backend prêt. Avec les données de démonstration, tout reste affiché.
+
 ## Récapitulatif
 
 | Appel | Backend actuel | À faire |
 |-------|----------------|---------|
-| `GET /api/tenders` | 5 filtres, tri fixe | onglets, filtres, tri, nouveaux champs (voir plus bas) |
-| `GET /api/tenders/counts` | sans paramètre | accepter les mêmes filtres que la liste, nouveaux onglets |
-| `GET /api/tenders/status-counts` | absent | **nouveau** : nombre par statut, pour Mes suivis |
+| `GET /api/tenders` | onglets, 13 filtres, tri (voir plus bas) | filtres et tris restants, synonymes, nouveaux champs |
+| `GET /api/tenders/counts` | mêmes filtres que la liste, tous les onglets | — |
+| `GET /api/tenders/status-counts` | existe | — |
 | `GET /api/tenders/{id}/awards` | absent | **nouveau** : marchés attribués de la consultation, un par lot (`AwardedContract`) |
 | `GET /api/awards` | absent | **nouveau** : recherche dans les marchés attribués (voir plus bas) |
 | `GET /api/tenders/{id}/documents/search?q=` | absent | **nouveau** : recherche dans le DCE (voir plus bas) |
-| `GET /api/tenders/{id}` | existe | nouveaux champs (voir plus bas) |
-| `PUT /api/tenders/{id}/follow-up` | existe | accepter le statut `SUBMITTED` |
-| `PUT /api/tenders/{id}/follow` | absent | **nouveau** : suivre (étoile), par utilisateur |
-| `DELETE /api/tenders/{id}/follow` | absent | **nouveau** : ne plus suivre |
+| `GET /api/tenders/{id}` | existe, avec `followed` et `result` | nouveaux champs (voir plus bas) |
+| `PUT /api/tenders/{id}/follow-up` | existe, accepte `SUBMITTED` | — |
+| `PUT /api/tenders/{id}/follow` | existe : suivre (étoile), par utilisateur | — |
+| `DELETE /api/tenders/{id}/follow` | existe : ne plus suivre | — |
 | `/api/alerts` | absent | **nouveau** : veilles de l'utilisateur (voir plus bas) |
 | Autres appels (connexion, DCE, analyse, paramètres) | existent | aucun changement |
 
@@ -51,13 +60,12 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 
 ## Ordre d'intégration recommandé
 
-1. **Rétablir le mode réel** : `SUBMITTED` dans `FollowUpStatus`, nouvelles valeurs de
-   `TenderTab`. Sans cela, la liste renvoie une erreur avec le vrai backend.
-2. **Champs simples de la liste** : `reference`, `procedureType`, `source`, `lotCount`,
-   `postalCode`, `documentCount`, `result`.
-3. **Recherche et filtres** : paramètres de `GET /api/tenders`, tri, `/counts` avec filtres,
-   `/status-counts`, synonymes.
-4. **Suivi personnel** : table `tender_follow`, `/follow`, champ `followed`, onglet `FOLLOWED`.
+1. **Rétablir le mode réel** : fait (`SUBMITTED`, nouvelles valeurs de `TenderTab`).
+2. **Champs simples de la liste** : fait pour `reference`, `procedureType`, `source`,
+   `lotCount` ; restent `postalCode`, `documentCount`, et `result` (fourni dans le détail seulement).
+3. **Recherche et filtres** : fait pour les paramètres marqués « oui » plus bas, le tri,
+   `/counts` avec filtres et `/status-counts` ; restent les synonymes et les autres paramètres.
+4. **Suivi personnel** : fait (table `tender_follow`, `/follow`, `followed`, onglet `FOLLOWED`).
 5. **Veilles** : table `alert`, `/api/alerts`, paramètre `alert`.
 6. **Attributions** : extraction des avis d'attribution, `/api/awards`, `/api/tenders/{id}/awards`,
    `winners`, `awardedAmount`.
@@ -70,7 +78,7 @@ encore absent.
 
 ## Statuts
 
-`FollowUpStatus` gagne la valeur `SUBMITTED` (« Réponse envoyée ») :
+`FollowUpStatus` comprend la valeur `SUBMITTED` (« Réponse envoyée ») :
 
 | Valeur | Libellé |
 |--------|---------|
@@ -81,21 +89,22 @@ encore absent.
 | `DISMISSED` | Écarté |
 
 La colonne `follow_up_status` est un `VARCHAR(20)` sans contrainte : seule l'énumération Java
-change. Le statut reste partagé par toute l'équipe.
+a changé. Le statut reste partagé par toute l'équipe. Il est distinct de l'état de la consultation
+(`status` : `ACTIVE`, `CLOSED`, `CANCELLED`, `UNSUCCESSFUL`), tenu par la collecte.
 
 ## Suivi personnel (étoile)
 
 Chaque utilisateur suit ses propres appels d'offres, indépendamment du statut.
 
-- Table à créer : `tender_follow (user_id, tender_id, created_at)`, clé primaire sur les deux
-  identifiants.
+- Table `tender_follow (user_id, tender_id, created_at)` (migration V12), clé primaire sur les
+  deux identifiants. L'utilisateur est toujours celui de la session.
 - `PUT /api/tenders/{id}/follow` et `DELETE /api/tenders/{id}/follow` : réponse `204`, sans
   corps ; idempotents.
 - Le champ `followed` des réponses est calculé pour l'utilisateur connecté.
 
 ## Onglets (`tab`)
 
-`TenderTab` est remplacé par :
+Valeurs de `TenderTab` :
 
 | Valeur | Contenu |
 |--------|---------|
@@ -114,32 +123,32 @@ il suffit qu'une valeur corresponde.
 
 | Paramètre | Existe | Règle |
 |-----------|--------|-------|
-| `tab` | oui (valeurs à changer) | voir ci-dessus, `NEW` par défaut |
-| `q` | oui | chaque terme doit commencer un mot, sans tenir compte de la casse ni des accents, du titre, de l'acheteur, de la référence, de la description (existant) **et** de l'identifiant de l'avis, de la ville, du code postal, du type de marché, du libellé des types de travaux, des codes et libellés CPV (à ajouter) ; les synonymes métier comptent (voir plus bas) |
-| `department` | oui (un seul) | **liste** de codes ; un département de l'appel d'offres doit y figurer |
-| `region` | non | nom de région (voir `frontend/src/lib/regions.ts`) ; un département de l'appel d'offres doit en faire partie |
-| `city` | non | texte contenu dans le lieu d'exécution, ou début du code postal |
+| `tab` | oui | voir ci-dessus, `NEW` par défaut |
+| `q` | oui, en partie | **backend actuel** : chaque terme doit être contenu, sans tenir compte de la casse ni des accents, dans le titre, l'acheteur, la référence, la description, le lieu d'exécution ou les codes CPV ; pas de synonymes. **Cible** : chaque terme doit commencer un mot, sans tenir compte de la casse ni des accents, du titre, de l'acheteur, de la référence, de la description (existant) **et** de l'identifiant de l'avis, de la ville, du code postal, du type de marché, du libellé des types de travaux, des codes et libellés CPV (à ajouter) ; les synonymes métier comptent (voir plus bas) |
+| `department` | oui | **liste** de codes ; un département de l'appel d'offres doit y figurer |
+| `region` | oui | nom de région (voir `frontend/src/lib/regions.ts`) ; un département de l'appel d'offres doit en faire partie |
+| `city` | oui, en partie | texte contenu dans le lieu d'exécution (fait), ou début du code postal (à faire) |
 | `maxDistanceKm` | non | distance connue et inférieure ou égale |
 | `activity` | non | liste de codes de types de travaux |
-| `marketType` | non | liste de `MarketType` |
+| `marketType` | oui | liste de `MarketType` |
 | `year` | non | année de publication (`2024`) |
 | `result` | non | `AWARDED`, `UNSUCCESSFUL`, `CANCELLED`, ou `UNKNOWN` pour une consultation passée sans résultat connu |
 | `buyer` | non | texte contenu dans le nom de l'acheteur |
-| `publishedWithinDays` | non | publié depuis N jours au plus |
+| `publishedWithinDays` | oui | publié depuis N jours au plus |
 | `publishedFrom`, `publishedTo` | non | dates `yyyy-MM-dd` incluses |
 | `deadlineFrom`, `deadlineTo` | non | dates `yyyy-MM-dd` incluses, en heure de Paris |
 | `minDaysLeft` | oui | date limite au moins N jours après maintenant |
-| `maxDaysLeft` | non | date limite non dépassée et au plus N jours après maintenant |
-| `minAmount` | non | un montant inconnu ne masque pas l'appel d'offres |
+| `maxDaysLeft` | oui | date limite non dépassée et au plus N jours après maintenant |
+| `minAmount` | oui | un montant inconnu ne masque pas l'appel d'offres |
 | `maxAmount` | oui | idem (règle actuelle) |
 | `amountKnown` | non | `true` : montant indiqué ; `false` : non indiqué |
-| `procedure` | non | liste de `ProcedureType` |
-| `hasLots` | non | `true` : au moins un lot ; `false` : aucun |
+| `procedure` | oui | liste de `ProcedureType` |
+| `hasLots` | oui | `true` : au moins un lot ; `false` : aucun |
 | `minLots` | non | nombre de lots minimum |
-| `status` | non | liste de `FollowUpStatus` |
+| `status` | oui | liste de `FollowUpStatus` |
 | `followed` | non | `true` : suivis par l'utilisateur connecté |
 | `alert` | non | identifiant d'une veille de l'utilisateur : ses critères s'ajoutent aux autres filtres |
-| `sort` | non | voir ci-dessous |
+| `sort` | oui, en partie | voir ci-dessous |
 | `page`, `size` | oui | `size` de 1 à 100, l'interface propose 20, 50 et 100 |
 
 ### Synonymes métier
@@ -154,14 +163,14 @@ backend devra la reprendre (table de synonymes ou dictionnaire de la recherche p
 Un `-` devant la clé trie dans l'ordre décroissant. Les valeurs absentes sont toujours à la fin ;
 à égalité, l'identifiant le plus récent d'abord.
 
-| Valeur | Ordre |
-|--------|-------|
-| absent ou `deadline` | date limite la plus proche ; les dates limites **dépassées** passent après les autres, la plus récente d'abord |
-| `-deadline` | date limite la plus éloignée |
-| `-published`, `published` | plus récents, plus anciens |
-| `-relevance` | pertinence décroissante |
-| `-amount`, `amount` | montant décroissant, croissant |
-| `distance` | plus proche du siège |
+| Valeur | Ordre | Backend |
+|--------|-------|---------|
+| absent ou `deadline` | date limite la plus proche ; les dates limites **dépassées** passent après les autres, la plus récente d'abord | oui |
+| `-deadline` | date limite la plus éloignée | oui |
+| `-published`, `published` | plus récents, plus anciens | oui |
+| `-relevance` | pertinence décroissante | non |
+| `-amount`, `amount` | montant décroissant, croissant | oui |
+| `distance` | plus proche du siège | non |
 
 ## Marchés attribués (`GET /api/awards`)
 
@@ -215,9 +224,9 @@ Accepte les mêmes paramètres que la liste (sauf `tab`, `page`, `size`, `sort`)
 chaque onglet, le nombre d'appels d'offres qui correspondent : les compteurs des onglets suivent
 ainsi la recherche et les filtres.
 
-## `GET /api/tenders/status-counts` (nouveau)
+## `GET /api/tenders/status-counts`
 
-Mêmes paramètres que la liste, `tab` compris, sauf `status` qui est ignoré. Renvoie le nombre
+Mêmes paramètres que la liste, `tab` compris (`ALL` par défaut), sauf `status` qui est ignoré. Renvoie le nombre
 d'appels d'offres de chaque `FollowUpStatus` : Mes suivis l'appelle avec `tab=FOLLOWED` pour les
 compteurs de ses onglets.
 
@@ -228,17 +237,17 @@ l'interface affiche « Non indiqué » ou « – ».
 
 | Champ | Type | Origine prévue |
 |-------|------|----------------|
-| `reference` | texte ou `null` | déjà dans le détail, à ajouter à la liste |
-| `procedureType` | `ProcedureType` ou `null` | déjà dans le détail, à ajouter à la liste |
-| `source` | texte (`BOAMP`, `JOUE`…) | déjà dans le détail, à ajouter à la liste |
-| `lotCount` | nombre | nombre de lots |
+| `reference` | texte ou `null` | **fourni** |
+| `procedureType` | `ProcedureType` ou `null` | **fourni** |
+| `source` | texte (`BOAMP`, `JOUE`…) | **fourni** |
+| `lotCount` | nombre | **fourni** : nombre de lots |
 | `activities` | liste de codes | déduits des préfixes CPV et des mots-clés (table de correspondance à paramétrer) |
 | `distanceKm` | nombre ou `null` | distance entre le siège et la commune d'exécution (voir plus bas) |
 | `relevanceScore` | 0 à 100 ou `null` | d'abord calculé par règles à partir des critères satisfaits, plus tard par l'analyse |
-| `followed` | booléen | suivi de l'utilisateur connecté |
+| `followed` | booléen | **fourni** : suivi de l'utilisateur connecté |
 | `documentCount` | nombre | documents de la dernière version du DCE déposé |
 | `postalCode` | texte ou `null` | code postal du lieu d'exécution |
-| `result` | objet ou `null` | issue d'une consultation passée : `AWARDED`, `UNSUCCESSFUL` ou `CANCELLED` |
+| `result` | objet ou `null` | issue d'une consultation passée : `AWARDED`, `UNSUCCESSFUL` ou `CANCELLED`. **Fourni dans le détail** (avis d'attribution reçu, ou état de la consultation) ; dans la liste, les Archives se rabattent sur `status` |
 | `cpv` (détail seulement) | liste `{ code, label }` | libellés de la nomenclature CPV |
 | `awardCriteria` (détail seulement) | liste `{ label, weight }` | critères d'attribution et pondération en %, `null` si non pondéré |
 | `keyInfo` (détail seulement) | objet ou `null` | visite (`required`, `date`), documents demandés, conditions particulières, qualifications, certifications ; repris de l'avis puis des valeurs validées de la fiche de synthèse |

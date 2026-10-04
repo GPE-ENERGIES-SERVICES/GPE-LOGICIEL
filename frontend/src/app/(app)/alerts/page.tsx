@@ -6,8 +6,10 @@ import { Suspense, useState } from "react";
 import { AlertForm } from "@/components/AlertForm";
 import { ACTIVITY_LABELS, formatAmount, formatDateTime, MARKET_TYPE_LABELS } from "@/lib/format";
 import { alertResultsHref } from "@/lib/navigation";
+import { NotConnected } from "@/components/NotConnected";
 import { useLoader } from "@/lib/useLoader";
 import { createAlert, deleteAlert, getAlerts, markAlertViewed, updateAlert } from "@/services/alertApi";
+import { available } from "@/services/http";
 import type { AlertInput, AlertSummary } from "@/types/alert";
 import type { MarketType } from "@/types/tender";
 
@@ -251,6 +253,9 @@ function AlertList() {
 }
 
 export default function AlertsPage() {
+  if (!available("alerts")) {
+    return <NotConnected title="Mes veilles" />;
+  }
   return (
     <Suspense>
       <AlertList />

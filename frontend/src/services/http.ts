@@ -11,6 +11,44 @@
 /** True when the screens run on the demo data of src/mock. */
 export const DEMO_DATA = process.env.NEXT_PUBLIC_DATA_SOURCE === "mock";
 
+/**
+ * What the screens offer and the backend does not provide yet. With the real
+ * backend they are hidden rather than failing; the demo data provides them
+ * all. See docs/contrat-api-interface.md.
+ */
+export type Feature =
+  /** Saved searches: Mes veilles. */
+  | "alerts"
+  /** Awarded contracts and winners. */
+  | "awards"
+  /** Search in the text of the documents of a consultation. */
+  | "documentSearch"
+  /** Type of works filter, from the activities of the company. */
+  | "activity"
+  /** Distance from the headquarters: filter and sort. */
+  | "distance"
+  /** Relevance score: sort. */
+  | "relevance"
+  /** Year, outcome and buyer filters of the past consultations. */
+  | "pastFilters"
+  /** Award criteria and key information read in the notice. */
+  | "noticeDetails";
+
+const NOT_IN_BACKEND = new Set<Feature>([
+  "alerts",
+  "awards",
+  "documentSearch",
+  "activity",
+  "distance",
+  "relevance",
+  "pastFilters",
+  "noticeDetails",
+]);
+
+export function available(feature: Feature): boolean {
+  return DEMO_DATA || !NOT_IN_BACKEND.has(feature);
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,

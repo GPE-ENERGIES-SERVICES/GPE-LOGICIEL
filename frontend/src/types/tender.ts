@@ -31,22 +31,22 @@ export type TenderSummary = {
   followUpStatus: FollowUpStatus;
   retained: boolean | null;
   filterReason: string | null;
-  // Provided by the simulated API; the backend does not send them yet.
   reference?: string | null;
   procedureType?: ProcedureType | null;
   source?: string;
   lotCount?: number;
+  /** Followed by the logged-in user; the follow-up status is shared by the team. */
+  followed?: boolean;
+  // Provided by the simulated API; the backend does not send them yet.
   /** Activity codes, see ACTIVITY_LABELS. */
   activities?: string[];
   /** Distance from the company's headquarters, null when the place is unknown. */
   distanceKm?: number | null;
   /** 0 to 100, null when not computed. */
   relevanceScore?: number | null;
-  /** Followed by the logged-in user; the follow-up status is shared by the team. */
-  followed?: boolean;
   documentCount?: number;
   postalCode?: string | null;
-  /** Outcome of a past consultation, null while it is open or when unknown. */
+  /** Outcome of a past consultation, null while it is open or when unknown; the backend sends it in the detail only. */
   result?: TenderResult | null;
   /** Companies awarded, one per lot at most, for an awarded consultation. */
   winners?: string[];

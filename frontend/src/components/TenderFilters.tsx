@@ -4,6 +4,7 @@ import type { ChangeEvent, FormEvent, ReactNode } from "react";
 
 import { ACTIVITY_LABELS, FOLLOW_UP_LABELS, MARKET_TYPE_LABELS, PROCEDURE_LABELS } from "@/lib/format";
 import { REGIONS } from "@/lib/regions";
+import { available, type Feature } from "@/services/http";
 
 /** URL parameters set by the filters, passed as is to GET /api/tenders. */
 export type FilterKey =
@@ -181,8 +182,21 @@ function field(key: FilterKey, value: string): ReactNode {
   }
 }
 
+/** Feature of the backend each filter needs, when not every backend provides it. */
+const FILTER_FEATURES: Partial<Record<FilterKey, Feature>> = {
+  activity: "activity",
+  maxDistanceKm: "distance",
+  year: "pastFilters",
+  result: "pastFilters",
+  buyer: "pastFilters",
+};
+
 /** Combinable filters of a list of tenders, all visible; a list applies as soon as it changes. */
-export function TenderFilters({ params, onApply, fields }: Props) {
+export function TenderFilters({ params, onApply, fields: wanted }: Props) {
+  const fields = wanted.filter((key) => {
+    const feature = FILTER_FEATURES[key];
+    return !feature || available(feature);
+  });
   const value = (key: string) => params.get(key) ?? "";
   const activeCount = fields.filter((key) => params.get(key)).length;
 
