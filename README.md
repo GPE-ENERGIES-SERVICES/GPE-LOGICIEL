@@ -43,6 +43,14 @@ Documentation :
 - [Contrat d'API attendu par l'interface](docs/contrat-api-interface.md) : ce que le backend doit
   fournir pour remplacer les données de démonstration.
 
+## Interface
+
+Rubriques : tableau de bord, appels d'offres (recherche, filtres, tri), mes veilles (recherches
+enregistrées), mes suivis, archives, marchés attribués et, pour les administrateurs, paramètres.
+Chaque consultation a sa fiche : informations, lots, critères, informations importantes, DCE et
+recherche dans ses documents, plateforme de dépôt, suivi, analyse et historique. Voir le
+[guide utilisateur](docs/guide-utilisateur.md).
+
 ## Configuration
 
 Copier le fichier d'exemple puis renseigner les valeurs :

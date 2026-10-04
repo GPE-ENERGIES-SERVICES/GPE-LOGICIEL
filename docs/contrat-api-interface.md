@@ -36,6 +36,38 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 | `/api/alerts` | absent | **nouveau** : veilles de l'utilisateur (voir plus bas) |
 | Autres appels (connexion, DCE, analyse, paramètres) | existent | aucun changement |
 
+## Écrans, services et appels
+
+| Écran | Fonctions de service | Appels |
+|-------|----------------------|--------|
+| Tableau de bord | `getTenderCounts`, `getStatusCounts`, `getTenders`, `getAlerts`, `markAlertViewed`, `getAwardedContracts` | `/api/tenders/counts`, `/api/tenders/status-counts`, `/api/tenders`, `/api/alerts`, `/api/awards` |
+| Appels d'offres | `getTenders`, `getTenderCounts`, `updateFollowUp`, `setFollowed`, `getAlerts` | `/api/tenders` (`tab` `NEW` à `FILTERED_OUT`), `/counts`, `/follow-up`, `/follow` |
+| Mes veilles | `getAlerts`, `createAlert`, `updateAlert`, `deleteAlert`, `markAlertViewed` | `/api/alerts` |
+| Mes suivis | `getTenders`, `getStatusCounts` | `/api/tenders?tab=FOLLOWED`, `/api/tenders/status-counts` |
+| Archives | `getTenders` | `/api/tenders?tab=ARCHIVED` |
+| Marchés attribués | `getAwardedContracts` | `/api/awards` |
+| Fiche | `getTender`, `getTenderAwards`, `getDossiers`, `searchDocuments`, `getTenderAnalysis`… | `/api/tenders/{id}`, `/awards`, `/dossiers`, `/documents/search`, `/analysis` |
+| Paramètres, connexion | inchangées | inchangés |
+
+## Ordre d'intégration recommandé
+
+1. **Rétablir le mode réel** : `SUBMITTED` dans `FollowUpStatus`, nouvelles valeurs de
+   `TenderTab`. Sans cela, la liste renvoie une erreur avec le vrai backend.
+2. **Champs simples de la liste** : `reference`, `procedureType`, `source`, `lotCount`,
+   `postalCode`, `documentCount`, `result`.
+3. **Recherche et filtres** : paramètres de `GET /api/tenders`, tri, `/counts` avec filtres,
+   `/status-counts`, synonymes.
+4. **Suivi personnel** : table `tender_follow`, `/follow`, champ `followed`, onglet `FOLLOWED`.
+5. **Veilles** : table `alert`, `/api/alerts`, paramètre `alert`.
+6. **Attributions** : extraction des avis d'attribution, `/api/awards`, `/api/tenders/{id}/awards`,
+   `winners`, `awardedAmount`.
+7. **Recherche dans le DCE** : `/documents/search` sur `document_page`.
+8. **Enrichissements** : `activities`, `distanceKm`, `relevanceScore`, `cpv`, `awardCriteria`,
+   `keyInfo`, `platformName`.
+
+Chaque point peut être livré seul : l'interface affiche « Non indiqué » ou « – » pour un champ
+encore absent.
+
 ## Statuts
 
 `FollowUpStatus` gagne la valeur `SUBMITTED` (« Réponse envoyée ») :
@@ -217,8 +249,8 @@ l'interface affiche « Non indiqué » ou « – ».
 Codes de types de travaux utilisés par l'interface (`ACTIVITY_LABELS` dans
 `frontend/src/lib/format.ts`) : `ELECTRICITY`, `PHOTOVOLTAIC`, `EV_CHARGING`, `HEATING`,
 `AIR_CONDITIONING`, `ENERGY_RENOVATION`, `PUBLIC_LIGHTING`, `NETWORKS`, `VRD`, `MAINTENANCE`,
-`STUDIES`. Un code inconnu de
-l'interface s'affiche tel quel : la liste peut s'enrichir côté backend.
+`STUDIES`. Un code inconnu de l'interface s'affiche tel quel : la liste peut s'enrichir côté
+backend.
 
 ### Distance
 
