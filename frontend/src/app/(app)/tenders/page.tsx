@@ -11,6 +11,20 @@ import { TENDER_TAB_LABELS } from "@/lib/format";
 import type { FollowUpStatus, Page, TenderSummary, TenderTab } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
 
+/** Values of the sort parameter of GET /api/tenders; "-" sorts in descending order. */
+const SORT_OPTIONS = [
+  { value: "", label: "Date limite la plus proche" },
+  { value: "-deadline", label: "Date limite la plus éloignée" },
+  { value: "-published", label: "Plus récents" },
+  { value: "published", label: "Plus anciens" },
+  { value: "-relevance", label: "Pertinence" },
+  { value: "-amount", label: "Montant décroissant" },
+  { value: "amount", label: "Montant croissant" },
+  { value: "distance", label: "Distance" },
+];
+
+const PAGE_SIZES = [20, 50, 100];
+
 const TAB_HINTS: Partial<Record<TenderTab, string>> = {
   TO_PROCESS: "Appels d'offres en cours d'analyse ou de préparation.",
   FOLLOWED: "Appels d'offres que vous suivez. Le suivi est propre à chaque utilisateur.",
@@ -124,11 +138,37 @@ function TenderList() {
 
       {list.data && (
         <>
-          <p className="muted result-count">
-            {list.data.totalElements} appel{list.data.totalElements > 1 ? "s" : ""} d&apos;offres
-            {text && <> pour « {text} »</>}
-            {list.loading && " · chargement…"}
-          </p>
+          <div className="list-toolbar">
+            <p className="muted result-count">
+              {list.data.totalElements} appel{list.data.totalElements > 1 ? "s" : ""} d&apos;offres
+              {text && <> pour « {text} »</>}
+              {list.loading && " · chargement…"}
+            </p>
+            <label className="inline">
+              Trier par
+              <select
+                value={searchParams.get("sort") ?? ""}
+                onChange={(e) => navigate({ sort: e.target.value, page: null })}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="inline">
+              Par page
+              <select
+                value={searchParams.get("size") ?? "20"}
+                onChange={(e) => navigate({ size: e.target.value === "20" ? null : e.target.value, page: null })}
+              >
+                {PAGE_SIZES.map((size) => (
+                  <option key={size}>{size}</option>
+                ))}
+              </select>
+            </label>
+          </div>
           {list.data.content.length === 0 ? (
             <p className="page-message">
               {filtered

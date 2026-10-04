@@ -9,7 +9,7 @@ aide à décider ; la décision reste humaine.
 1. **Tableau de bord** : l'état de la dernière collecte et le nombre d'appels d'offres de chaque
    onglet à traiter ; un clic ouvre l'onglet correspondant.
 2. **Liste** (« Appels d'offres ») : les appels d'offres retenus par les critères de
-   l'entreprise, triés par date limite. Les onglets :
+   l'entreprise. Les onglets :
    - **Nouveaux** : retenus par le filtre, sans décision ;
    - **À traiter** : en cours d'analyse ou de préparation ;
    - **Mes suivis** : ceux que vous suivez (le suivi est propre à chaque utilisateur) ;
@@ -34,6 +34,10 @@ aide à décider ; la décision reste humaine.
    montant (minimum, maximum, indiqué ou non), procédure, lots et statut. Dans un même groupe de
    cases, il suffit qu'une case corresponde. Un montant non indiqué ne masque pas un appel
    d'offres, sauf si l'on choisit « Montant : Indiqué ».
+
+   Le **tri** se choisit au-dessus du tableau : date limite (la plus proche par défaut ; les
+   dates dépassées passent alors après les appels d'offres encore ouverts), publication,
+   pertinence, montant ou distance. On peut afficher 20, 50 ou 100 lignes par page.
 3. **Fiche** : ouvrir un appel d'offres pour voir les informations de l'avis, l'historique des
    publications (un rectificatif qui change la date limite est signalé) et le lien vers la
    plateforme de l'acheteur.

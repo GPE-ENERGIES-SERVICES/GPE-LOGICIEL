@@ -435,8 +435,17 @@ legend {
   margin: 0;
 }
 
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
 .result-count {
-  margin: 0 0 0.5rem;
+  flex: 1;
+  margin: 0;
 }
 
 .table-card {

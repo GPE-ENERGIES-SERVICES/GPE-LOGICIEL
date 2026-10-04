@@ -227,11 +227,27 @@ const SORT_VALUES: Record<string, (tender: TenderDetail) => number | null> = {
   distance: (tender) => tender.distanceKm ?? null,
 };
 
-/** Closest deadline first by default, as in the backend; missing values always last. */
+/**
+ * Closest deadline first by default; missing values always last. With the
+ * closest deadline first, passed deadlines come after the open ones, the most
+ * recent first: they no longer call for an action.
+ */
 function sort(found: TenderDetail[], sortParam: string | null): TenderDetail[] {
+  const key = sortParam?.replace(/^-/, "") ?? "";
   const descending = sortParam?.startsWith("-") ?? false;
-  const value = SORT_VALUES[sortParam?.replace(/^-/, "") ?? ""] ?? SORT_VALUES.deadline;
+  const value = SORT_VALUES[key] ?? SORT_VALUES.deadline;
+  const closestDeadlineFirst = value === SORT_VALUES.deadline && !descending;
+  const now = Date.now();
+  const passed = (tender: TenderDetail) => (time(tender.deadline) ?? Infinity) < now;
+
   return [...found].sort((a, b) => {
+    let direction = descending ? -1 : 1;
+    if (closestDeadlineFirst) {
+      if (passed(a) !== passed(b)) {
+        return passed(a) ? 1 : -1;
+      }
+      direction = passed(a) ? -1 : 1;
+    }
     const left = value(a);
     const right = value(b);
     if (left === right) {
@@ -240,7 +256,7 @@ function sort(found: TenderDetail[], sortParam: string | null): TenderDetail[] {
     if (left === null || right === null) {
       return left === null ? 1 : -1;
     }
-    return descending ? right - left : left - right;
+    return (left - right) * direction;
   });
 }
 
