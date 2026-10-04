@@ -45,9 +45,10 @@ aide à décider ; la décision reste humaine.
    (qualifications, visite, critères, contraintes), documents, fiche de synthèse et historique
    des publications (un rectificatif qui change la date limite est signalé).
 4. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
-   dans la section « Dossier de consultation » (archive ZIP ou fichiers). Chaque dépôt crée une
-   nouvelle version. Vérifier le type de chaque pièce (RC, CCAP, CCTP…) et le corriger si besoin :
-   l'analyse se fonde sur le règlement de consultation.
+   dans la section « Documents (DCE) » (archive ZIP ou fichiers). Chaque dépôt crée une
+   nouvelle version. Chaque pièce (RC, CCAP, CCTP, AE, DPGF, BPU, DQE, plans…) peut être ouverte
+   ou téléchargée. Vérifier son type et le corriger si besoin : l'analyse se fonde sur le
+   règlement de consultation. Dans la liste, « DCE : n documents » signale un dossier déjà déposé.
 5. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
    et prend quelques minutes. Pour un appel d'offres écarté par le filtre, utiliser « Lancer
    l'analyse ».

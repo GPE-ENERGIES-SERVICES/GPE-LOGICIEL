@@ -10,8 +10,10 @@ import { ACTIVITY_LABELS, TENDER_TAB_LABELS } from "../format";
 import { REGIONS } from "../regions";
 import type {
   CollectJournal,
+  DocumentInfo,
   FollowUpStatus,
   Page,
+  PieceType,
   TenderAnalysis,
   TenderDetail,
   TenderSummary,
@@ -313,6 +315,20 @@ function follow(id: string, followed: boolean): undefined {
   return undefined;
 }
 
+/** Correction of the type of a piece; kept until the next reload. */
+function changePieceType(id: string, body: unknown): DocumentInfo {
+  const document = Object.values(MOCK_DOSSIERS)
+    .flat()
+    .flatMap((dossier) => dossier.documents)
+    .find((candidate) => candidate.id === Number(id));
+  if (!document) {
+    throw new ApiError(404, "Élément introuvable.");
+  }
+  document.pieceType = (body as { pieceType: PieceType }).pieceType;
+  document.pieceTypeCorrected = true;
+  return document;
+}
+
 // --- Other screens ----------------------------------------------------------
 
 function collectJournal(): CollectJournal {
@@ -357,6 +373,7 @@ const ROUTES: Route[] = [
   ["DELETE", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, false)],
   ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id]],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
+  ["PUT", /^\/api\/documents\/(\d+)\/piece-type$/, (id, _, body) => changePieceType(id, body)],
 ];
 
 export async function mockApi<T>(method: string, path: string, body?: unknown): Promise<T> {

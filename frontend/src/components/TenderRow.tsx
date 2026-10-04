@@ -30,7 +30,13 @@ export function TenderRow({ tender, onFollowUp, onFollowChanged, busy }: Props) 
   const place = [tender.location, tender.departments.length ? `(${tender.departments.join(", ")})` : null]
     .filter(Boolean)
     .join(" ");
-  const about = [tender.buyer ?? "Acheteur non indiqué", tender.reference && `Réf. ${tender.reference}`, tender.source]
+  const documentCount = tender.documentCount ?? 0;
+  const about = [
+    tender.buyer ?? "Acheteur non indiqué",
+    tender.reference && `Réf. ${tender.reference}`,
+    tender.source,
+    documentCount > 0 && `DCE : ${documentCount} document${documentCount > 1 ? "s" : ""}`,
+  ]
     .filter(Boolean)
     .join(" · ");
   const activities = (tender.activities ?? []).map((code) => ACTIVITY_LABELS[code] ?? code).join(", ");

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { api, upload } from "@/lib/api";
+import { api, DEMO_DATA, upload } from "@/lib/api";
 import {
   DOCUMENT_STATE_LABELS,
   DOSSIER_STATUS_LABELS,
@@ -53,12 +53,16 @@ function DocumentRow({ document, onChanged }: { document: DocumentInfo; onChange
       <td>{document.pageCount ?? "–"}</td>
       <td>{formatSize(document.sizeBytes)}</td>
       <td className="actions">
-        {document.readable && (
-          <a href={`/api/documents/${document.id}/pdf`} target="_blank" rel="noopener noreferrer">
-            Ouvrir
-          </a>
+        {!DEMO_DATA && (
+          <>
+            {document.readable && (
+              <a href={`/api/documents/${document.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                Ouvrir
+              </a>
+            )}
+            <a href={`/api/documents/${document.id}/file`}>Télécharger</a>
+          </>
         )}
-        <a href={`/api/documents/${document.id}/file`}>Télécharger</a>
       </td>
     </tr>
   );
@@ -95,6 +99,12 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
         <p className="hint">
           {notAnalysed} document{notAnalysed > 1 ? "s" : ""} non analysé{notAnalysed > 1 ? "s" : ""} : les
           informations qu&apos;ils contiennent ne seront pas prises en compte.
+        </p>
+      )}
+      {DEMO_DATA && (
+        <p className="hint">
+          Données de démonstration : les fichiers eux-mêmes ne sont pas disponibles. Les liens Ouvrir et
+          Télécharger apparaîtront avec le backend.
         </p>
       )}
       {failed > 0 && dossier.status === "DONE" && (

@@ -7,7 +7,8 @@
  * backend (lib/mock) instead: same URLs, same responses.
  */
 
-const USE_MOCK = process.env.NEXT_PUBLIC_DATA_SOURCE === "mock";
+/** True when the screens run on the demo data of lib/mock. */
+export const DEMO_DATA = process.env.NEXT_PUBLIC_DATA_SOURCE === "mock";
 
 export class ApiError extends Error {
   constructor(
@@ -59,7 +60,7 @@ async function errorMessage(response: Response): Promise<string> {
  * Sends files as multipart form data.
  */
 export async function upload<T>(path: string, form: FormData): Promise<T> {
-  if (USE_MOCK) {
+  if (DEMO_DATA) {
     throw new ApiError(501, "Le dépôt de fichiers n'est pas disponible avec les données de démonstration.");
   }
   const token = await ensureCsrfToken();
@@ -77,7 +78,7 @@ export async function upload<T>(path: string, form: FormData): Promise<T> {
 
 export async function api<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const method = options.method ?? "GET";
-  if (USE_MOCK) {
+  if (DEMO_DATA) {
     // Loaded on demand: the demo data is never downloaded with the real backend.
     const { mockApi } = await import("./mock/handler");
     return mockApi<T>(method, path, options.body);

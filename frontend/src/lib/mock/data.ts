@@ -471,7 +471,9 @@ function documentsFor(tenderId: number, marketType: MarketType, lotCount: number
   if (marketType === "WORKS" && chance(0.6)) {
     documents.push(pdf("07_Plans.pdf", "PLAN", between(4, 20)));
   }
-  return documents.map((document, index) => ({ ...document, id: tenderId * 100 + index + 1 }));
+  return documents
+    .sort((a, b) => a.fileName.localeCompare(b.fileName))
+    .map((document, index) => ({ ...document, id: tenderId * 100 + index + 1 }));
 }
 
 function makeTender(id: number): { tender: TenderDetail; dossier: Dossier | null } {
