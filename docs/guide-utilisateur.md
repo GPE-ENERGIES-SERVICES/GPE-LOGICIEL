@@ -6,6 +6,10 @@ aide à décider ; la décision reste humaine.
 
 ## Parcours
 
+Le bandeau du haut donne accès aux rubriques : Tableau de bord, Appels d'offres, Mes veilles,
+Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramètres. Les rubriques
+Mes veilles, Mes suivis, Archives et Marchés attribués sont en cours de construction.
+
 1. **Tableau de bord** : l'état de la dernière collecte ; le nombre de nouveaux appels
    d'offres, de ceux à traiter, de vos suivis, des échéances dans les 7 jours et des avis hors
    critères (un clic ouvre la liste correspondante) ; les échéances des 7 prochains jours ; les

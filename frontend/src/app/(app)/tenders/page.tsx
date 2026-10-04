@@ -93,6 +93,7 @@ function TenderList() {
 
   return (
     <>
+      <h1>Appels d&apos;offres</h1>
       <CollectStatus />
 
       <form className="filters" role="search" onSubmit={search} key={text}>
