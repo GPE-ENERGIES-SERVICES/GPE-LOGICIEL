@@ -741,6 +741,30 @@ td.actions a + a {
   margin-left: 0.75rem;
 }
 
+.document-search {
+  margin: 0.5rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.document-search .hint {
+  margin: 0 0 0.5rem;
+}
+
+.search-hits {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.search-hits li {
+  margin-bottom: 0.5rem;
+}
+
+mark {
+  background: var(--warning-bg);
+  color: inherit;
+}
+
 .previous-dossier {
   margin-top: 1rem;
 }

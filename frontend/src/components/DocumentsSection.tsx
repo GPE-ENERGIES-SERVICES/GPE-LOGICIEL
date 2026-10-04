@@ -15,6 +15,8 @@ import { changePieceType, getDossiers, retryDossier, uploadDossier } from "@/ser
 import { DEMO_DATA } from "@/services/http";
 import type { DocumentInfo, Dossier, PieceType } from "@/types/document";
 
+import { DocumentSearch } from "./DocumentSearch";
+
 const ACCEPTED = ".zip,.pdf,.doc,.docx,.odt,.rtf,.xls,.xlsx,.xlsm,.ods,.csv,.dwg,.dxf,.jpg,.jpeg,.png,.tif,.tiff";
 
 function DocumentRow({ document, onChanged }: { document: DocumentInfo; onChanged: () => void }) {
@@ -194,6 +196,7 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
       </form>
       {error && <p className="error">{error}</p>}
       {data && data.length === 0 && <p className="muted">Aucun dossier déposé.</p>}
+      {data?.[0]?.status === "DONE" && <DocumentSearch tenderId={tenderId} />}
       {data?.map((dossier, index) =>
         index === 0 ? (
           <DossierView key={dossier.id} dossier={dossier} onChanged={reload} />

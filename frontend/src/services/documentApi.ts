@@ -1,4 +1,4 @@
-import type { DocumentInfo, Dossier, PieceType } from "@/types/document";
+import type { DocumentHit, DocumentInfo, Dossier, PieceType } from "@/types/document";
 
 import { api, upload } from "./http";
 
@@ -21,4 +21,13 @@ export function retryDossier(dossierId: number): Promise<void> {
 
 export function changePieceType(documentId: number, pieceType: PieceType): Promise<DocumentInfo> {
   return api(`/api/documents/${documentId}/piece-type`, { method: "PUT", body: { pieceType } });
+}
+
+/**
+ * Pages of the latest consultation file containing all the searched words,
+ * in the order of the documents. Only the text read from the documents is
+ * searched: spreadsheets and scanned plans are not.
+ */
+export function searchDocuments(tenderId: number, text: string): Promise<DocumentHit[]> {
+  return api(`/api/tenders/${tenderId}/documents/search?q=${encodeURIComponent(text)}`);
 }

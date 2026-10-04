@@ -5,14 +5,14 @@
  * browser so that they survive a reload.
  */
 
-import { ACTIVITY_LABELS, formatAmount, MARKET_TYPE_LABELS, TENDER_TAB_LABELS } from "@/lib/format";
+import { ACTIVITY_LABELS, formatAmount, MARKET_TYPE_LABELS, normalizeText, TENDER_TAB_LABELS } from "@/lib/format";
 import { REGIONS } from "@/lib/regions";
 import { ApiError } from "@/services/http";
 import type { Alert, AlertInput, AlertSummary } from "@/types/alert";
 import type { AwardedContract, AwardSearch } from "@/types/award";
 import type { TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
-import type { DocumentInfo, PieceType } from "@/types/document";
+import type { DocumentHit, DocumentInfo, PieceType } from "@/types/document";
 import type { CollectJournal } from "@/types/settings";
 import type {
   FollowUpStatus,
@@ -24,7 +24,7 @@ import type { CurrentUser } from "@/types/user";
 
 import { MOCK_ALERTS } from "./alerts";
 import { MOCK_AWARDS } from "./awardedContracts";
-import { MOCK_DOSSIERS } from "./documents";
+import { MOCK_DOSSIERS, MOCK_PAGES } from "./documents";
 import { SEARCH_SYNONYMS } from "./reference";
 import { MOCK_TENDERS } from "./tenders";
 
@@ -173,12 +173,7 @@ function inTab(tender: TenderDetail, tab: TenderTab): boolean {
   }
 }
 
-function normalize(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
+const normalize = normalizeText;
 
 function searchedText(tender: TenderDetail): string {
   return normalize(
@@ -602,6 +597,32 @@ function changePieceType(id: string, body: unknown): DocumentInfo {
   return document;
 }
 
+/**
+ * Pages of the latest consultation file containing every searched term,
+ * synonyms of the trade included, in the order of the documents.
+ */
+function searchDocuments(id: string, url: URL): DocumentHit[] {
+  const tender = find(id);
+  const text = url.searchParams.get("q")?.trim();
+  if (!text) {
+    return [];
+  }
+  const terms = searchTerms(text);
+  const documents = MOCK_DOSSIERS[tender.id]?.[0]?.documents ?? [];
+  return documents.flatMap((document) =>
+    (MOCK_PAGES[document.id] ?? [])
+      .filter((page) => terms.every((words) => words.some((word) => startsWord(normalize(page.text), word))))
+      .map((page) => ({
+        documentId: document.id,
+        fileName: document.fileName,
+        pieceType: document.pieceType,
+        pageNumber: page.pageNumber,
+        excerpt: page.text,
+        readable: document.readable,
+      })),
+  );
+}
+
 // --- Other screens ----------------------------------------------------------
 
 function collectJournal(): CollectJournal {
@@ -647,6 +668,7 @@ const ROUTES: Route[] = [
   ["DELETE", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, false)],
   ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id] ?? []],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
+  ["GET", /^\/api\/tenders\/(\d+)\/documents\/search$/, (id, url) => searchDocuments(id, url)],
   ["GET", /^\/api\/tenders\/(\d+)\/awards$/, (id) => MOCK_AWARDS.filter((award) => award.tenderId === find(id).id)],
   ["PUT", /^\/api\/documents\/(\d+)\/piece-type$/, (id, _, body) => changePieceType(id, body)],
   ["GET", /^\/api\/awards$/, (_, url) => searchAwards(url.searchParams)],

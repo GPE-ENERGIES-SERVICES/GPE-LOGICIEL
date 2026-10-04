@@ -28,6 +28,7 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 | `GET /api/tenders/status-counts` | absent | **nouveau** : nombre par statut, pour Mes suivis |
 | `GET /api/tenders/{id}/awards` | absent | **nouveau** : marchés attribués de la consultation, un par lot (`AwardedContract`) |
 | `GET /api/awards` | absent | **nouveau** : recherche dans les marchés attribués (voir plus bas) |
+| `GET /api/tenders/{id}/documents/search?q=` | absent | **nouveau** : recherche dans le DCE (voir plus bas) |
 | `GET /api/tenders/{id}` | existe | nouveaux champs (voir plus bas) |
 | `PUT /api/tenders/{id}/follow-up` | existe | accepter le statut `SUBMITTED` |
 | `PUT /api/tenders/{id}/follow` | absent | **nouveau** : suivre (étoile), par utilisateur |
@@ -149,6 +150,15 @@ différents) et `totalAmount` (somme des montants connus) calculés sur toutes l
 
 À faire côté backend : extraire l'attributaire, le montant et le nombre d'offres des avis
 d'attribution BOAMP (ils sont conservés bruts dans `raw_notice`).
+
+## Recherche dans le DCE (`GET /api/tenders/{id}/documents/search?q=`)
+
+Renvoie les pages des documents de la **dernière version** du DCE qui contiennent tous les termes
+cherchés, synonymes métier compris, dans l'ordre des documents puis des pages (type
+`DocumentHit` : document, nom, type de pièce, numéro de page, extrait, `readable`). Le texte est
+déjà stocké page par page dans `document_page` : une recherche plein texte PostgreSQL
+(`to_tsvector('french', …)`) suffit. Plus tard, les pages scannées pourront être couvertes par
+l'OCR.
 
 ## Veilles (`/api/alerts`)
 

@@ -91,6 +91,9 @@ Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramèt
    nouvelle version. Chaque pièce (RC, CCAP, CCTP, AE, DPGF, BPU, DQE, plans…) peut être ouverte
    ou téléchargée. Vérifier son type et le corriger si besoin : l'analyse se fonde sur le
    règlement de consultation. Dans la liste, « DCE : n documents » signale un dossier déjà déposé.
+   Une fois le dossier lu, « Rechercher dans les documents » trouve les pages qui contiennent les
+   mots cherchés (synonymes du métier compris) : document, page et extrait, avec un lien qui ouvre
+   le document à la bonne page. Seul le texte lu dans les PDF et les documents Word est couvert.
 9. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
    et prend quelques minutes. Pour un appel d'offres écarté par le filtre, utiliser « Lancer
    l'analyse ».

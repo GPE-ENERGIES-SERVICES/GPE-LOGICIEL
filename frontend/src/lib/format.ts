@@ -10,6 +10,14 @@ import type {
 
 export const NOT_INDICATED = "Non indiqué";
 
+/** Text in lower case and without accents, to compare words as a search does. */
+export function normalizeText(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 const TIME_ZONE = "Europe/Paris";
 
 const dateTimeFormat = new Intl.DateTimeFormat("fr-FR", {

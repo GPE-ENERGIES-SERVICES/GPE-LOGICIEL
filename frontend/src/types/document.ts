@@ -26,3 +26,15 @@ export type Dossier = {
   processedAt: string | null;
   documents: DocumentInfo[];
 };
+
+/** A page of a document of the consultation file containing the searched words. */
+export type DocumentHit = {
+  documentId: number;
+  fileName: string;
+  pieceType: PieceType;
+  pageNumber: number;
+  /** Text of the page around the words found. */
+  excerpt: string;
+  /** False when the original file cannot be shown as PDF. */
+  readable: boolean;
+};
