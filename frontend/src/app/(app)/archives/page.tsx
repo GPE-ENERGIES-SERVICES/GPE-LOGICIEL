@@ -12,6 +12,7 @@ import { ACTIVITY_LABELS, formatAmount, formatDate, MARKET_TYPE_LABELS } from "@
 import { tenderHref } from "@/lib/navigation";
 import { useLoader } from "@/lib/useLoader";
 import { useUrlParams } from "@/lib/useUrlParams";
+import { available } from "@/services/http";
 import { getTenders } from "@/services/tenderApi";
 import type { TenderResult, TenderSummary } from "@/types/tender";
 
@@ -28,12 +29,6 @@ const RESULT_LABELS: Record<TenderResult["kind"], string> = {
   UNSUCCESSFUL: "Sans suite",
   CANCELLED: "Annulée",
 };
-
-/** The backend gives the outcome in the detail only; the list falls back on the status of the consultation. */
-function resultLabel(tender: TenderSummary): string {
-  const kind = tender.result?.kind ?? (tender.status === "CLOSED" || tender.status === "ACTIVE" ? null : tender.status);
-  return kind ? RESULT_LABELS[kind] : "Close, résultat non connu";
-}
 
 function ArchiveRow({ tender, href }: { tender: TenderSummary; href: string }) {
   const area = tender.postalCode ?? tender.departments.join(", ");
@@ -57,13 +52,15 @@ function ArchiveRow({ tender, href }: { tender: TenderSummary; href: string }) {
       <td className="nowrap">{formatDate(tender.publishedAt)}</td>
       <td className="nowrap">{formatAmount(tender.estimatedAmount)}</td>
       <td className="nowrap">
-        {resultLabel(tender)}
+        {tender.result ? RESULT_LABELS[tender.result.kind] : "Close, résultat non connu"}
         {tender.followUpStatus === "SUBMITTED" && <div className="small muted">Réponse envoyée</div>}
       </td>
-      <td>
-        {tender.winners?.length ? tender.winners.join(", ") : "–"}
-        {tender.winners?.length ? <div className="small muted">{formatAmount(tender.awardedAmount ?? null)}</div> : null}
-      </td>
+      {available("awards") && (
+        <td>
+          {tender.winners?.length ? tender.winners.join(", ") : "–"}
+          {tender.winners?.length ? <div className="small muted">{formatAmount(tender.awardedAmount ?? null)}</div> : null}
+        </td>
+      )}
     </tr>
   );
 }
@@ -135,7 +132,7 @@ function ArchiveList() {
                     <th>Publication</th>
                     <th>Montant estimé</th>
                     <th>Résultat</th>
-                    <th>Attributaire</th>
+                    {available("awards") && <th>Attributaire</th>}
                   </tr>
                 </thead>
                 <tbody>

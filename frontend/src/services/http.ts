@@ -29,8 +29,6 @@ export type Feature =
   | "distance"
   /** Relevance score: sort. */
   | "relevance"
-  /** Year, outcome and buyer filters of the past consultations. */
-  | "pastFilters"
   /** Award criteria and key information read in the notice. */
   | "noticeDetails";
 
@@ -41,7 +39,6 @@ const NOT_IN_BACKEND = new Set<Feature>([
   "activity",
   "distance",
   "relevance",
-  "pastFilters",
   "noticeDetails",
 ]);
 

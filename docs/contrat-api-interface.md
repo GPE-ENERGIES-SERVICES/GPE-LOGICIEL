@@ -23,16 +23,16 @@ Avec le backend réel, ce que le backend ne fournit pas encore est masqué plut�
 une erreur : la liste `NOT_IN_BACKEND` de `services/http.ts`, lue par `available()`, en décide.
 Elle contient aujourd'hui les veilles (Mes veilles affiche « pas encore reliée au serveur »), les
 marchés attribués (même message ; la fiche ne les demande pas), la recherche dans le DCE, le
-filtre par type de travaux, la distance (filtre et tri), le tri par pertinence, les filtres année,
-résultat et acheteur des Archives, et les sections Critères d'attribution et Informations
-importantes de la fiche. Retirer une valeur de cette liste suffit à afficher la fonction une fois
+filtre par type de travaux, la distance (filtre et tri), le tri par pertinence, la colonne
+Attributaire des Archives, et les sections Critères d'attribution et Informations importantes de
+la fiche. Retirer une valeur de cette liste suffit à afficher la fonction une fois
 le backend prêt. Avec les données de démonstration, tout reste affiché.
 
 ## Récapitulatif
 
 | Appel | Backend actuel | À faire |
 |-------|----------------|---------|
-| `GET /api/tenders` | onglets, 13 filtres, tri (voir plus bas) | filtres et tris restants, synonymes, nouveaux champs |
+| `GET /api/tenders` | onglets, 16 filtres, tri (voir plus bas) | filtres et tris restants, synonymes, nouveaux champs |
 | `GET /api/tenders/counts` | mêmes filtres que la liste, tous les onglets | — |
 | `GET /api/tenders/status-counts` | existe | — |
 | `GET /api/tenders/{id}/awards` | absent | **nouveau** : marchés attribués de la consultation, un par lot (`AwardedContract`) |
@@ -53,7 +53,7 @@ le backend prêt. Avec les données de démonstration, tout reste affiché.
 | Appels d'offres | `getTenders`, `getTenderCounts`, `updateFollowUp`, `setFollowed`, `getAlerts` | `/api/tenders` (`tab` `NEW` à `FILTERED_OUT`), `/counts`, `/follow-up`, `/follow` |
 | Mes veilles | `getAlerts`, `createAlert`, `updateAlert`, `deleteAlert`, `markAlertViewed` | `/api/alerts` |
 | Mes suivis | `getTenders`, `getStatusCounts` | `/api/tenders?tab=FOLLOWED`, `/api/tenders/status-counts` |
-| Archives | `getTenders` | `/api/tenders?tab=ARCHIVED` |
+| Archives | `getTenders` | `/api/tenders?tab=ARCHIVED` (`sort=-published` par défaut), avec `year`, `result`, `buyer` |
 | Marchés attribués | `getAwardedContracts` | `/api/awards` |
 | Fiche | `getTender`, `getTenderAwards`, `getDossiers`, `searchDocuments`, `getTenderAnalysis`… | `/api/tenders/{id}`, `/awards`, `/dossiers`, `/documents/search`, `/analysis` |
 | Paramètres, connexion | inchangées | inchangés |
@@ -62,7 +62,7 @@ le backend prêt. Avec les données de démonstration, tout reste affiché.
 
 1. **Rétablir le mode réel** : fait (`SUBMITTED`, nouvelles valeurs de `TenderTab`).
 2. **Champs simples de la liste** : fait pour `reference`, `procedureType`, `source`,
-   `lotCount` ; restent `postalCode`, `documentCount`, et `result` (fourni dans le détail seulement).
+   `lotCount`, `result` ; restent `postalCode`, `documentCount`.
 3. **Recherche et filtres** : fait pour les paramètres marqués « oui » plus bas, le tri,
    `/counts` avec filtres et `/status-counts` ; restent les synonymes et les autres paramètres.
 4. **Suivi personnel** : fait (table `tender_follow`, `/follow`, `followed`, onglet `FOLLOWED`).
@@ -131,9 +131,9 @@ il suffit qu'une valeur corresponde.
 | `maxDistanceKm` | non | distance connue et inférieure ou égale |
 | `activity` | non | liste de codes de types de travaux |
 | `marketType` | oui | liste de `MarketType` |
-| `year` | non | année de publication (`2024`) |
-| `result` | non | `AWARDED`, `UNSUCCESSFUL`, `CANCELLED`, ou `UNKNOWN` pour une consultation passée sans résultat connu |
-| `buyer` | non | texte contenu dans le nom de l'acheteur |
+| `year` | oui | année de publication (`2024`) |
+| `result` | oui | liste parmi `AWARDED` (un avis d'attribution est publié), `CANCELLED`, `UNSUCCESSFUL` (état de la consultation, sans avis d'attribution), ou `UNKNOWN` pour une consultation sans résultat connu ; indépendant du statut de l'équipe (`status`) |
+| `buyer` | oui | texte contenu dans le nom de l'acheteur, sans tenir compte de la casse ni des accents |
 | `publishedWithinDays` | oui | publié depuis N jours au plus |
 | `publishedFrom`, `publishedTo` | non | dates `yyyy-MM-dd` incluses |
 | `deadlineFrom`, `deadlineTo` | non | dates `yyyy-MM-dd` incluses, en heure de Paris |
@@ -247,7 +247,7 @@ l'interface affiche « Non indiqué » ou « – ».
 | `followed` | booléen | **fourni** : suivi de l'utilisateur connecté |
 | `documentCount` | nombre | documents de la dernière version du DCE déposé |
 | `postalCode` | texte ou `null` | code postal du lieu d'exécution |
-| `result` | objet ou `null` | issue d'une consultation passée : `AWARDED`, `UNSUCCESSFUL` ou `CANCELLED`. **Fourni dans le détail** (avis d'attribution reçu, ou état de la consultation) ; dans la liste, les Archives se rabattent sur `status` |
+| `result` | objet ou `null` | issue d'une consultation passée : `AWARDED`, `UNSUCCESSFUL` ou `CANCELLED`. **Fourni** dans la liste et le détail : `AWARDED` dès qu'un avis d'attribution est publié, sinon `CANCELLED` ou `UNSUCCESSFUL` selon l'état de la consultation. Le backend ne positionne pas encore l'état `UNSUCCESSFUL` |
 | `cpv` (détail seulement) | liste `{ code, label }` | libellés de la nomenclature CPV |
 | `awardCriteria` (détail seulement) | liste `{ label, weight }` | critères d'attribution et pondération en %, `null` si non pondéré |
 | `keyInfo` (détail seulement) | objet ou `null` | visite (`required`, `date`), documents demandés, conditions particulières, qualifications, certifications ; repris de l'avis puis des valeurs validées de la fiche de synthèse |

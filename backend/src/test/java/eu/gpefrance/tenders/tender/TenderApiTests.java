@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.assertj.core.api.ObjectArrayAssert;
@@ -242,6 +243,77 @@ class TenderApiTests {
 	}
 
 	@Test
+	void listsThePastConsultationsWithTheirOutcome() {
+		Tender awarded = past("25-1", "Éclairage du stade", "Ville de Marseille", LocalDate.of(2025, 3, 10));
+		awarded.addNotice(rawNotice("25-9"), "25-9", NoticeKind.AWARD, null, null, null);
+		tenders.save(awarded);
+		Tender cancelled = past("26-2", "Réseau de chaleur", "Métropole Aix-Marseille", LocalDate.of(2026, 5, 2));
+		cancelled.cancel(NOW);
+		tenders.save(cancelled);
+		past("26-3", "Bornes de recharge", "Département du Var", LocalDate.of(2026, 9, 1));
+		save("26-4", "Toujours ouvert", "13", 20, true, null);
+
+		assertThat(mvc.get().uri("/api/tenders?tab=ARCHIVED&sort=-published").with(TestUsers.user())).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"totalElements": 3, "content": [
+					 {"title": "Bornes de recharge", "status": "CLOSED", "result": null},
+					 {"title": "Réseau de chaleur", "status": "CANCELLED", "result": {"kind": "CANCELLED"}},
+					 {"title": "Éclairage du stade", "status": "CLOSED", "result": {"kind": "AWARDED"}}]}
+					""");
+		assertThat(mvc.get().uri("/api/tenders?tab=ARCHIVED&sort=published&page=1&size=2").with(TestUsers.user()))
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"page": 1, "totalPages": 2, "content": [{"title": "Bornes de recharge"}]}
+					""");
+	}
+
+	@Test
+	void filtersThePastConsultationsByOutcomeYearAndBuyer() {
+		Tender awarded = past("25-1", "Éclairage du stade", "Ville de Marseille", LocalDate.of(2025, 3, 10));
+		awarded.addNotice(rawNotice("25-9"), "25-9", NoticeKind.AWARD, null, null, null);
+		tenders.save(awarded);
+		Tender cancelled = past("26-2", "Réseau de chaleur", "Métropole Aix-Marseille", LocalDate.of(2026, 5, 2));
+		cancelled.cancel(NOW);
+		tenders.save(cancelled);
+		past("26-3", "Bornes de recharge", "Département du Var", LocalDate.of(2026, 9, 1));
+
+		titles("/api/tenders?tab=ARCHIVED&result=AWARDED").containsExactly("Éclairage du stade");
+		titles("/api/tenders?tab=ARCHIVED&result=UNKNOWN").containsExactly("Bornes de recharge");
+		titles("/api/tenders?tab=ARCHIVED&result=CANCELLED,AWARDED&sort=-published")
+			.containsExactly("Réseau de chaleur", "Éclairage du stade");
+		titles("/api/tenders?tab=ARCHIVED&year=2026&sort=-published").containsExactly("Bornes de recharge",
+				"Réseau de chaleur");
+		titles("/api/tenders?tab=ARCHIVED&buyer=marseille&year=2025").containsExactly("Éclairage du stade");
+		assertThat(mvc.get().uri("/api/tenders?tab=ARCHIVED&year=2020").with(TestUsers.user())).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("{\"totalElements\": 0, \"content\": []}");
+		assertThat(mvc.get().uri("/api/tenders?tab=ARCHIVED&result=LOST").with(TestUsers.user()))
+			.hasStatus(HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void keepsTheDecisionOfTheTeamApartFromTheOutcome() {
+		Tender answered = past("26-1", "Éclairage du stade", "Ville de Marseille", LocalDate.of(2026, 3, 10));
+		answered.followUp(FollowUpStatus.SUBMITTED, null, "Marie", NOW);
+		tenders.save(answered);
+		Tender cancelled = past("26-2", "Réseau de chaleur", "Ville de Marseille", LocalDate.of(2026, 5, 2));
+		cancelled.followUp(FollowUpStatus.SUBMITTED, null, "Marie", NOW);
+		cancelled.cancel(NOW);
+		tenders.save(cancelled);
+
+		// An answer sent tells nothing of the outcome, which stays unknown without an award notice.
+		titles("/api/tenders?tab=ARCHIVED&status=SUBMITTED&result=UNKNOWN").containsExactly("Éclairage du stade");
+		assertThat(mvc.get().uri("/api/tenders/{id}", cancelled.getId()).with(TestUsers.user())).bodyJson()
+			.isLenientlyEqualTo("""
+					{"status": "CANCELLED", "followUpStatus": "SUBMITTED", "result": {"kind": "CANCELLED"}}
+					""");
+		// Past consultations stay out of the tabs of the open ones, whatever their follow-up status.
+		assertThat(mvc.get().uri("/api/tenders/counts").with(TestUsers.user())).bodyJson()
+			.isLenientlyEqualTo("{\"NEW\": 0, \"TO_PROCESS\": 0, \"ALL\": 0, \"ARCHIVED\": 2}");
+	}
+
+	@Test
 	void returnsTheDetailWithLotsAndHistory() {
 		Tender tender = tenders.save(new Tender("BOAMP", "26-1",
 				details("Construction d'une école", "69", NOW.plus(Duration.ofDays(20)), null,
@@ -294,6 +366,23 @@ class TenderApiTests {
 				details(title, department, NOW.plus(Duration.ofDays(daysLeft)), amount, List.of()), NOW);
 		tender.applyFilter(retained, retained ? "Retenu" : "Écarté", NOW);
 		return tenders.save(tender);
+	}
+
+	/** A consultation closed after its deadline, retained by the filter. */
+	private Tender past(String externalId, String title, String buyer, LocalDate publishedAt) {
+		Tender tender = new Tender("BOAMP", externalId,
+				new TenderDetails(title, null, buyer, null, null, List.of("13"), List.of(MarketType.WORKS), null,
+						List.of(), null, publishedAt, NOW.minus(Duration.ofDays(10)), null, null, List.of()),
+				NOW);
+		tender.applyFilter(true, "Retenu", NOW);
+		tender.close(NOW);
+		return tenders.save(tender);
+	}
+
+	private Long rawNotice(String externalId) {
+		return jdbc.queryForObject(
+				"INSERT INTO raw_notice (source, external_id, payload) VALUES ('BOAMP', ?, '{}') RETURNING id",
+				Long.class, externalId);
 	}
 
 	private static Tender retained(Tender tender) {

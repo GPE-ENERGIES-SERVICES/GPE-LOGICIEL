@@ -37,6 +37,8 @@ export type TenderSummary = {
   lotCount?: number;
   /** Followed by the logged-in user; the follow-up status is shared by the team. */
   followed?: boolean;
+  /** Outcome of a past consultation, null while it is open or when unknown. */
+  result?: TenderResult | null;
   // Provided by the simulated API; the backend does not send them yet.
   /** Activity codes, see ACTIVITY_LABELS. */
   activities?: string[];
@@ -46,8 +48,6 @@ export type TenderSummary = {
   relevanceScore?: number | null;
   documentCount?: number;
   postalCode?: string | null;
-  /** Outcome of a past consultation, null while it is open or when unknown; the backend sends it in the detail only. */
-  result?: TenderResult | null;
   /** Companies awarded, one per lot at most, for an awarded consultation. */
   winners?: string[];
   /** Total awarded, null when an amount is unknown. */

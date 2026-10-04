@@ -1,3 +1,5 @@
 node_modules/
 .next/
 *.md
+# Local settings, such as the demo data of a developer, stay out of the image.
+.env*.local

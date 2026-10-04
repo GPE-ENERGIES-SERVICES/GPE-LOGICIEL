@@ -19,6 +19,7 @@ import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
 /**
@@ -34,20 +35,37 @@ import jakarta.validation.constraints.PositiveOrZero;
  * @param maxDaysLeft deadline not passed and at most this number of days away
  * @param publishedWithinDays published at most this number of days ago
  * @param hasLots {@code true} with at least one lot, {@code false} without
+ * @param buyer text contained in the name of the buyer
+ * @param year year of publication
+ * @param result outcomes of the consultation, see {@link Result}
  */
 public record TenderSearch(String q, List<String> department, String region, String city,
 		List<MarketType> marketType, List<ProcedureType> procedure, List<FollowUpStatus> status,
 		@PositiveOrZero Integer minDaysLeft, @PositiveOrZero Integer maxDaysLeft,
 		@PositiveOrZero Integer publishedWithinDays, @PositiveOrZero BigDecimal minAmount,
-		@PositiveOrZero BigDecimal maxAmount, Boolean hasLots) {
+		@PositiveOrZero BigDecimal maxAmount, Boolean hasLots, String buyer, @Positive Integer year,
+		List<Result> result) {
+
+	/**
+	 * Outcome of a consultation, read as in the detail: AWARDED once an award
+	 * notice is published, otherwise CANCELLED or UNSUCCESSFUL from the status
+	 * of the consultation, UNKNOWN for the others. It never depends on the
+	 * follow-up status of the team.
+	 */
+	public enum Result {
+
+		AWARDED, CANCELLED, UNSUCCESSFUL, UNKNOWN
+
+	}
 
 	static TenderSearch none() {
-		return new TenderSearch(null, null, null, null, null, null, null, null, null, null, null, null, null);
+		return new TenderSearch(null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+				null, null);
 	}
 
 	TenderSearch withStatus(List<FollowUpStatus> statuses) {
 		return new TenderSearch(q, department, region, city, marketType, procedure, statuses, minDaysLeft,
-				maxDaysLeft, publishedWithinDays, minAmount, maxAmount, hasLots);
+				maxDaysLeft, publishedWithinDays, minAmount, maxAmount, hasLots, buyer, year, result);
 	}
 
 	/**
@@ -103,6 +121,15 @@ public record TenderSearch(String q, List<String> department, String region, Str
 			if (hasLots != null) {
 				predicates.add(hasLots ? cb.isNotEmpty(root.get("lots")) : cb.isEmpty(root.get("lots")));
 			}
+			if (buyer != null && !buyer.isBlank()) {
+				predicates.add(like(cb, root.get("buyer"), unaccent(cb, cb.literal(pattern(buyer.strip())))));
+			}
+			if (year != null) {
+				predicates.add(cb.between(root.get("publishedAt"), LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31)));
+			}
+			if (result != null && !result.isEmpty()) {
+				predicates.add(resultPredicate(result, root, query, cb));
+			}
 			return cb.and(predicates.toArray(Predicate[]::new));
 		};
 	}
@@ -129,6 +156,22 @@ public record TenderSearch(String q, List<String> department, String region, Str
 			case ARCHIVED -> cb.notEqual(root.get("status"), TenderStatus.ACTIVE);
 			case FILTERED_OUT -> cb.and(cb.not(notFilteredOut), active);
 		};
+	}
+
+	private static Predicate resultPredicate(List<Result> results, Root<Tender> root, CriteriaQuery<?> query,
+			CriteriaBuilder cb) {
+		Subquery<Long> awards = query.subquery(Long.class);
+		Root<TenderNotice> notice = awards.from(TenderNotice.class);
+		awards.select(notice.get("id"))
+			.where(cb.equal(notice.get("tender"), root), cb.equal(notice.get("kind"), NoticeKind.AWARD));
+		Predicate awarded = cb.exists(awards);
+		Expression<TenderStatus> status = root.get("status");
+		return cb.or(results.stream().map(result -> switch (result) {
+			case AWARDED -> awarded;
+			case CANCELLED -> cb.and(cb.not(awarded), cb.equal(status, TenderStatus.CANCELLED));
+			case UNSUCCESSFUL -> cb.and(cb.not(awarded), cb.equal(status, TenderStatus.UNSUCCESSFUL));
+			case UNKNOWN -> cb.and(cb.not(awarded), status.in(TenderStatus.CANCELLED, TenderStatus.UNSUCCESSFUL).not());
+		}).toArray(Predicate[]::new));
 	}
 
 	/**

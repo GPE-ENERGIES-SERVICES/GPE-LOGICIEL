@@ -63,6 +63,7 @@ export const PAST_FILTERS: FilterKey[] = [
   "result",
   "activity",
   "marketType",
+  "procedure",
   "region",
   "department",
   "city",
@@ -186,9 +187,6 @@ function field(key: FilterKey, value: string): ReactNode {
 const FILTER_FEATURES: Partial<Record<FilterKey, Feature>> = {
   activity: "activity",
   maxDistanceKm: "distance",
-  year: "pastFilters",
-  result: "pastFilters",
-  buyer: "pastFilters",
 };
 
 /** Combinable filters of a list of tenders, all visible; a list applies as soon as it changes. */

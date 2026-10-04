@@ -119,7 +119,9 @@ public class Tender {
 	@OrderBy("position")
 	private List<Lot> lots = new ArrayList<>();
 
+	// The list reads the outcome of a whole page from the notices.
 	@OneToMany(mappedBy = "tender", cascade = CascadeType.ALL)
+	@BatchSize(size = 100)
 	@OrderBy("publishedAt, id")
 	private List<TenderNotice> notices = new ArrayList<>();
 
