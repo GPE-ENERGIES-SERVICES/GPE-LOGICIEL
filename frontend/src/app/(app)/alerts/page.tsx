@@ -5,6 +5,7 @@ import { Suspense, useState } from "react";
 
 import { AlertForm } from "@/components/AlertForm";
 import { ACTIVITY_LABELS, formatAmount, formatDateTime, MARKET_TYPE_LABELS } from "@/lib/format";
+import { alertResultsHref } from "@/lib/navigation";
 import { useLoader } from "@/lib/useLoader";
 import { createAlert, deleteAlert, getAlerts, markAlertViewed, updateAlert } from "@/services/alertApi";
 import type { AlertInput, AlertSummary } from "@/types/alert";
@@ -125,7 +126,7 @@ function AlertItem({ alert, onEdit, onChanged }: { alert: AlertSummary; onEdit: 
     } catch {
       // the results are shown all the same
     }
-    router.push(`/tenders?tab=ALL&sort=-published&alert=${alert.id}`);
+    router.push(alertResultsHref(alert.id));
   };
 
   return (

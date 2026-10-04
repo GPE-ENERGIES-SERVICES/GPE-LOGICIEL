@@ -9,11 +9,12 @@ aide à décider ; la décision reste humaine.
 Le bandeau du haut donne accès aux rubriques : Tableau de bord, Appels d'offres, Mes veilles,
 Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramètres.
 
-1. **Tableau de bord** : l'état de la dernière collecte ; le nombre de nouveaux appels
-   d'offres, de ceux à traiter, de vos suivis, des échéances dans les 7 jours et des avis hors
-   critères (un clic ouvre la liste correspondante) ; les échéances des 7 prochains jours ; les
-   derniers appels d'offres retenus ; la répartition des appels d'offres en cours par statut, type
-   de travaux et département.
+1. **Tableau de bord** : l'état de la dernière collecte, puis « Aujourd'hui » : les nouvelles
+   opportunités publiées depuis hier (dont celles qui correspondent aux critères de l'entreprise),
+   les consultations à analyser, les échéances des 7 prochains jours, vos suivis et les avis hors
+   critères à vérifier ; un clic sur un chiffre ouvre la liste correspondante. Suivent les
+   échéances proches, les nouvelles opportunités, vos veilles actives avec leurs nouvelles
+   consultations (un clic ouvre leurs résultats) et les derniers marchés attribués.
 2. **Appels d'offres** : les consultations en cours. Les onglets :
    - **Nouveaux** : retenues par le filtre, sans décision ;
    - **À traiter** : à analyser ou en préparation ;

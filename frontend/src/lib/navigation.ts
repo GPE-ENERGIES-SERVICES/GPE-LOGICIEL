@@ -8,6 +8,11 @@ export function tenderHref(id: number, from?: string): string {
   return from ? `/tenders/${id}?from=${encodeURIComponent(from)}` : `/tenders/${id}`;
 }
 
+/** Results of a saved search, the newest first. */
+export function alertResultsHref(alertId: number): string {
+  return `/tenders?tab=ALL&sort=-published&alert=${alertId}`;
+}
+
 const BACK_LABELS: Record<string, string> = {
   "/tenders": "Retour aux résultats",
   "/follows": "Retour à Mes suivis",

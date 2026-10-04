@@ -1,5 +1,5 @@
 import type { Page } from "@/types/common";
-import type { FollowUpStatus, TenderDetail, TenderStats, TenderSummary, TenderTab } from "@/types/tender";
+import type { FollowUpStatus, TenderDetail, TenderSummary, TenderTab } from "@/types/tender";
 
 import { api } from "./http";
 
@@ -21,10 +21,6 @@ export function getTenderCounts(params: SearchParams = ""): Promise<Record<Tende
 /** Number of tenders of each status in a tab, with the same search and filters except the status. */
 export function getStatusCounts(params: SearchParams): Promise<Record<FollowUpStatus, number>> {
   return api(`/api/tenders/status-counts?${params}`);
-}
-
-export function getTenderStats(): Promise<TenderStats> {
-  return api("/api/tenders/stats");
 }
 
 export function getTender(id: number | string): Promise<TenderDetail> {

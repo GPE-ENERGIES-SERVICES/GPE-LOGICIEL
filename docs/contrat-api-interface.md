@@ -25,7 +25,6 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 |-------|----------------|---------|
 | `GET /api/tenders` | 5 filtres, tri fixe | onglets, filtres, tri, nouveaux champs (voir plus bas) |
 | `GET /api/tenders/counts` | sans paramètre | accepter les mêmes filtres que la liste, nouveaux onglets |
-| `GET /api/tenders/stats` | absent | **nouveau** : répartition pour le tableau de bord |
 | `GET /api/tenders/status-counts` | absent | **nouveau** : nombre par statut, pour Mes suivis |
 | `GET /api/tenders/{id}/awards` | absent | **nouveau** : marchés attribués de la consultation, un par lot (`AwardedContract`) |
 | `GET /api/awards` | absent | **nouveau** : recherche dans les marchés attribués (voir plus bas) |
@@ -179,20 +178,6 @@ ainsi la recherche et les filtres.
 Mêmes paramètres que la liste, `tab` compris, sauf `status` qui est ignoré. Renvoie le nombre
 d'appels d'offres de chaque `FollowUpStatus` : Mes suivis l'appelle avec `tab=FOLLOWED` pour les
 compteurs de ses onglets.
-
-## `GET /api/tenders/stats` (nouveau)
-
-Répartition des appels d'offres **en cours** (actifs, hors écartés par le filtre au statut `NEW`) :
-
-```json
-{
-  "byStatus": { "NEW": 27, "TO_STUDY": 14, "RESPONDING": 9, "SUBMITTED": 8, "DISMISSED": 10 },
-  "byActivity": { "ELECTRICITY": 23, "PHOTOVOLTAIC": 11 },
-  "byDepartment": { "13": 31, "83": 12 }
-}
-```
-
-Un appel d'offres compte une fois dans chacun de ses types de travaux et départements.
 
 ## Nouveaux champs
 

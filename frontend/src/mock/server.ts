@@ -17,7 +17,6 @@ import type { CollectJournal } from "@/types/settings";
 import type {
   FollowUpStatus,
   TenderDetail,
-  TenderStats,
   TenderSummary,
   TenderTab,
 } from "@/types/tender";
@@ -32,7 +31,7 @@ import { MOCK_TENDERS } from "./tenders";
 const MOCK_USER: CurrentUser = {
   id: 1,
   email: "demo@gpefrance.eu",
-  displayName: "Compte de démonstration",
+  displayName: "Houssem Arbia",
   role: "ADMIN",
 };
 
@@ -413,24 +412,6 @@ function statusCounts(params: URLSearchParams): Record<FollowUpStatus, number> {
   return counts;
 }
 
-function stats(): TenderStats {
-  const open = tenders.filter((tender) => inTab(tender, "ALL"));
-  const countBy = (keys: (tender: TenderDetail) => string[]) => {
-    const counts: Record<string, number> = {};
-    for (const tender of open) {
-      for (const key of keys(tender)) {
-        counts[key] = (counts[key] ?? 0) + 1;
-      }
-    }
-    return counts;
-  };
-  return {
-    byStatus: countBy((tender) => [tender.followUpStatus]) as Record<FollowUpStatus, number>,
-    byActivity: countBy((tender) => tender.activities ?? []),
-    byDepartment: countBy((tender) => tender.departments),
-  };
-}
-
 // --- Awarded contracts ------------------------------------------------------
 
 /** Filters of GET /api/awards, all combinable; an unknown amount never hides a contract. */
@@ -659,7 +640,6 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/collect-runs$/, () => collectJournal()],
   ["GET", /^\/api\/tenders$/, (_, url) => search(url.searchParams)],
   ["GET", /^\/api\/tenders\/counts$/, (_, url) => counts(url.searchParams)],
-  ["GET", /^\/api\/tenders\/stats$/, () => stats()],
   ["GET", /^\/api\/tenders\/status-counts$/, (_, url) => statusCounts(url.searchParams)],
   ["GET", /^\/api\/tenders\/(\d+)$/, (id) => toDetail(find(id))],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow-up$/, (id, _, body) => toDetail(followUp(id, body))],
