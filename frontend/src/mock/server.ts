@@ -15,7 +15,6 @@ import type { DocumentInfo, PieceType } from "@/types/document";
 import type { CollectJournal } from "@/types/settings";
 import type {
   FollowUpStatus,
-  TenderConditions,
   TenderDetail,
   TenderStats,
   TenderSummary,
@@ -116,21 +115,6 @@ function toSummary(tender: TenderDetail): TenderSummary {
   };
 }
 
-/** Conditions shown by the current details page, taken from the key information. */
-function conditionsOf(tender: TenderDetail): TenderConditions | null {
-  const info = tender.keyInfo;
-  if (!info) {
-    return null;
-  }
-  const criteria = (tender.awardCriteria ?? []).map((c) => (c.weight === null ? c.label : `${c.label} ${c.weight} %`));
-  return {
-    qualifications: [...info.qualifications, ...info.certifications],
-    siteVisit: info.siteVisit ? (info.siteVisit.required ? "Obligatoire" : "Facultative") : null,
-    selectionCriteria: criteria.length ? criteria.join(", ") : null,
-    constraints: info.specialConditions,
-  };
-}
-
 /** The details, with the award notice completed from the awarded contracts. */
 function toDetail(tender: TenderDetail): TenderDetail {
   const awarded = MOCK_AWARDS.filter((award) => award.tenderId === tender.id)
@@ -139,7 +123,6 @@ function toDetail(tender: TenderDetail): TenderDetail {
   return {
     ...tender,
     ...toSummary(tender),
-    conditions: conditionsOf(tender),
     notices: tender.notices.map((notice) =>
       notice.kind === "AWARD" && !notice.details && awarded ? { ...notice, details: `Attribution — ${awarded}.` } : notice,
     ),
@@ -597,6 +580,7 @@ const ROUTES: Route[] = [
   ["DELETE", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, false)],
   ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id] ?? []],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
+  ["GET", /^\/api\/tenders\/(\d+)\/awards$/, (id) => MOCK_AWARDS.filter((award) => award.tenderId === find(id).id)],
   ["PUT", /^\/api\/documents\/(\d+)\/piece-type$/, (id, _, body) => changePieceType(id, body)],
   ["GET", /^\/api\/alerts$/, () => alerts.map(alertSummary)],
   ["POST", /^\/api\/alerts$/, (_, __, body) => createAlert(body)],

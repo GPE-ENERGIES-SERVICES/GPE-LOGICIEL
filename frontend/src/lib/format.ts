@@ -201,3 +201,30 @@ export function formatSize(bytes: number): string {
   }
   return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
 }
+
+const FILE_FORMATS: Record<string, string> = {
+  pdf: "PDF",
+  doc: "Word",
+  docx: "Word",
+  odt: "Texte",
+  rtf: "Texte",
+  xls: "Excel",
+  xlsx: "Excel",
+  xlsm: "Excel",
+  ods: "Tableur",
+  csv: "CSV",
+  dwg: "Plan DWG",
+  dxf: "Plan DXF",
+  jpg: "Image",
+  jpeg: "Image",
+  png: "Image",
+  tif: "Image",
+  tiff: "Image",
+  zip: "Archive",
+};
+
+/** Format of a file, from its extension: "PDF", "Excel"… */
+export function fileFormat(fileName: string): string {
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+  return FILE_FORMATS[extension] ?? extension.toUpperCase();
+}

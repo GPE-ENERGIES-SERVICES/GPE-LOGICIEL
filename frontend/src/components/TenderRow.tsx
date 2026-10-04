@@ -20,13 +20,15 @@ import { FollowButton } from "./FollowButton";
 
 type Props = {
   tender: TenderSummary;
+  /** Link to the details, remembering the list. */
+  href: string;
   onFollowUp: (status: FollowUpStatus) => void;
   onFollowChanged: () => void;
   busy: boolean;
 };
 
 /** One line of the tender table: what is needed to sort out many tenders quickly. */
-export function TenderRow({ tender, onFollowUp, onFollowChanged, busy }: Props) {
+export function TenderRow({ tender, href, onFollowUp, onFollowChanged, busy }: Props) {
   // The postal code when known, otherwise the departments.
   const area = tender.postalCode ?? (tender.departments.length ? tender.departments.join(", ") : null);
   const place = [tender.location, area && `(${area})`].filter(Boolean).join(" ");
@@ -53,7 +55,7 @@ export function TenderRow({ tender, onFollowUp, onFollowChanged, busy }: Props) 
         />
       </td>
       <td className="tender-title">
-        <Link href={`/tenders/${tender.id}`}>{tender.title}</Link>
+        <Link href={href}>{tender.title}</Link>
         <div className="small muted">{about}</div>
       </td>
       <td>

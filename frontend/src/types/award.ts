@@ -13,6 +13,9 @@ export type AwardedContract = {
   marketType: MarketType;
   /** Activity codes, see ACTIVITY_LABELS. */
   activities: string[];
+  /** Number of the lot, null when the consultation is not divided. */
+  lotNumber: string | null;
+  /** "Lot 3 – Chauffage", null when the consultation is not divided. */
   lot: string | null;
   winner: string;
   winnerCity: string | null;

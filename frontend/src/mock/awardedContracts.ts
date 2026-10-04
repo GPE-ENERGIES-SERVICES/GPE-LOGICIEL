@@ -49,6 +49,7 @@ function awardsOf(tender: TenderDetail): Omit<AwardedContract, "id">[] {
       department: tender.departments[0] ?? null,
       marketType: tender.marketTypes[0] ?? "WORKS",
       activities: tender.activities ?? [],
+      lotNumber: lot.number || null,
       lot: lot.number ? `Lot ${lot.number} – ${lot.title ?? "sans intitulé"}` : null,
       winner,
       winnerCity: city,

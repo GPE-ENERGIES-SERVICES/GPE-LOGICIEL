@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   DOCUMENT_STATE_LABELS,
   DOSSIER_STATUS_LABELS,
+  fileFormat,
   formatDateTime,
   formatSize,
   PIECE_TYPE_LABELS,
@@ -33,6 +34,7 @@ function DocumentRow({ document, onChanged }: { document: DocumentInfo; onChange
   return (
     <tr className={analysed ? "" : "row-muted"}>
       <td className="file-name">{document.fileName}</td>
+      <td>{fileFormat(document.fileName)}</td>
       <td>
         <select
           value={document.pieceType}
@@ -117,6 +119,7 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
         <thead>
           <tr>
             <th>Fichier</th>
+            <th>Format</th>
             <th>Type de pièce</th>
             <th>État</th>
             <th>Pages</th>

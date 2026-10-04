@@ -1,7 +1,9 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
+import { tenderHref } from "@/lib/navigation";
 import { updateFollowUp } from "@/services/tenderApi";
 import type { Page } from "@/types/common";
 import type { FollowUpStatus, TenderSummary } from "@/types/tender";
@@ -40,6 +42,9 @@ export function TenderResults({ data, loading, params, onNavigate, caption, empt
   const [busyId, setBusyId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const page = Number(params.get("page") ?? "0");
+  const pathname = usePathname();
+  const query = params.toString();
+  const from = query ? `${pathname}?${query}` : pathname;
 
   const followUp = async (tender: TenderSummary, status: FollowUpStatus) => {
     setBusyId(tender.id);
@@ -108,6 +113,7 @@ export function TenderResults({ data, loading, params, onNavigate, caption, empt
                 <TenderRow
                   key={tender.id}
                   tender={tender}
+                  href={tenderHref(tender.id, from)}
                   busy={busyId === tender.id}
                   onFollowUp={(status) => followUp(tender, status)}
                   onFollowChanged={onChanged}

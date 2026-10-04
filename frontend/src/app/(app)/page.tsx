@@ -11,6 +11,7 @@ import {
   FOLLOW_UP_LABELS,
   TENDER_TAB_LABELS,
 } from "@/lib/format";
+import { tenderHref } from "@/lib/navigation";
 import { useLoader } from "@/lib/useLoader";
 import { getTenderCounts, getTenders, getTenderStats } from "@/services/tenderApi";
 import type { FollowUpStatus, TenderSummary, TenderTab } from "@/types/tender";
@@ -53,7 +54,7 @@ function Breakdown({ title, counts, label }: BreakdownProps) {
 function TenderLink({ tender }: { tender: TenderSummary }) {
   return (
     <>
-      <Link href={`/tenders/${tender.id}`}>{tender.title}</Link>
+      <Link href={tenderHref(tender.id, "/")}>{tender.title}</Link>
       <div className="small muted">{tender.buyer ?? "Acheteur non indiqué"}</div>
     </>
   );

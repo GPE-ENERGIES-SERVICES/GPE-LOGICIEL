@@ -65,12 +65,16 @@ Archives et Marchés attribués sont en cours de construction.
    consultation close porte la mention « Clos »). Les onglets les rangent par statut, avec leur
    nombre ; on peut y chercher, trier et changer le statut. Retirer l'étoile retire la
    consultation de cette rubrique.
-5. **Fiche** : ouvrir un appel d'offres. Les informations sont rangées par section :
-   informations générales (date limite, montant, pertinence, référence, procédure, lieu, source,
-   raison du filtre, liens vers la plateforme de l'acheteur et l'avis), suivi, travaux
-   (types de travaux, codes CPV, description, lots), conditions de participation
-   (qualifications, visite, critères, contraintes), documents, fiche de synthèse et historique
-   des publications (un rectificatif qui change la date limite est signalé).
+5. **Fiche** : ouvrir une consultation. L'en-tête résume l'essentiel (acheteur, référence, lieu,
+   type de marché, travaux, procédure, publication, date limite et jours restants, statut) ; les
+   sections suivent : informations principales, objet, lots (avec leur total et, pour une
+   consultation attribuée, l'attributaire de chaque lot), critères d'attribution et leur
+   pondération, informations importantes (visite et sa date, documents demandés, qualifications,
+   certifications, conditions particulières), documents du DCE, plateforme de dépôt, suivi,
+   analyse du DCE et historique des publications dans l'ordre chronologique (un rectificatif qui
+   change la date limite est signalé). Une information absente de l'avis n'est pas affichée ou est
+   signalée comme non indiquée. « Retour aux résultats » ramène à la page d'où la fiche a été
+   ouverte, avec sa recherche, ses filtres, son tri et sa page.
 6. **Dépôt du DCE** : télécharger le dossier sur la plateforme de l'acheteur, puis le déposer
    dans la section « Documents (DCE) » (archive ZIP ou fichiers). Chaque dépôt crée une
    nouvelle version. Chaque pièce (RC, CCAP, CCTP, AE, DPGF, BPU, DQE, plans…) peut être ouverte

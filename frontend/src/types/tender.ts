@@ -70,24 +70,12 @@ export type TenderKeyInfo = {
   certifications: string[];
 };
 
-/**
- * Conditions of participation. Later filled from the validated analysis of
- * the consultation file.
- */
-export type TenderConditions = {
-  qualifications: string[];
-  siteVisit: string | null;
-  selectionCriteria: string | null;
-  constraints: string | null;
-};
-
 export type TenderDetail = TenderSummary & {
   source: string;
   externalId: string;
   description: string | null;
   reference: string | null;
   procedureType: ProcedureType | null;
-  conditions?: TenderConditions | null;
   cpvCodes: string[];
   // Provided by the simulated API; the backend does not send them yet.
   cpv?: { code: string; label: string }[];

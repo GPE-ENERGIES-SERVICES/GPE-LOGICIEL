@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, type ReactNode } from "react";
 
 import { useAuth } from "./AuthProvider";
 
+type Section = { href: string; label: string };
+
 /** Main sections; a section is active on its page and on the pages below it. */
-const SECTIONS = [
+const SECTIONS: Section[] = [
   { href: "/", label: "Tableau de bord" },
   { href: "/tenders", label: "Appels d'offres" },
   { href: "/alerts", label: "Mes veilles" },
@@ -16,11 +18,37 @@ const SECTIONS = [
   { href: "/awards", label: "Marchés attribués" },
 ];
 
+function SectionNav({ sections, origin }: { sections: Section[]; origin: string | null }) {
+  const pathname = usePathname();
+  const current = origin ?? pathname;
+  const isActive = (href: string) => (href === "/" ? current === "/" : current.startsWith(href));
+  return (
+    <nav className="app-nav">
+      {sections.map(({ href, label }) => (
+        <Link
+          key={href}
+          href={href}
+          className={isActive(href) ? "active" : ""}
+          aria-current={isActive(href) ? "page" : undefined}
+        >
+          {label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+/** The details of a tender belong to the section they were opened from (?from=…). */
+function SectionNavWithOrigin({ sections }: { sections: Section[] }) {
+  const pathname = usePathname();
+  const from = useSearchParams().get("from")?.split("?")[0] ?? null;
+  const origin = pathname.startsWith("/tenders/") && sections.some(({ href }) => href === from) ? from : null;
+  return <SectionNav sections={sections} origin={origin} />;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const pathname = usePathname();
   const sections = user.role === "ADMIN" ? [...SECTIONS, { href: "/settings", label: "Paramètres" }] : SECTIONS;
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
     <>
@@ -34,18 +62,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             Se déconnecter
           </button>
         </div>
-        <nav className="app-nav">
-          {sections.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={isActive(href) ? "active" : ""}
-              aria-current={isActive(href) ? "page" : undefined}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
+        <Suspense fallback={<SectionNav sections={sections} origin={null} />}>
+          <SectionNavWithOrigin sections={sections} />
+        </Suspense>
       </header>
       <main className="app-main">{children}</main>
     </>

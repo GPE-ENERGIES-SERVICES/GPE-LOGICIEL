@@ -27,6 +27,7 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 | `GET /api/tenders/counts` | sans paramètre | accepter les mêmes filtres que la liste, nouveaux onglets |
 | `GET /api/tenders/stats` | absent | **nouveau** : répartition pour le tableau de bord |
 | `GET /api/tenders/status-counts` | absent | **nouveau** : nombre par statut, pour Mes suivis |
+| `GET /api/tenders/{id}/awards` | absent | **nouveau** : marchés attribués de la consultation, un par lot (`AwardedContract`) |
 | `GET /api/tenders/{id}` | existe | nouveaux champs (voir plus bas) |
 | `PUT /api/tenders/{id}/follow-up` | existe | accepter le statut `SUBMITTED` |
 | `PUT /api/tenders/{id}/follow` | absent | **nouveau** : suivre (étoile), par utilisateur |
@@ -185,7 +186,12 @@ l'interface affiche « Non indiqué » ou « – ».
 | `relevanceScore` | 0 à 100 ou `null` | d'abord calculé par règles à partir des critères satisfaits, plus tard par l'analyse |
 | `followed` | booléen | suivi de l'utilisateur connecté |
 | `documentCount` | nombre | documents de la dernière version du DCE déposé |
-| `conditions` (détail seulement) | objet ou `null` | qualifications, visite, critères d'attribution et contraintes, repris des valeurs validées de la fiche de synthèse |
+| `postalCode` | texte ou `null` | code postal du lieu d'exécution |
+| `result` | objet ou `null` | issue d'une consultation passée : `AWARDED`, `UNSUCCESSFUL` ou `CANCELLED` |
+| `cpv` (détail seulement) | liste `{ code, label }` | libellés de la nomenclature CPV |
+| `awardCriteria` (détail seulement) | liste `{ label, weight }` | critères d'attribution et pondération en %, `null` si non pondéré |
+| `keyInfo` (détail seulement) | objet ou `null` | visite (`required`, `date`), documents demandés, conditions particulières, qualifications, certifications ; repris de l'avis puis des valeurs validées de la fiche de synthèse |
+| `platformName` (détail seulement) | texte ou `null` | nom de la plateforme de dépôt ; à défaut l'interface affiche l'adresse de `platformUrl` |
 
 Codes de types de travaux utilisés par l'interface (`ACTIVITY_LABELS` dans
 `frontend/src/lib/format.ts`) : `ELECTRICITY`, `PHOTOVOLTAIC`, `EV_CHARGING`, `HEATING`,
