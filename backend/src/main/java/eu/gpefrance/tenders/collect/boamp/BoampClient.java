@@ -68,17 +68,15 @@ public class BoampClient {
 		return page;
 	}
 
+	/**
+	 * A notice without identifier is returned all the same: the collection
+	 * rejects it without stopping, see {@link BoampRecord#isValid()}.
+	 */
 	private static BoampRecord toRecord(JsonNode result) {
 		String idweb = result.path("idweb").asString(null);
-		if (idweb == null || idweb.isBlank()) {
-			throw new IllegalStateException("BOAMP notice without idweb: " + abbreviate(result.toString()));
-		}
 		String publishedAt = result.path("dateparution").asString(null);
-		return new BoampRecord(idweb, publishedAt == null ? null : LocalDate.parse(publishedAt), result.toString());
-	}
-
-	private static String abbreviate(String text) {
-		return text.length() <= 200 ? text : text.substring(0, 200) + "...";
+		return new BoampRecord(idweb == null || idweb.isBlank() ? null : idweb,
+				publishedAt == null ? null : LocalDate.parse(publishedAt), result.toString());
 	}
 
 }

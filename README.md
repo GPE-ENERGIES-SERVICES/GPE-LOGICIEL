@@ -97,6 +97,16 @@ Sans backend, l'interface peut tourner sur des données de démonstration : cré
 Les appels `/api` sont alors traités par `frontend/src/mock` (mêmes URL, mêmes réponses ;
 voir le [contrat d'API](docs/contrat-api-interface.md)).
 
+Importer les données BOAMP (l'application doit tourner ; connexion avec le compte
+administrateur du `.env`) :
+
+```bash
+scripts/import-boamp.sh              # nouveaux avis depuis le dernier import
+scripts/import-boamp.sh 2026-09-01   # chargement initial depuis le 1er septembre (un an maximum)
+API_URL=http://localhost:3002 scripts/import-boamp.sh   # interface publiée sur un autre port
+docker compose logs backend | grep "BOAMP import"       # bilan détaillé de chaque import
+```
+
 Tests :
 
 ```bash
@@ -109,11 +119,13 @@ cd frontend && npm run lint && npx tsc --noEmit
 1. **Collecte** : deux fois par jour ouvré (7 h et 13 h), le backend interroge l'API open data
    du BOAMP et récupère les avis publiés depuis la dernière collecte réussie (avec un jour de
    recouvrement). Chaque avis est conservé tel quel ; chaque collecte est journalisée. Un
-   administrateur peut lancer une collecte depuis les paramètres.
+   administrateur peut lancer une collecte depuis les paramètres, ou un chargement initial sur
+   une période (voir « Importer les données BOAMP »).
 2. **Normalisation** : les avis sont convertis au format commun (objet, acheteur, lieu,
    départements, dates, type, procédure, CPV, montant, lots, liens). Les rectificatifs,
    attributions et annulations sont rattachés à l'avis initial. Une information absente reste
-   « Non indiqué ».
+   « Non indiqué ». Un avis n'est jamais importé deux fois et rien n'est supprimé (voir
+   `docs/technique.md`, « Cycle de vie des données »).
 3. **Filtrage** : un appel d'offres est retenu s'il respecte tous les critères obligatoires
    (zone, type de marché, délai, montant, mots-clés exclus) et au moins un critère métier
    (code CPV ou mot-clé). La raison est enregistrée et affichée ; les avis écartés restent

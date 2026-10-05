@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.collect;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.domain.PageRequest;
@@ -36,10 +37,14 @@ public class CollectController {
 		return new CollectJournalResponse(collectService.isRunning(), recent);
 	}
 
+	/**
+	 * @param since first publication day to fetch, for an initial load; by
+	 * default the collection resumes after the last successful one
+	 */
 	@PostMapping
 	@ResponseStatus(HttpStatus.ACCEPTED)
-	public void start() {
-		collectService.startInBackground(CollectTrigger.MANUAL);
+	public void start(@RequestParam(required = false) LocalDate since) {
+		collectService.startInBackground(CollectTrigger.MANUAL, since);
 	}
 
 	public record CollectJournalResponse(boolean running, List<CollectRunResponse> runs) {

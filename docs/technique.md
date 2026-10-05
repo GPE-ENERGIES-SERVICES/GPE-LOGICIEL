@@ -183,9 +183,49 @@ moins une fois avant la mise en service (critère de recette).
 Suivi : `docker compose logs backup` affiche chaque sauvegarde et les échecs
 (`BACKUP FAILED`).
 
+## Cycle de vie des données
+
+```
+API open data BOAMP (un jour de parution à la fois)   collect/boamp/BoampClient
+  → avis bruts, JSON intact                             raw_notice, unique (source, external_id)
+  → format commun                                       collect/boamp/BoampNoticeParser
+  → création ou rattachement à la consultation          collect/NormalizationService
+  → consultations, lots, historique des avis            tender (unique source, external_id), lot, tender_notice
+  → critères de l'entreprise, clôture des échéances     filter/FilterService, tender/TenderLifecycleService
+```
+
+Orchestration : `collect/CollectService`, déclenché par `CollectScheduler` (`collect.cron`, 7 h et
+13 h les jours ouvrés), par le bouton des paramètres ou par `POST /api/collect-runs?since=AAAA-MM-JJ`
+(administrateur, `scripts/import-boamp.sh`). Une seule collecte à la fois.
+
+- **Doublons** : un avis BOAMP (`idweb`) n'est stocké qu'une fois (`INSERT … ON CONFLICT DO
+  NOTHING`), une consultation qu'une fois par (source, identifiant de l'avis initial), un avis
+  n'est rattaché qu'une fois. Les contraintes d'unicité sont dans PostgreSQL ; réimporter une
+  période ne crée rien.
+- **Mises à jour** : le BOAMP ne modifie pas un avis publié, il publie un nouvel avis lié à
+  l'initial. Un rectificatif change la date limite, un rectificatif complet les informations
+  qu'il donne (une information absente n'efface jamais la précédente) ; l'avis le plus récent
+  prévaut, les dates annoncées restent dans l'historique des publications. Une attribution
+  clôt la consultation, une annulation l'annule.
+- **Données de GPE** : l'import n'écrit que les informations publiées. Le statut de l'équipe, son
+  commentaire, les suivis (`tender_follow`), les DCE déposés et les analyses ne sont jamais
+  modifiés par un import. Une nouvelle consultation commence au statut « Nouveau ».
+- **Rien n'est supprimé** : une consultation passe à `CLOSED` (date limite dépassée ou
+  attribution) ou `CANCELLED` et reste consultable dans les Archives.
+- **Avis en attente** : un rectificatif ou une attribution dont l'avis initial n'a pas été
+  collecté est mis de côté (« Initial notice not collected ») et appliqué dès que cet avis
+  initial est importé, par exemple par un chargement initial plus ancien.
+- **Erreurs** : un avis sans identifiant est écarté sans arrêter la collecte ; un avis illisible
+  est noté en erreur et retenté à la collecte suivante. Si le BOAMP ne répond pas (délais
+  `spring.http.clients.*`), la collecte échoue sans avancer son point de départ : la suivante
+  reprend les mêmes jours.
+- **Bilan** : chaque import écrit une ligne `BOAMP import finished in … s: … notices received,
+  … new, … already known, … rejected; … tenders created, … updated; … notices ignored, … errors`.
+
 ## Journaux
 
-- Collectes : Paramètres → Journal de collecte (date, avis reçus, nouveaux, erreurs).
+- Collectes : Paramètres → Journal de collecte (date, avis reçus, nouveaux, erreurs) ; bilan
+  détaillé : `docker compose logs backend | grep "BOAMP import"`.
 - Analyses : Paramètres → Analyses par IA (statut, modèle, tokens, coût, erreurs) et qualité
   par information à partir des décisions des utilisateurs.
 - Journal technique : `docker compose logs backend`.

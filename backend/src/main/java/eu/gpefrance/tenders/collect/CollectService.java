@@ -1,6 +1,7 @@
 package eu.gpefrance.tenders.collect;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -22,15 +23,20 @@ import eu.gpefrance.tenders.filter.FilterService;
 import eu.gpefrance.tenders.tender.TenderLifecycleService;
 
 /**
- * Collects BOAMP notices published since the last successful collection,
- * then converts them to tenders and filters them. A failed collection does
- * not move the starting point, so the next one fetches the same days again;
- * notices already stored are skipped.
+ * Collects BOAMP notices published since the last successful collection, or
+ * since a chosen day for an initial load, then converts them to tenders and
+ * filters them. A failed collection does not move the starting point, so the
+ * next one fetches the same days again; notices already stored are skipped.
+ * Nothing is ever deleted: a notice no longer published stays with its
+ * tender.
  */
 @Service
 public class CollectService {
 
 	public static final String SOURCE = "BOAMP";
+
+	/** How far back a collection may start. */
+	static final int MAX_DAYS_BACK = 366;
 
 	private static final Logger log = LoggerFactory.getLogger(CollectService.class);
 
@@ -85,9 +91,18 @@ public class CollectService {
 	}
 
 	public CollectRun collect(CollectTrigger trigger) {
+		return collect(trigger, null);
+	}
+
+	/**
+	 * @param since first publication day to fetch, or {@code null} to resume
+	 * after the last successful collection
+	 */
+	public CollectRun collect(CollectTrigger trigger, LocalDate since) {
+		checkPeriod(since);
 		acquire();
 		try {
-			return doCollect(trigger);
+			return doCollect(trigger, since);
 		}
 		finally {
 			running.set(false);
@@ -98,12 +113,13 @@ public class CollectService {
 	 * Starts a collection in the background. Fails immediately if one is
 	 * already running.
 	 */
-	public void startInBackground(CollectTrigger trigger) {
+	public void startInBackground(CollectTrigger trigger, LocalDate since) {
+		checkPeriod(since);
 		acquire();
 		try {
 			taskExecutor.execute(() -> {
 				try {
-					doCollect(trigger);
+					doCollect(trigger, since);
 				}
 				finally {
 					running.set(false);
@@ -120,34 +136,49 @@ public class CollectService {
 		return running.get();
 	}
 
+	private void checkPeriod(LocalDate since) {
+		LocalDate today = LocalDate.now(clock);
+		if (since != null && (since.isAfter(today) || since.isBefore(today.minusDays(MAX_DAYS_BACK)))) {
+			throw new CollectPeriodException(today.minusDays(MAX_DAYS_BACK));
+		}
+	}
+
 	private void acquire() {
 		if (!running.compareAndSet(false, true)) {
 			throw new CollectAlreadyRunningException();
 		}
 	}
 
-	private CollectRun doCollect(CollectTrigger trigger) {
+	private CollectRun doCollect(CollectTrigger trigger, LocalDate since) {
 		LocalDate today = LocalDate.now(clock);
-		CollectRun run = runs.save(new CollectRun(SOURCE, trigger, startDate(today), clock.instant()));
-		log.info("Collecting {} notices published since {}", SOURCE, run.getSinceDate());
+		LocalDate from = since != null ? since : startDate(today);
+		CollectRun run = runs.save(new CollectRun(SOURCE, trigger, from, clock.instant()));
+		log.info("Collecting {} notices published since {}", SOURCE, from);
 
 		int received = 0;
 		int created = 0;
+		int rejected = 0;
 		try {
-			for (LocalDate day = run.getSinceDate(); !day.isAfter(today); day = day.plusDays(1)) {
+			for (LocalDate day = from; !day.isAfter(today); day = day.plusDays(1)) {
 				List<BoampRecord> records = boampClient.fetchPublishedOn(day);
 				received += records.size();
+				rejected += reject(records);
 				created += store(records);
 			}
 			run.succeed(received, created, clock.instant());
-			log.info("Collection succeeded: {} notices received, {} new", received, created);
 		}
 		catch (RuntimeException ex) {
 			run.fail(received, created, ex.getClass().getSimpleName() + ": " + ex.getMessage(), clock.instant());
 			log.error("Collection failed after {} notices received", received, ex);
 		}
 		run = runs.save(run);
-		processCollected();
+		NormalizationReport report = processCollected();
+		log.info("{} import {} in {} s: {} notices received, {} new, {} already known, {} rejected; "
+				+ "{} tenders created, {} updated; {} notices ignored, {} errors", SOURCE,
+				run.getStatus() == CollectStatus.SUCCESS ? "finished" : "failed",
+				Duration.between(run.getStartedAt(), clock.instant()).toSeconds(), received, created,
+				received - created - rejected, rejected, report.created(), report.updated(), report.ignored(),
+				report.errors());
 		return run;
 	}
 
@@ -155,15 +186,17 @@ public class CollectService {
 	 * Runs even after a failed collection: the notices stored before the
 	 * failure are usable.
 	 */
-	private void processCollected() {
+	private NormalizationReport processCollected() {
+		NormalizationReport report = NormalizationReport.NONE;
 		try {
-			normalization.normalizePending();
+			report = normalization.normalizePending();
 			filter.filterPending();
 			lifecycle.closeExpired();
 		}
 		catch (RuntimeException ex) {
 			log.error("Processing of the collected notices failed", ex);
 		}
+		return report;
 	}
 
 	/**
@@ -178,8 +211,18 @@ public class CollectService {
 			.orElse(today.minusDays(properties.initialDays()));
 	}
 
+	/**
+	 * @return the number of notices that cannot be stored, logged one by one
+	 */
+	private static int reject(List<BoampRecord> records) {
+		List<BoampRecord> invalid = records.stream().filter(record -> !record.isValid()).toList();
+		invalid.forEach(record -> log.warn("{} notice without identifier rejected: {}", SOURCE, record.excerpt()));
+		return invalid.size();
+	}
+
 	private int store(List<BoampRecord> records) {
 		Integer created = transaction.execute(status -> records.stream()
+			.filter(BoampRecord::isValid)
 			.mapToInt(r -> rawNotices.insertIfAbsent(SOURCE, r.idweb(), r.json(), r.publishedAt()))
 			.sum());
 		return created == null ? 0 : created;

@@ -69,7 +69,27 @@ class CollectControllerTests {
 		assertThat(mvc.post().uri("/api/collect-runs").with(TestUsers.admin()).with(csrf()))
 			.hasStatus(HttpStatus.ACCEPTED);
 
-		verify(collectService).startInBackground(CollectTrigger.MANUAL);
+		verify(collectService).startInBackground(CollectTrigger.MANUAL, null);
+	}
+
+	@Test
+	void startsAnInitialLoadFromTheGivenDay() {
+		assertThat(mvc.post().uri("/api/collect-runs?since=2026-09-01").with(TestUsers.admin()).with(csrf()))
+			.hasStatus(HttpStatus.ACCEPTED);
+
+		verify(collectService).startInBackground(CollectTrigger.MANUAL, LocalDate.of(2026, 9, 1));
+	}
+
+	@Test
+	void refusesAPeriodOutOfRange() {
+		willThrow(new CollectPeriodException(LocalDate.of(2025, 10, 4))).given(collectService)
+			.startInBackground(CollectTrigger.MANUAL, LocalDate.of(2020, 1, 1));
+
+		assertThat(mvc.post().uri("/api/collect-runs?since=2020-01-01").with(TestUsers.admin()).with(csrf()))
+			.hasStatus(HttpStatus.BAD_REQUEST)
+			.bodyJson()
+			.extractingPath("$.detail")
+			.isEqualTo("La collecte peut commencer au plus tôt le 04/10/2025 et au plus tard aujourd'hui");
 	}
 
 	@Test
@@ -88,7 +108,7 @@ class CollectControllerTests {
 	@Test
 	void refusesASecondCollectionWhileOneIsRunning() {
 		willThrow(new CollectAlreadyRunningException()).given(collectService)
-			.startInBackground(CollectTrigger.MANUAL);
+			.startInBackground(CollectTrigger.MANUAL, null);
 
 		assertThat(mvc.post().uri("/api/collect-runs").with(TestUsers.admin()).with(csrf()))
 			.hasStatus(HttpStatus.CONFLICT)

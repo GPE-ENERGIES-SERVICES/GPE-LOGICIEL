@@ -63,6 +63,20 @@ class BoampClientTests {
 	}
 
 	@Test
+	void returnsANoticeWithoutIdentifierAsInvalid() {
+		server.expect(requestTo(startsWith(BASE_URL + "/records")))
+			.andRespond(withSuccess("""
+					{"total_count": 2, "results": [{"dateparution": "2026-10-02", "objet": "Sans identifiant"},
+					{"idweb": "26-1", "dateparution": "2026-10-02", "objet": "Travaux"}]}""",
+					MediaType.APPLICATION_JSON));
+
+		List<BoampRecord> records = client.fetchPublishedOn(LocalDate.of(2026, 10, 2));
+
+		assertThat(records).extracting(BoampRecord::isValid).containsExactly(false, true);
+		assertThat(records.getFirst().excerpt()).contains("Sans identifiant");
+	}
+
+	@Test
 	void propagatesServerErrors() {
 		server.expect(requestTo(startsWith(BASE_URL + "/records"))).andRespond(withServerError());
 

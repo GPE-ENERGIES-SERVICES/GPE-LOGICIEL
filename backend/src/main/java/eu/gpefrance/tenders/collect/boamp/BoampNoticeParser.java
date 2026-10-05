@@ -53,6 +53,9 @@ public class BoampNoticeParser {
 
 	private static final Set<String> LOT_KEYS = Set.of("cac:ProcurementProjectLot", "lot");
 
+	/** Size of the lot number column. */
+	private static final int MAX_LOT_NUMBER_LENGTH = 50;
+
 	private static final Map<String, ProcedureType> PROCEDURES = Map.of("OUVERT", ProcedureType.OPEN, "RESTREINT",
 			ProcedureType.RESTRICTED, "NEGOCIE", ProcedureType.NEGOTIATED, "DIALOGUE_COMPETITIF",
 			ProcedureType.COMPETITIVE_DIALOGUE, "PROCEDURE_ADAPTE", ProcedureType.ADAPTED, "DSP",
@@ -386,6 +389,11 @@ public class BoampNoticeParser {
 			String number = firstText(item.get("numLot"), item.get("cbc:ID"));
 			String title = firstText(item.get("intitule"), item.get("intituleLot"), item.get("description"),
 					project.get("cbc:Name"));
+			// Some buyers write the title of the lot in its number.
+			if (number != null && number.strip().length() > MAX_LOT_NUMBER_LENGTH) {
+				title = title != null ? title : number;
+				number = null;
+			}
 			BigDecimal amount = amount(item.get("estimationValeur"));
 			if (amount == null) {
 				amount = amount(project.path("cac:RequestedTenderTotal").get("cbc:EstimatedOverallContractAmount"));

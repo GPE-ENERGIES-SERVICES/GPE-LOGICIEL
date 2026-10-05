@@ -1,6 +1,7 @@
 package eu.gpefrance.tenders.collect.boamp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -183,6 +184,28 @@ class BoampNoticeParserTests {
 
 		assertThat(notice.details().description()).isNull();
 		assertThat(notice.details().lots()).hasSize(2);
+	}
+
+	@Test
+	void takesATitleWrittenInTheLotNumberAsTheTitle() {
+		String donnees = """
+				{"FNSimple": {"initial": {"natureMarche": {"intitule": "Fournitures"}, "lots": {"lot": [
+				{"numLot": "Lot 1 - Maintenance du matériel ELLEX ou équivalent et de ses accessoires"},
+				{"numLot": "2", "intitule": "Consommables"}]}}}}""";
+		ParsedNotice notice = parser.parse(JsonMapper.builder()
+			.build()
+			.createObjectNode()
+			.put("idweb", "26-4")
+			.put("nature", "APPEL_OFFRE")
+			.put("objet", "Fournitures")
+			.put("donnees", donnees)
+			.toString());
+
+		assertThat(notice.details().lots()).extracting(LotDetails::number, LotDetails::title)
+			.containsExactly(
+					tuple("1",
+							"Lot 1 - Maintenance du matériel ELLEX ou équivalent et de ses accessoires"),
+					tuple("2", "Consommables"));
 	}
 
 	@Test

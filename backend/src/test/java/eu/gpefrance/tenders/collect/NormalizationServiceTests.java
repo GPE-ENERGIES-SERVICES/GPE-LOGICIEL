@@ -56,7 +56,7 @@ class NormalizationServiceTests {
 			store(fixture.hashCode() + "", fixture(fixture));
 		}
 
-		assertThat(service.normalizePending()).isEqualTo(9);
+		assertThat(service.normalizePending().total()).isEqualTo(9);
 
 		assertThat(tenders.findAll()).extracting(Tender::getExternalId)
 			.containsExactlyInAnyOrder("26-94229", "26-94446", "26-94039", "26-94116", "26-93202", "26-91123");
@@ -136,7 +136,7 @@ class NormalizationServiceTests {
 		store("26-100", notice("26-100", "APPEL_OFFRE", "INITIAL", null, null));
 		service.normalizePending();
 
-		assertThat(service.normalizePending()).isZero();
+		assertThat(service.normalizePending().total()).isZero();
 		assertThat(tenders.count()).isEqualTo(1);
 	}
 
@@ -146,11 +146,24 @@ class NormalizationServiceTests {
 				+ "\"donnees\": \"not json\"}");
 		store("26-200", notice("26-200", "APPEL_OFFRE", "INITIAL", null, null));
 
-		assertThat(service.normalizePending()).isEqualTo(2);
+		assertThat(service.normalizePending()).isEqualTo(new NormalizationReport(1, 0, 0, 1));
 
 		assertThat(tenders.findAll()).extracting(Tender::getExternalId).containsExactly("26-200");
 		assertThat(rawNotices.findAll()).extracting(RawNotice::getNormalizationNote)
 			.anySatisfy(note -> assertThat(note).startsWith("Error: "));
+	}
+
+	@Test
+	void retriesANoticeInErrorAtTheNextRun() {
+		store("26-100", "{\"idweb\": \"26-100\", \"nature\": \"APPEL_OFFRE\", \"objet\": \"Travaux\", "
+				+ "\"donnees\": \"not json\"}");
+		assertThat(service.normalizePending()).isEqualTo(new NormalizationReport(0, 0, 0, 1));
+		// The cause is fixed meanwhile, here by a readable payload.
+		jdbc.update("UPDATE raw_notice SET payload = CAST(? AS jsonb)", notice("26-100", "APPEL_OFFRE", "INITIAL", null, null));
+
+		assertThat(service.normalizePending()).isEqualTo(new NormalizationReport(1, 0, 0, 0));
+		assertThat(tenders.findAll()).extracting(Tender::getExternalId).containsExactly("26-100");
+		assertThat(service.normalizePending().total()).isZero();
 	}
 
 	private void store(String idweb, String json) {
