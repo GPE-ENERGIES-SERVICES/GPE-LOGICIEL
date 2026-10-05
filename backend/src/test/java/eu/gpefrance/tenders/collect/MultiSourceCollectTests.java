@@ -153,6 +153,28 @@ class MultiSourceCollectTests {
 	}
 
 	@Test
+	void aLateInitialNoticeNeverJoinsATenderOfAnotherSource() {
+		// Complete rectifications collected first, each citing an initial notice of its own source.
+		testSource.publish(TODAY, test("26-5", "COMPLETE_RECTIFICATION", "26-1", null));
+		given(boampClient.fetchPublishedOn(TODAY)).willReturn(List.of(boampRectification("26-6", "26-2")));
+		service.collectActive(CollectTrigger.SCHEDULED);
+		// The identifiers they cite then appear, but in the other source.
+		testSource.publish(TODAY, test("26-5", "COMPLETE_RECTIFICATION", "26-1", null),
+				test("26-2", "CALL_FOR_TENDERS", null, null));
+		given(boampClient.fetchPublishedOn(TODAY))
+			.willReturn(List.of(boampRectification("26-6", "26-2"), boamp("26-1", "APPEL_OFFRE", null)));
+		service.collectActive(CollectTrigger.SCHEDULED);
+
+		inTransaction(() -> assertThat(tenders.findAll()).hasSize(4)
+			.allSatisfy(tender -> assertThat(tender.getNotices()).singleElement()
+				.extracting(TenderNotice::getExternalId)
+				.isEqualTo(tender.getExternalId())));
+		assertThat(tenders.findAll()).extracting(Tender::getSource, Tender::getExternalId)
+			.containsExactlyInAnyOrder(tuple("TEST", "26-5"), tuple("TEST", "26-2"), tuple("BOAMP", "26-6"),
+					tuple("BOAMP", "26-1"));
+	}
+
+	@Test
 	void aFailingSourceDoesNotStopTheOthers() {
 		testSource.publish(TODAY, test("26-1", "CALL_FOR_TENDERS", null, null));
 
@@ -286,6 +308,15 @@ class MultiSourceCollectTests {
 				{"idweb": "%s", "nature": "%s", "etat": "INITIAL", "objet": "Travaux %s",
 				 "dateparution": "2026-10-05", "annonce_lie": %s, "donnees": "{}"}
 				""".formatted(idweb, nature, idweb, linkedId == null ? "null" : "[\"" + linkedId + "\"]");
+		return new SourceRecord(idweb, TODAY, json);
+	}
+
+	/** A BOAMP complete rectification citing an initial notice. */
+	private static SourceRecord boampRectification(String idweb, String linkedId) {
+		String json = """
+				{"idweb": "%s", "nature": "APPEL_OFFRE", "etat": "RECTIFICATIF", "objet": "Travaux %s",
+				 "dateparution": "2026-10-05", "annonce_lie": ["%s"], "donnees": "{}"}
+				""".formatted(idweb, idweb, linkedId);
 		return new SourceRecord(idweb, TODAY, json);
 	}
 

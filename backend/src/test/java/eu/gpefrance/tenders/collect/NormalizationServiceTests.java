@@ -154,23 +154,37 @@ class NormalizationServiceTests {
 	}
 
 	@Test
-	void readingANoticeAgainKeepsItWithItsTender() {
+	void aLateInitialNoticeJoinsTheTenderOfItsCompleteRectificationAndStaysThere() {
 		// A complete rectification collected before its initial notice makes its own tender.
 		store("26-102", notice("26-102", "APPEL_OFFRE", "RECTIFICATIF", "26-100", "2026-11-25T12:00:00"));
 		service.normalizePending("BOAMP");
 		store("26-100", notice("26-100", "APPEL_OFFRE", "INITIAL", null, "2026-11-10T12:00:00"));
-		service.normalizePending("BOAMP");
+		assertThat(service.normalizePending("BOAMP")).isEqualTo(new NormalizationReport(0, 1, 0, 0));
 
+		// Read again, each notice stays with its tender.
 		jdbc.update("UPDATE raw_notice SET normalized_at = NULL");
 		assertThat(service.normalizePending("BOAMP")).isEqualTo(new NormalizationReport(0, 2, 0, 0));
 
 		inTransaction(() -> {
-			Tender rectified = tenders.findBySourceAndExternalId("BOAMP", "26-102").orElseThrow();
-			assertThat(rectified.getNotices()).extracting(TenderNotice::getExternalId).containsExactly("26-102");
-			assertThat(rectified.getDeadline()).isEqualTo(Instant.parse("2026-11-25T11:00:00Z"));
-			assertThat(tenders.findBySourceAndExternalId("BOAMP", "26-100").orElseThrow().getNotices())
-				.extracting(TenderNotice::getExternalId)
-				.containsExactly("26-100");
+			assertThat(tenders.findAll()).singleElement().satisfies(tender -> {
+				assertThat(tender.getExternalId()).isEqualTo("26-102");
+				assertThat(tender.getNotices()).extracting(TenderNotice::getExternalId)
+					.containsExactlyInAnyOrder("26-102", "26-100");
+				assertThat(tender.getDeadline()).isEqualTo(Instant.parse("2026-11-25T11:00:00Z"));
+			});
+		});
+	}
+
+	@Test
+	void aRectificationCitingAnUnknownNoticeAttachesNothing() {
+		store("26-102", notice("26-102", "APPEL_OFFRE", "RECTIFICATIF", "26-999", "2026-11-25T12:00:00"));
+		store("26-100", notice("26-100", "APPEL_OFFRE", "INITIAL", null, "2026-11-10T12:00:00"));
+
+		service.normalizePending("BOAMP");
+
+		inTransaction(() -> {
+			assertThat(tenders.findAll()).extracting(Tender::getExternalId).containsExactlyInAnyOrder("26-102", "26-100");
+			assertThat(tenders.findAll()).allSatisfy(tender -> assertThat(tender.getNotices()).hasSize(1));
 		});
 	}
 

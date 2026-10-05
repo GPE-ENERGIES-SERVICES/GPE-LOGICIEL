@@ -237,9 +237,15 @@ jamais collectée commence `collect.initial-days` jours en arrière (7).
   initial est importé, par exemple par un chargement initial plus ancien. Les avis liés lus par
   le parseur sont conservés dans `raw_notice.linked_ids` : la reprise ne relit pas le format de
   la source. Un avis relu (reprise, rejeu) reste rattaché à sa consultation.
-- **Limite connue** : un rectificatif complet reçu avant son avis initial crée sa propre
-  consultation ; si l'avis initial est importé ensuite, il en crée une seconde pour le même
-  marché (16 cas après le chargement du 05/09/2026, sans statut, suivi ni DCE).
+- **Rectificatif avant l'avis initial** : un rectificatif complet peut être reçu avant son avis
+  initial ; il crée alors la consultation. L'identifiant de l'avis initial, cité par le
+  rectificatif (`linked_ids`, même source), permet ensuite de rattacher l'avis initial à cette
+  consultation sans créer de doublon : il ne fait que compléter les informations absentes et
+  donne la date de publication. Les doublons créés avant ce correctif ont été fusionnés par la
+  migration V14 (13 paires), qui refuse et signale toute paire non conforme.
+- **Limite connue** : une chaîne de rectificatifs complets reçus dans le désordre (un rectificatif
+  qui en cite un autre, plus ancien, reçu après lui) donne encore deux consultations ; 3 cas
+  laissés en l'état par V14, sans statut, suivi ni DCE.
 - **Erreurs** : un avis sans identifiant est écarté sans arrêter la collecte ; un avis illisible
   est noté en erreur et retenté à la collecte suivante. Si le BOAMP ne répond pas (délais
   `spring.http.clients.*`), la collecte échoue sans avancer son point de départ : la suivante

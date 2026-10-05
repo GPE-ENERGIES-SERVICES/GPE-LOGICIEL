@@ -173,11 +173,38 @@ public class NormalizationService {
 		if (notice.details().title() == null) {
 			return Applied.ignored("Notice without title");
 		}
+		Optional<Tender> rectified = kind == NoticeKind.INITIAL ? rectifiedBefore(raw, notice) : Optional.empty();
+		if (rectified.isPresent()) {
+			// The rectification citing it came later and prevails: the initial notice only completes.
+			Tender tender = rectified.get();
+			tender.complete(notice.details(), now);
+			attach(tender, raw, notice, kind);
+			return Applied.UPDATED;
+		}
 		Optional<Tender> known = tenders.findBySourceAndExternalId(raw.getSource(), notice.externalId());
 		Tender tender = known.orElseGet(() -> new Tender(raw.getSource(), notice.externalId(), notice.details(), now));
 		attach(tender, raw, notice, kind);
 		tenders.save(tender);
 		return known.isPresent() ? Applied.UPDATED : Applied.CREATED;
+	}
+
+	/**
+	 * The tender made by a complete rectification received before this initial
+	 * notice and citing it, in the same source: the initial notice joins it
+	 * instead of making a second tender for the same consultation. Only an
+	 * explicit citation counts; with several candidates, none is chosen.
+	 */
+	private Optional<Tender> rectifiedBefore(RawNotice raw, SourceNotice notice) {
+		if (tenders.findBySourceAndExternalId(raw.getSource(), notice.externalId()).isPresent()) {
+			return Optional.empty();
+		}
+		List<Long> candidates = tenders.findMadeByARectificationCiting(raw.getSource(), notice.externalId());
+		if (candidates.size() > 1) {
+			log.warn("{} notice {} is cited by the rectifications of several tenders {}: none is chosen",
+					raw.getSource(), notice.externalId(), candidates);
+			return Optional.empty();
+		}
+		return candidates.stream().findFirst().flatMap(tenders::findById);
 	}
 
 	private static boolean isLatest(Tender tender, LocalDate publishedAt) {

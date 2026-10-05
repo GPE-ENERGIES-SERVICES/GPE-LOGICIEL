@@ -171,6 +171,42 @@ public class Tender {
 		updatedAt = now;
 	}
 
+	/**
+	 * Completes the tender with an earlier notice received after the ones
+	 * applied, such as an initial notice collected after its complete
+	 * rectification: only the information still unknown is taken, and the
+	 * publication date becomes the earliest one.
+	 */
+	public void complete(TenderDetails details, Instant now) {
+		description = firstNonNull(description, details.description());
+		buyer = firstNonNull(buyer, details.buyer());
+		reference = firstNonNull(reference, details.reference());
+		location = firstNonNull(location, details.location());
+		if (departments.isEmpty()) {
+			departments = new ArrayList<>(details.departments());
+		}
+		if (marketTypes.isEmpty()) {
+			marketTypes = new ArrayList<>(details.marketTypes().stream().map(Enum::name).toList());
+		}
+		procedureType = firstNonNull(procedureType, details.procedureType());
+		if (cpvCodes.isEmpty()) {
+			cpvCodes = new ArrayList<>(details.cpvCodes());
+		}
+		estimatedAmount = firstNonNull(estimatedAmount, details.estimatedAmount());
+		if (details.publishedAt() != null && (publishedAt == null || details.publishedAt().isBefore(publishedAt))) {
+			publishedAt = details.publishedAt();
+		}
+		deadline = firstNonNull(deadline, details.deadline());
+		noticeUrl = firstNonNull(noticeUrl, details.noticeUrl());
+		platformUrl = firstNonNull(platformUrl, details.platformUrl());
+		if (lots.isEmpty()) {
+			for (int i = 0; i < details.lots().size(); i++) {
+				lots.add(new Lot(this, i + 1, details.lots().get(i)));
+			}
+		}
+		updatedAt = now;
+	}
+
 	public TenderNotice addNotice(Long rawNoticeId, String externalId, NoticeKind kind, LocalDate publishedAt,
 			Instant deadline, String details) {
 		TenderNotice notice = new TenderNotice(this, rawNoticeId, externalId, kind, publishedAt, deadline, details);

@@ -2,9 +2,14 @@ package eu.gpefrance.tenders.collect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -24,6 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import eu.gpefrance.tenders.ClockConfiguration;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
 import eu.gpefrance.tenders.collect.boamp.BoampClient;
+import eu.gpefrance.tenders.collect.boamp.BoampNoticeParser;
 import eu.gpefrance.tenders.tender.FollowUpStatus;
 import eu.gpefrance.tenders.tender.NoticeKind;
 import eu.gpefrance.tenders.tender.Tender;
@@ -55,6 +61,9 @@ class BoampImportTests {
 
 	@Autowired
 	private TransactionTemplate transaction;
+
+	@Autowired
+	private BoampNoticeParser boampParser;
 
 	@MockitoBean
 	private BoampClient boampClient;
@@ -207,6 +216,63 @@ class BoampImportTests {
 		assertThatThrownBy(() -> jdbc.update(insert)).isInstanceOf(DuplicateKeyException.class);
 	}
 
+	/**
+	 * Real notices: the complete rectification 26-94421 of 2 October cites the
+	 * initial notice 26-93854 of 30 September, collected afterwards.
+	 */
+	@Test
+	void aLateInitialNoticeJoinsTheTenderOfItsCompleteRectification() {
+		Instant rectifiedDeadline = boampParser.parse(fixture("late-initial-rectification")).details().deadline();
+		published(LocalDate.of(2026, 10, 2), fixture("late-initial-rectification"));
+		service.collect("BOAMP", CollectTrigger.MANUAL, LocalDate.of(2026, 10, 2));
+		Long id = tenders.findBySourceAndExternalId("BOAMP", "26-94421").orElseThrow().getId();
+
+		published(LocalDate.of(2026, 9, 30), fixture("late-initial"));
+		service.collect("BOAMP", CollectTrigger.MANUAL, LocalDate.of(2026, 9, 30));
+
+		inTransaction(() -> {
+			Tender tender = tenders.findAll().getFirst();
+			assertThat(tenders.count()).isEqualTo(1);
+			assertThat(tender.getId()).isEqualTo(id);
+			assertThat(tender.getNotices()).extracting(TenderNotice::getExternalId, TenderNotice::getKind)
+				.containsExactly(tuple("26-93854", NoticeKind.INITIAL), tuple("26-94421", NoticeKind.RECTIFICATION));
+			assertThat(tender.getLots()).hasSize(11);
+			assertThat(tender.getDeadline()).isEqualTo(rectifiedDeadline);
+			assertThat(tender.getPublishedAt()).isEqualTo(LocalDate.of(2026, 9, 30));
+		});
+
+		// Collected again, nothing changes.
+		service.collect("BOAMP", CollectTrigger.MANUAL, LocalDate.of(2026, 9, 30));
+		assertThat(tenders.count()).isEqualTo(1);
+		assertThat(rawNotices.count()).isEqualTo(2);
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM tender_notice", Long.class)).isEqualTo(2);
+	}
+
+	@Test
+	void aLateInitialNoticeKeepsTheDataOfTheTeam() {
+		published(LocalDate.of(2026, 10, 2), fixture("late-initial-rectification"));
+		service.collect("BOAMP", CollectTrigger.MANUAL, LocalDate.of(2026, 10, 2));
+		Long id = tenders.findBySourceAndExternalId("BOAMP", "26-94421").orElseThrow().getId();
+		jdbc.update("""
+				UPDATE tender SET follow_up_status = 'RESPONDING', follow_up_comment = 'Chiffrage en cours',
+				follow_up_by = 'Marie Durand', follow_up_at = now() WHERE id = ?""", id);
+		jdbc.update("INSERT INTO tender_follow (user_id, tender_id, created_at) VALUES (1, ?, now())", id);
+
+		published(LocalDate.of(2026, 9, 30), fixture("late-initial"));
+		service.collect("BOAMP", CollectTrigger.MANUAL, LocalDate.of(2026, 9, 30));
+
+		inTransaction(() -> {
+			Tender tender = tenders.findById(id).orElseThrow();
+			assertThat(tender.getNotices()).hasSize(2);
+			assertThat(tender.getFollowUpStatus()).isEqualTo(FollowUpStatus.RESPONDING);
+			assertThat(tender.getFollowUpComment()).isEqualTo("Chiffrage en cours");
+			assertThat(tender.getFollowUpBy()).isEqualTo("Marie Durand");
+		});
+		assertThat(tenders.count()).isEqualTo(1);
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM tender_follow WHERE tender_id = ?", Long.class, id))
+			.isEqualTo(1);
+	}
+
 	@Test
 	void refusesAPeriodInTheFutureOrTooFarBack() {
 		assertThatThrownBy(() -> service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.plusDays(1)))
@@ -221,6 +287,15 @@ class BoampImportTests {
 
 	private void published(LocalDate day, SourceRecord... records) {
 		given(boampClient.fetchPublishedOn(day)).willReturn(List.of(records));
+	}
+
+	private static String fixture(String name) {
+		try (InputStream in = BoampImportTests.class.getResourceAsStream("/boamp/" + name + ".json")) {
+			return new String(in.readAllBytes(), StandardCharsets.UTF_8).strip();
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
 	}
 
 	private void inTransaction(Runnable assertions) {
