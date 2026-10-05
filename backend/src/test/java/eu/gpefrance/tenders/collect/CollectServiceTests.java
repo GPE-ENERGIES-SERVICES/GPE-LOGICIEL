@@ -23,10 +23,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import eu.gpefrance.tenders.ClockConfiguration;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
 import eu.gpefrance.tenders.collect.boamp.BoampClient;
-import eu.gpefrance.tenders.collect.boamp.BoampRecord;
 import eu.gpefrance.tenders.tender.TenderRepository;
 
-@SpringBootTest(properties = "boamp.initial-days=2")
+@SpringBootTest(properties = "collect.initial-days=2")
 @Import(TestcontainersConfiguration.class)
 class CollectServiceTests {
 
@@ -68,7 +67,7 @@ class CollectServiceTests {
 		given(boampClient.fetchPublishedOn(TODAY.minusDays(2))).willReturn(List.of(record("26-1")));
 		given(boampClient.fetchPublishedOn(TODAY)).willReturn(List.of(record("26-2"), record("26-3")));
 
-		CollectRun run = service.collect(CollectTrigger.MANUAL);
+		CollectRun run = service.collect("BOAMP", CollectTrigger.MANUAL, null);
 
 		assertThat(run.getStatus()).isEqualTo(CollectStatus.SUCCESS);
 		assertThat(run.getSinceDate()).isEqualTo(TODAY.minusDays(2));
@@ -80,9 +79,9 @@ class CollectServiceTests {
 	@Test
 	void nextCollectionResumesTheDayBeforeTheLastSuccessAndSkipsKnownNotices() {
 		given(boampClient.fetchPublishedOn(any())).willReturn(List.of(record("26-1")));
-		service.collect(CollectTrigger.SCHEDULED);
+		service.collect("BOAMP", CollectTrigger.SCHEDULED, null);
 
-		CollectRun second = service.collect(CollectTrigger.SCHEDULED);
+		CollectRun second = service.collect("BOAMP", CollectTrigger.SCHEDULED, null);
 
 		assertThat(second.getSinceDate()).isEqualTo(TODAY.minusDays(1));
 		assertThat(second.getNoticesReceived()).isEqualTo(2);
@@ -95,7 +94,7 @@ class CollectServiceTests {
 		given(boampClient.fetchPublishedOn(TODAY.minusDays(2))).willReturn(List.of(record("26-1")));
 		given(boampClient.fetchPublishedOn(TODAY.minusDays(1))).willThrow(new IllegalStateException("API down"));
 
-		CollectRun failed = service.collect(CollectTrigger.SCHEDULED);
+		CollectRun failed = service.collect("BOAMP", CollectTrigger.SCHEDULED, null);
 
 		assertThat(failed.getStatus()).isEqualTo(CollectStatus.FAILED);
 		assertThat(failed.getErrorMessage()).isEqualTo("IllegalStateException: API down");
@@ -105,24 +104,24 @@ class CollectServiceTests {
 		verify(boampClient, never()).fetchPublishedOn(TODAY);
 
 		given(boampClient.fetchPublishedOn(any())).willReturn(List.of());
-		assertThat(service.collect(CollectTrigger.SCHEDULED).getSinceDate()).isEqualTo(TODAY.minusDays(2));
+		assertThat(service.collect("BOAMP", CollectTrigger.SCHEDULED, null).getSinceDate()).isEqualTo(TODAY.minusDays(2));
 	}
 
 	@Test
 	void convertsTheCollectedNoticesToTenders() {
 		given(boampClient.fetchPublishedOn(any())).willReturn(List.of());
-		given(boampClient.fetchPublishedOn(TODAY)).willReturn(List.of(new BoampRecord("26-9", TODAY, """
+		given(boampClient.fetchPublishedOn(TODAY)).willReturn(List.of(new SourceRecord("26-9", TODAY, """
 				{"idweb": "26-9", "nature": "APPEL_OFFRE", "etat": "INITIAL", "objet": "Travaux"}""")));
 
-		service.collect(CollectTrigger.SCHEDULED);
+		service.collect("BOAMP", CollectTrigger.SCHEDULED, null);
 
-		assertThat(tenders.findBySourceAndExternalId(CollectService.SOURCE, "26-9")).isPresent();
+		assertThat(tenders.findBySourceAndExternalId("BOAMP", "26-9")).isPresent();
 		assertThat(rawNotices.findAll()).allSatisfy(notice -> assertThat(notice.getNormalizedAt()).isNotNull());
 	}
 
 	@Test
 	void runsLeftRunningByARestartAreMarkedAsFailed() {
-		runs.save(new CollectRun(CollectService.SOURCE, CollectTrigger.SCHEDULED, TODAY, clock.instant()));
+		runs.save(new CollectRun("BOAMP", CollectTrigger.SCHEDULED, TODAY, clock.instant()));
 
 		service.closeInterruptedRuns();
 
@@ -133,8 +132,8 @@ class CollectServiceTests {
 			});
 	}
 
-	private static BoampRecord record(String idweb) {
-		return new BoampRecord(idweb, TODAY, "{\"idweb\": \"" + idweb + "\"}");
+	private static SourceRecord record(String idweb) {
+		return new SourceRecord(idweb, TODAY, "{\"idweb\": \"" + idweb + "\"}");
 	}
 
 }

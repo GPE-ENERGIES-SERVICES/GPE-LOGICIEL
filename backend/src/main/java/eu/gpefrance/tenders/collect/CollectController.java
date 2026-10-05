@@ -38,13 +38,15 @@ public class CollectController {
 	}
 
 	/**
+	 * @param source the source to collect; by default every active source
 	 * @param since first publication day to fetch, for an initial load; by
 	 * default the collection resumes after the last successful one
 	 */
 	@PostMapping
 	@ResponseStatus(HttpStatus.ACCEPTED)
-	public void start(@RequestParam(required = false) LocalDate since) {
-		collectService.startInBackground(CollectTrigger.MANUAL, since);
+	public void start(@RequestParam(required = false) String source,
+			@RequestParam(required = false) LocalDate since) {
+		collectService.startInBackground(source, CollectTrigger.MANUAL, since);
 	}
 
 	public record CollectJournalResponse(boolean running, List<CollectRunResponse> runs) {

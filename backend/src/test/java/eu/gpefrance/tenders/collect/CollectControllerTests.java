@@ -69,7 +69,7 @@ class CollectControllerTests {
 		assertThat(mvc.post().uri("/api/collect-runs").with(TestUsers.admin()).with(csrf()))
 			.hasStatus(HttpStatus.ACCEPTED);
 
-		verify(collectService).startInBackground(CollectTrigger.MANUAL, null);
+		verify(collectService).startInBackground(null, CollectTrigger.MANUAL, null);
 	}
 
 	@Test
@@ -77,13 +77,35 @@ class CollectControllerTests {
 		assertThat(mvc.post().uri("/api/collect-runs?since=2026-09-01").with(TestUsers.admin()).with(csrf()))
 			.hasStatus(HttpStatus.ACCEPTED);
 
-		verify(collectService).startInBackground(CollectTrigger.MANUAL, LocalDate.of(2026, 9, 1));
+		verify(collectService).startInBackground(null, CollectTrigger.MANUAL, LocalDate.of(2026, 9, 1));
+	}
+
+	@Test
+	void startsTheCollectionOfOneSource() {
+		assertThat(mvc.post()
+			.uri("/api/collect-runs?source=BOAMP&since=2026-09-01")
+			.with(TestUsers.admin())
+			.with(csrf())).hasStatus(HttpStatus.ACCEPTED);
+
+		verify(collectService).startInBackground("BOAMP", CollectTrigger.MANUAL, LocalDate.of(2026, 9, 1));
+	}
+
+	@Test
+	void refusesASourceThatIsNotCollected() {
+		willThrow(CollectSourceException.notCollected("PROTECTED")).given(collectService)
+			.startInBackground("PROTECTED", CollectTrigger.MANUAL, null);
+
+		assertThat(mvc.post().uri("/api/collect-runs?source=PROTECTED").with(TestUsers.admin()).with(csrf()))
+			.hasStatus(HttpStatus.BAD_REQUEST)
+			.bodyJson()
+			.extractingPath("$.detail")
+			.isEqualTo("La source PROTECTED n'est pas collectée automatiquement");
 	}
 
 	@Test
 	void refusesAPeriodOutOfRange() {
 		willThrow(new CollectPeriodException(LocalDate.of(2025, 10, 4))).given(collectService)
-			.startInBackground(CollectTrigger.MANUAL, LocalDate.of(2020, 1, 1));
+			.startInBackground(null, CollectTrigger.MANUAL, LocalDate.of(2020, 1, 1));
 
 		assertThat(mvc.post().uri("/api/collect-runs?since=2020-01-01").with(TestUsers.admin()).with(csrf()))
 			.hasStatus(HttpStatus.BAD_REQUEST)
@@ -108,7 +130,7 @@ class CollectControllerTests {
 	@Test
 	void refusesASecondCollectionWhileOneIsRunning() {
 		willThrow(new CollectAlreadyRunningException()).given(collectService)
-			.startInBackground(CollectTrigger.MANUAL, null);
+			.startInBackground(null, CollectTrigger.MANUAL, null);
 
 		assertThat(mvc.post().uri("/api/collect-runs").with(TestUsers.admin()).with(csrf()))
 			.hasStatus(HttpStatus.CONFLICT)

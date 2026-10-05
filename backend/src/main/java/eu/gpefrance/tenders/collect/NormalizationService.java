@@ -4,16 +4,16 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import eu.gpefrance.tenders.collect.boamp.BoampNoticeParser;
-import eu.gpefrance.tenders.collect.boamp.BoampNoticeType;
-import eu.gpefrance.tenders.collect.boamp.ParsedNotice;
 import eu.gpefrance.tenders.tender.NoticeKind;
 import eu.gpefrance.tenders.tender.Tender;
 import eu.gpefrance.tenders.tender.TenderNotice;
@@ -22,9 +22,11 @@ import eu.gpefrance.tenders.tender.TenderRepository;
 
 /**
  * Converts the collected notices to tenders and attaches the later notices
- * (rectification, award, cancellation) to the tender they refer to. Only the
- * information published by the source is written: the decision of the team,
- * its comment and the follows of the users are never touched.
+ * (rectification, award, cancellation) to the tender they refer to. Each
+ * source is processed apart, with its own {@link SourceParser}: a notice is
+ * only ever attached to a tender of its own source. Only the information
+ * published by the source is written: the decision of the team, its comment
+ * and the follows of the users are never touched.
  */
 @Service
 public class NormalizationService {
@@ -45,60 +47,67 @@ public class NormalizationService {
 
 	private final TenderNoticeRepository tenderNotices;
 
-	private final BoampNoticeParser parser;
+	private final Map<String, SourceParser> parsers;
 
 	private final TransactionTemplate transaction;
 
 	private final Clock clock;
 
 	public NormalizationService(RawNoticeRepository rawNotices, TenderRepository tenders,
-			TenderNoticeRepository tenderNotices, BoampNoticeParser parser, TransactionTemplate transaction,
+			TenderNoticeRepository tenderNotices, List<SourceParser> parsers, TransactionTemplate transaction,
 			Clock clock) {
 		this.rawNotices = rawNotices;
 		this.tenders = tenders;
 		this.tenderNotices = tenderNotices;
-		this.parser = parser;
+		this.parsers = parsers.stream().collect(Collectors.toUnmodifiableMap(SourceParser::source, Function.identity()));
 		this.transaction = transaction;
 		this.clock = clock;
 	}
 
 	/**
-	 * Tries again the notices that failed at a previous run, processes every
-	 * notice not converted yet, oldest publication first so an initial notice
-	 * is handled before its rectifications, then the notices that were
-	 * waiting for an initial notice collected since. Each notice has its own
-	 * transaction: one unreadable notice does not block the others.
+	 * For the notices of one source: tries again those that failed at a
+	 * previous run, processes every notice not converted yet, oldest
+	 * publication first so an initial notice is handled before its
+	 * rectifications, then the notices that were waiting for an initial notice
+	 * collected since. Each notice has its own transaction: one unreadable
+	 * notice does not block the others.
 	 */
-	public synchronized NormalizationReport normalizePending() {
+	public synchronized NormalizationReport normalizePending(String source) {
+		SourceParser parser = parsers.get(source);
+		if (parser == null) {
+			throw new IllegalArgumentException("No parser for the source " + source);
+		}
 		NormalizationReport report = NormalizationReport.NONE;
 		// Failed at a previous run: tried once more, older than the notices collected since.
-		for (RawNotice failed : rawNotices.findByNormalizationNoteStartingWithOrderByPublishedAtAscIdAsc(ERROR)) {
-			report = report.plus(normalize(failed.getId()));
+		for (RawNotice failed : rawNotices.findBySourceAndNormalizationNoteStartingWithOrderByPublishedAtAscIdAsc(source,
+				ERROR)) {
+			report = report.plus(normalize(failed.getId(), parser));
 		}
 		List<RawNotice> batch;
 		do {
-			batch = rawNotices.findTop100ByNormalizedAtIsNullOrderByPublishedAtAscIdAsc();
+			batch = rawNotices.findTop100BySourceAndNormalizedAtIsNullOrderByPublishedAtAscIdAsc(source);
 			for (RawNotice notice : batch) {
-				report = report.plus(normalize(notice.getId()));
+				report = report.plus(normalize(notice.getId(), parser));
 			}
 		}
 		while (!batch.isEmpty());
-		for (Long waiting : rawNotices.findWaitingForAKnownNotice(INITIAL_NOT_COLLECTED)) {
-			report = report.plus(normalize(waiting));
+		for (Long waiting : rawNotices.findWaitingForAKnownNotice(source, INITIAL_NOT_COLLECTED)) {
+			report = report.plus(normalize(waiting, parser));
 		}
 		if (report.total() > 0) {
-			log.info("{} collected notices normalized: {} tenders created, {} updated, {} ignored, {} errors",
-					report.total(), report.created(), report.updated(), report.ignored(), report.errors());
+			log.info("{} {} notices normalized: {} tenders created, {} updated, {} ignored, {} errors", report.total(),
+					source, report.created(), report.updated(), report.ignored(), report.errors());
 		}
 		return report;
 	}
 
-	private NormalizationReport normalize(Long rawNoticeId) {
+	private NormalizationReport normalize(Long rawNoticeId, SourceParser parser) {
 		try {
 			Outcome outcome = transaction.execute(status -> {
 				RawNotice notice = rawNotices.findById(rawNoticeId).orElseThrow();
-				Applied applied = apply(notice, parser.parse(notice.getPayload()));
-				notice.markNormalized(applied.note(), clock.instant());
+				SourceNotice parsed = parser.parse(notice.getPayload());
+				Applied applied = apply(notice, parsed);
+				notice.markNormalized(applied.note(), parsed.linkedIds(), clock.instant());
 				return applied.outcome();
 			});
 			return switch (outcome) {
@@ -112,23 +121,23 @@ public class NormalizationService {
 			String note = ERROR + ex.getClass().getSimpleName() + ": " + ex.getMessage();
 			transaction.executeWithoutResult(status -> rawNotices.findById(rawNoticeId)
 				.orElseThrow()
-				.markNormalized(truncate(note), clock.instant()));
+				.markFailed(truncate(note), clock.instant()));
 			return new NormalizationReport(0, 0, 0, 1);
 		}
 	}
 
-	private Applied apply(RawNotice raw, ParsedNotice notice) {
+	private Applied apply(RawNotice raw, SourceNotice notice) {
 		Instant now = clock.instant();
-		if (notice.type() == BoampNoticeType.CALL_FOR_TENDERS) {
+		if (notice.type() == NoticeType.CALL_FOR_TENDERS) {
 			return createTender(raw, notice, NoticeKind.INITIAL, now);
 		}
-		if (notice.type() == BoampNoticeType.OTHER) {
+		if (notice.type() == NoticeType.OTHER) {
 			return Applied.ignored("Not a call for tenders");
 		}
-		Optional<Tender> linked = linkedTender(notice);
+		Optional<Tender> linked = linkedTender(raw, notice);
 		if (linked.isEmpty()) {
 			// A complete rectification carries the whole tender: it can stand alone.
-			return notice.type() == BoampNoticeType.COMPLETE_RECTIFICATION
+			return notice.type() == NoticeType.COMPLETE_RECTIFICATION
 					? createTender(raw, notice, NoticeKind.RECTIFICATION, now) : Applied.ignored(INITIAL_NOT_COLLECTED);
 		}
 		Tender tender = linked.get();
@@ -160,12 +169,12 @@ public class NormalizationService {
 		return Applied.UPDATED;
 	}
 
-	private Applied createTender(RawNotice raw, ParsedNotice notice, NoticeKind kind, Instant now) {
+	private Applied createTender(RawNotice raw, SourceNotice notice, NoticeKind kind, Instant now) {
 		if (notice.details().title() == null) {
 			return Applied.ignored("Notice without title");
 		}
-		Optional<Tender> known = tenders.findBySourceAndExternalId(raw.getSource(), notice.idweb());
-		Tender tender = known.orElseGet(() -> new Tender(raw.getSource(), notice.idweb(), notice.details(), now));
+		Optional<Tender> known = tenders.findBySourceAndExternalId(raw.getSource(), notice.externalId());
+		Tender tender = known.orElseGet(() -> new Tender(raw.getSource(), notice.externalId(), notice.details(), now));
 		attach(tender, raw, notice, kind);
 		tenders.save(tender);
 		return known.isPresent() ? Applied.UPDATED : Applied.CREATED;
@@ -177,21 +186,30 @@ public class NormalizationService {
 			.noneMatch(existing -> existing.getPublishedAt() != null && existing.getPublishedAt().isAfter(publishedAt));
 	}
 
-	private static void attach(Tender tender, RawNotice raw, ParsedNotice notice, NoticeKind kind) {
+	private static void attach(Tender tender, RawNotice raw, SourceNotice notice, NoticeKind kind) {
 		boolean alreadyAttached = tender.getNotices()
 			.stream()
 			.anyMatch(existing -> existing.getRawNoticeId().equals(raw.getId()));
 		if (!alreadyAttached) {
-			tender.addNotice(raw.getId(), notice.idweb(), kind, notice.details().publishedAt(),
+			tender.addNotice(raw.getId(), notice.externalId(), kind, notice.details().publishedAt(),
 					notice.details().deadline(), notice.changeDescription());
 		}
 	}
 
-	private Optional<Tender> linkedTender(ParsedNotice notice) {
-		if (notice.linkedIds().isEmpty()) {
-			return Optional.empty();
+	/**
+	 * The tender the notice is attached to, if it was applied before: read
+	 * again, a notice stays with its tender. Otherwise the tender of the
+	 * notices it refers to, in its source.
+	 */
+	private Optional<Tender> linkedTender(RawNotice raw, SourceNotice notice) {
+		Optional<Tender> attached = tenderNotices.findByRawNoticeId(raw.getId()).map(TenderNotice::getTender);
+		if (attached.isPresent() || notice.linkedIds().isEmpty()) {
+			return attached;
 		}
-		return tenderNotices.findByExternalIdIn(notice.linkedIds()).stream().map(TenderNotice::getTender).findFirst();
+		return tenderNotices.findByTenderSourceAndExternalIdInOrderByIdAsc(raw.getSource(), notice.linkedIds())
+			.stream()
+			.map(TenderNotice::getTender)
+			.findFirst();
 	}
 
 	private static String truncate(String note) {

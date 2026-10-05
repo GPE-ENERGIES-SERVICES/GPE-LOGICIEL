@@ -39,7 +39,7 @@ printf '{"email":"%s","password":"%s"}' "$(json_escape "$BOOTSTRAP_ADMIN_EMAIL")
     --data @- "$API_URL/api/auth/login" -o /dev/null
 
 curl -sS -c "$JAR" -b "$JAR" -X POST -H "X-XSRF-TOKEN: $(xsrf)" \
-  "$API_URL/api/collect-runs${SINCE:+?since=$SINCE}" -w '%{http_code}' -o "$JAR.out" > "$JAR.code"
+  "$API_URL/api/collect-runs?source=BOAMP${SINCE:+&since=$SINCE}" -w '%{http_code}' -o "$JAR.out" > "$JAR.code"
 code=$(cat "$JAR.code")
 if [ "$code" != "202" ]; then
   echo "Import refused ($code): $(cat "$JAR.out")" >&2

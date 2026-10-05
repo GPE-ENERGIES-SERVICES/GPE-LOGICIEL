@@ -18,6 +18,8 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
+import eu.gpefrance.tenders.collect.SourceRecord;
+
 class BoampClientTests {
 
 	private static final String BASE_URL = "https://boamp.test/api";
@@ -30,7 +32,7 @@ class BoampClientTests {
 	void setUp() {
 		RestClient.Builder builder = RestClient.builder();
 		server = MockRestServiceServer.bindTo(builder).build();
-		client = new BoampClient(builder, new BoampProperties(BASE_URL, 7));
+		client = new BoampClient(builder, new BoampProperties(BASE_URL));
 	}
 
 	@Test
@@ -43,11 +45,11 @@ class BoampClientTests {
 			.andExpect(queryParam("offset", "2"))
 			.andRespond(withSuccess(page(3, "26-3"), MediaType.APPLICATION_JSON));
 
-		List<BoampRecord> records = client.fetchPublishedOn(LocalDate.of(2026, 10, 2));
+		List<SourceRecord> records = client.fetchPublishedOn(LocalDate.of(2026, 10, 2));
 
-		assertThat(records).extracting(BoampRecord::idweb).containsExactly("26-1", "26-2", "26-3");
+		assertThat(records).extracting(SourceRecord::externalId).containsExactly("26-1", "26-2", "26-3");
 		assertThat(records.getFirst().publishedAt()).isEqualTo(LocalDate.of(2026, 10, 2));
-		assertThat(records.getFirst().json()).contains("\"objet\":\"Travaux 26-1\"");
+		assertThat(records.getFirst().payload()).contains("\"objet\":\"Travaux 26-1\"");
 		server.verify();
 	}
 
@@ -70,9 +72,9 @@ class BoampClientTests {
 					{"idweb": "26-1", "dateparution": "2026-10-02", "objet": "Travaux"}]}""",
 					MediaType.APPLICATION_JSON));
 
-		List<BoampRecord> records = client.fetchPublishedOn(LocalDate.of(2026, 10, 2));
+		List<SourceRecord> records = client.fetchPublishedOn(LocalDate.of(2026, 10, 2));
 
-		assertThat(records).extracting(BoampRecord::isValid).containsExactly(false, true);
+		assertThat(records).extracting(SourceRecord::isValid).containsExactly(false, true);
 		assertThat(records.getFirst().excerpt()).contains("Sans identifiant");
 	}
 

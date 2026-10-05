@@ -21,6 +21,9 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 import eu.gpefrance.tenders.ClockConfiguration;
+import eu.gpefrance.tenders.collect.NoticeType;
+import eu.gpefrance.tenders.collect.SourceNotice;
+import eu.gpefrance.tenders.collect.SourceParser;
 import eu.gpefrance.tenders.tender.LotDetails;
 import eu.gpefrance.tenders.tender.MarketType;
 import eu.gpefrance.tenders.tender.ProcedureType;
@@ -37,7 +40,7 @@ import tools.jackson.databind.json.JsonMapper;
  * amount, lots, links) is looked up by key name rather than by fixed path.
  */
 @Component
-public class BoampNoticeParser {
+public class BoampNoticeParser implements SourceParser {
 
 	private static final String NOTICE_URL = "https://www.boamp.fr/pages/avis/?q=idweb:";
 
@@ -70,7 +73,13 @@ public class BoampNoticeParser {
 		this.jsonMapper = jsonMapper;
 	}
 
-	public ParsedNotice parse(String json) {
+	@Override
+	public String source() {
+		return BoampConnector.SOURCE;
+	}
+
+	@Override
+	public SourceNotice parse(String json) {
 		JsonNode record = jsonMapper.readTree(json);
 		JsonNode donnees = parseJson(record.get("donnees"));
 		String idweb = text(record.get("idweb"));
@@ -81,7 +90,7 @@ public class BoampNoticeParser {
 				amount(findFirst(donnees, AMOUNT_KEYS::contains)), date(record.get("dateparution")), deadline(record),
 				noticeUrl(record, idweb), platformUrl(donnees), lots(donnees));
 
-		return new ParsedNotice(idweb, type(record), linkedIds(record), details, changeDescription(donnees));
+		return new SourceNotice(idweb, type(record), linkedIds(record), details, changeDescription(donnees));
 	}
 
 	/**
@@ -92,23 +101,23 @@ public class BoampNoticeParser {
 		return json == null ? jsonMapper.createObjectNode() : jsonMapper.readTree(json);
 	}
 
-	private static BoampNoticeType type(JsonNode record) {
+	private static NoticeType type(JsonNode record) {
 		String nature = text(record.get("nature"));
 		String etat = text(record.get("etat"));
 		if ("ATTRIBUTION".equals(nature)) {
-			return BoampNoticeType.AWARD;
+			return NoticeType.AWARD;
 		}
 		if ("ANNULATION".equals(nature) || "ANNULATION".equals(etat)) {
-			return BoampNoticeType.CANCELLATION;
+			return NoticeType.CANCELLATION;
 		}
 		if ("RECTIFICATIF".equals(nature)) {
-			return BoampNoticeType.RECTIFICATION;
+			return NoticeType.RECTIFICATION;
 		}
 		if ("APPEL_OFFRE".equals(nature)) {
-			return "RECTIFICATIF".equals(etat) ? BoampNoticeType.COMPLETE_RECTIFICATION
-					: BoampNoticeType.CALL_FOR_TENDERS;
+			return "RECTIFICATIF".equals(etat) ? NoticeType.COMPLETE_RECTIFICATION
+					: NoticeType.CALL_FOR_TENDERS;
 		}
-		return BoampNoticeType.OTHER;
+		return NoticeType.OTHER;
 	}
 
 	private static List<String> linkedIds(JsonNode record) {

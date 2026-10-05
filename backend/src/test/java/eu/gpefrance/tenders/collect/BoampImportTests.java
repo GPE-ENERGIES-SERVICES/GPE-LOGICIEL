@@ -24,7 +24,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import eu.gpefrance.tenders.ClockConfiguration;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
 import eu.gpefrance.tenders.collect.boamp.BoampClient;
-import eu.gpefrance.tenders.collect.boamp.BoampRecord;
 import eu.gpefrance.tenders.tender.FollowUpStatus;
 import eu.gpefrance.tenders.tender.NoticeKind;
 import eu.gpefrance.tenders.tender.Tender;
@@ -83,7 +82,7 @@ class BoampImportTests {
 		published(TODAY.minusDays(30), initial("26-1", TODAY.minusDays(30), "2026-11-10T12:00:00"));
 		published(TODAY, initial("26-2", TODAY, "2026-11-12T12:00:00"));
 
-		CollectRun run = service.collect(CollectTrigger.MANUAL, TODAY.minusDays(30));
+		CollectRun run = service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.minusDays(30));
 
 		assertThat(run.getStatus()).isEqualTo(CollectStatus.SUCCESS);
 		assertThat(run.getSinceDate()).isEqualTo(TODAY.minusDays(30));
@@ -98,9 +97,9 @@ class BoampImportTests {
 	@Test
 	void aSecondImportCreatesNoDuplicate() {
 		published(TODAY, initial("26-1", TODAY, null), initial("26-2", TODAY, null));
-		service.collect(CollectTrigger.MANUAL, TODAY);
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY);
 
-		CollectRun second = service.collect(CollectTrigger.MANUAL, TODAY);
+		CollectRun second = service.collect("BOAMP", CollectTrigger.MANUAL, TODAY);
 
 		assertThat(second.getNoticesReceived()).isEqualTo(2);
 		assertThat(second.getNoticesNew()).isZero();
@@ -111,7 +110,7 @@ class BoampImportTests {
 	@Test
 	void aRectificationUpdatesTheTenderAndKeepsTheDataOfTheTeam() {
 		published(TODAY.minusDays(1), initial("26-1", TODAY.minusDays(1), "2026-11-10T12:00:00"));
-		service.collect(CollectTrigger.MANUAL, TODAY.minusDays(1));
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.minusDays(1));
 		Long id = tenders.findBySourceAndExternalId("BOAMP", "26-1").orElseThrow().getId();
 		jdbc.update("""
 				UPDATE tender SET follow_up_status = 'TO_STUDY', follow_up_comment = 'Visite prévue',
@@ -119,7 +118,7 @@ class BoampImportTests {
 		jdbc.update("INSERT INTO tender_follow (user_id, tender_id, created_at) VALUES (1, ?, now())", id);
 
 		published(TODAY, notice("26-5", "RECTIFICATIF", "RECTIFICATIF", "26-1", TODAY, "2026-11-20T12:00:00"));
-		service.collect(CollectTrigger.SCHEDULED);
+		service.collect("BOAMP", CollectTrigger.SCHEDULED, null);
 
 		inTransaction(() -> {
 			Tender tender = tenders.findAll().getFirst();
@@ -139,10 +138,10 @@ class BoampImportTests {
 	@Test
 	void aTenderNoLongerPublishedIsKept() {
 		published(TODAY.minusDays(1), initial("26-1", TODAY.minusDays(1), null));
-		service.collect(CollectTrigger.MANUAL, TODAY.minusDays(1));
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.minusDays(1));
 		given(boampClient.fetchPublishedOn(any())).willReturn(List.of());
 
-		service.collect(CollectTrigger.MANUAL, TODAY);
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY);
 
 		assertThat(tenders.findAll()).singleElement()
 			.satisfies(tender -> assertThat(tender.getStatus()).isEqualTo(TenderStatus.ACTIVE));
@@ -150,10 +149,10 @@ class BoampImportTests {
 
 	@Test
 	void aNoticeWithoutIdentifierDoesNotStopTheImport() {
-		published(TODAY, new BoampRecord(null, TODAY, "{\"objet\": \"Sans identifiant\"}"),
+		published(TODAY, new SourceRecord(null, TODAY, "{\"objet\": \"Sans identifiant\"}"),
 				record(initial("26-1", TODAY, null)));
 
-		CollectRun run = service.collect(CollectTrigger.MANUAL, TODAY);
+		CollectRun run = service.collect("BOAMP", CollectTrigger.MANUAL, TODAY);
 
 		assertThat(run.getStatus()).isEqualTo(CollectStatus.SUCCESS);
 		assertThat(run.getNoticesReceived()).isEqualTo(2);
@@ -164,13 +163,13 @@ class BoampImportTests {
 	@Test
 	void aNoticeWaitingForItsInitialNoticeIsAppliedOnceItIsCollected() {
 		published(TODAY, notice("26-9", "ATTRIBUTION", "INITIAL", "26-1", TODAY, null));
-		service.collect(CollectTrigger.MANUAL, TODAY);
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY);
 		assertThat(tenders.count()).isZero();
 		assertThat(rawNotices.findAll()).extracting(RawNotice::getNormalizationNote)
 			.containsExactly(NormalizationService.INITIAL_NOT_COLLECTED);
 
 		published(TODAY.minusDays(40), initial("26-1", TODAY.minusDays(40), null));
-		service.collect(CollectTrigger.MANUAL, TODAY.minusDays(40));
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.minusDays(40));
 
 		inTransaction(() -> {
 			Tender tender = tenders.findBySourceAndExternalId("BOAMP", "26-1").orElseThrow();
@@ -185,11 +184,11 @@ class BoampImportTests {
 	void anOlderRectificationDoesNotReplaceANewerDeadline() {
 		published(TODAY.minusDays(10), notice("26-2", "RECTIFICATIF", "RECTIFICATIF", "26-1", TODAY.minusDays(10),
 				"2026-11-20T12:00:00"));
-		service.collect(CollectTrigger.MANUAL, TODAY.minusDays(10));
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.minusDays(10));
 
 		published(TODAY.minusDays(20), initial("26-1", TODAY.minusDays(20), "2026-11-10T12:00:00"));
 		published(TODAY, notice("26-3", "RECTIFICATIF", "RECTIFICATIF", "26-1", TODAY, "2026-11-25T12:00:00"));
-		service.collect(CollectTrigger.MANUAL, TODAY.minusDays(20));
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.minusDays(20));
 
 		inTransaction(() -> {
 			Tender tender = tenders.findBySourceAndExternalId("BOAMP", "26-1").orElseThrow();
@@ -210,17 +209,17 @@ class BoampImportTests {
 
 	@Test
 	void refusesAPeriodInTheFutureOrTooFarBack() {
-		assertThatThrownBy(() -> service.collect(CollectTrigger.MANUAL, TODAY.plusDays(1)))
+		assertThatThrownBy(() -> service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.plusDays(1)))
 			.isInstanceOf(CollectPeriodException.class);
-		assertThatThrownBy(() -> service.collect(CollectTrigger.MANUAL, TODAY.minusDays(400)))
+		assertThatThrownBy(() -> service.collect("BOAMP", CollectTrigger.MANUAL, TODAY.minusDays(400)))
 			.isInstanceOf(CollectPeriodException.class);
 	}
 
 	private void published(LocalDate day, String... notices) {
-		published(day, List.of(notices).stream().map(BoampImportTests::record).toArray(BoampRecord[]::new));
+		published(day, List.of(notices).stream().map(BoampImportTests::record).toArray(SourceRecord[]::new));
 	}
 
-	private void published(LocalDate day, BoampRecord... records) {
+	private void published(LocalDate day, SourceRecord... records) {
 		given(boampClient.fetchPublishedOn(day)).willReturn(List.of(records));
 	}
 
@@ -228,10 +227,10 @@ class BoampImportTests {
 		transaction.executeWithoutResult(status -> assertions.run());
 	}
 
-	private static BoampRecord record(String json) {
+	private static SourceRecord record(String json) {
 		String idweb = json.replaceFirst("(?s).*\"idweb\": \"([^\"]+)\".*", "$1");
 		String day = json.replaceFirst("(?s).*\"dateparution\": \"([^\"]+)\".*", "$1");
-		return new BoampRecord(idweb, LocalDate.parse(day), json);
+		return new SourceRecord(idweb, LocalDate.parse(day), json);
 	}
 
 	private static String initial(String idweb, LocalDate publishedAt, String deadline) {

@@ -13,6 +13,8 @@ import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
+import eu.gpefrance.tenders.collect.NoticeType;
+import eu.gpefrance.tenders.collect.SourceNotice;
 import eu.gpefrance.tenders.tender.LotDetails;
 import eu.gpefrance.tenders.tender.MarketType;
 import eu.gpefrance.tenders.tender.ProcedureType;
@@ -29,10 +31,10 @@ class BoampNoticeParserTests {
 
 	@Test
 	void parsesAnEformsWorksNotice() {
-		ParsedNotice notice = parse("eforms-works");
+		SourceNotice notice = parse("eforms-works");
 
-		assertThat(notice.idweb()).isEqualTo("26-94229");
-		assertThat(notice.type()).isEqualTo(BoampNoticeType.CALL_FOR_TENDERS);
+		assertThat(notice.externalId()).isEqualTo("26-94229");
+		assertThat(notice.type()).isEqualTo(NoticeType.CALL_FOR_TENDERS);
 		assertThat(notice.linkedIds()).isEmpty();
 		TenderDetails details = notice.details();
 		assertThat(details.title()).startsWith("Marché Global Sectoriel pour le projet de restructuration");
@@ -119,9 +121,9 @@ class BoampNoticeParserTests {
 
 	@Test
 	void parsesARectificationWithItsChangeAndLink() {
-		ParsedNotice notice = parse("fns-rectification");
+		SourceNotice notice = parse("fns-rectification");
 
-		assertThat(notice.type()).isEqualTo(BoampNoticeType.RECTIFICATION);
+		assertThat(notice.type()).isEqualTo(NoticeType.RECTIFICATION);
 		assertThat(notice.linkedIds()).containsExactly("26-87745");
 		assertThat(notice.changeDescription()).contains("est reportée au 02/10/2026 à 16H00");
 		assertThat(notice.details().deadline()).isNull();
@@ -129,9 +131,9 @@ class BoampNoticeParserTests {
 
 	@Test
 	void parsesAnEformsChangeNoticeAsACompleteRectification() {
-		ParsedNotice notice = parse("eforms-change");
+		SourceNotice notice = parse("eforms-change");
 
-		assertThat(notice.type()).isEqualTo(BoampNoticeType.COMPLETE_RECTIFICATION);
+		assertThat(notice.type()).isEqualTo(NoticeType.COMPLETE_RECTIFICATION);
 		assertThat(notice.linkedIds()).containsExactly("26-81625", "26-88165");
 		assertThat(notice.changeDescription()).isNotBlank();
 		assertThat(notice.details().estimatedAmount()).isEqualByComparingTo("420000");
@@ -139,19 +141,19 @@ class BoampNoticeParserTests {
 
 	@Test
 	void parsesAnAwardAndACancellation() {
-		ParsedNotice award = parse("award");
-		assertThat(award.type()).isEqualTo(BoampNoticeType.AWARD);
+		SourceNotice award = parse("award");
+		assertThat(award.type()).isEqualTo(NoticeType.AWARD);
 		assertThat(award.linkedIds()).containsExactly("25-14540");
 
-		ParsedNotice cancellation = parse("cancellation");
-		assertThat(cancellation.type()).isEqualTo(BoampNoticeType.CANCELLATION);
+		SourceNotice cancellation = parse("cancellation");
+		assertThat(cancellation.type()).isEqualTo(NoticeType.CANCELLATION);
 		assertThat(cancellation.linkedIds()).containsExactly("26-89214");
 		assertThat(cancellation.details().departments()).containsExactly("974", "976");
 	}
 
 	@Test
 	void cleansTextsAndKeepsMissingValuesEmpty() {
-		ParsedNotice notice = parser.parse("""
+		SourceNotice notice = parser.parse("""
 				{"idweb": "26-1", "nature": "APPEL_OFFRE", "etat": "INITIAL",
 				 "objet": "  <p>Travaux&nbsp;de</p>\\n   peinture ", "nomacheteur": "",
 				 "code_departement": ["5", "2A", "971"], "type_marche": ["TRAVAUX", "AUTRE"], "donnees": null}
@@ -173,7 +175,7 @@ class BoampNoticeParserTests {
 		String donnees = """
 				{"FNSimple": {"initial": {"natureMarche": {"intitule": "Travaux"}, "lots": {"lot": [
 				{"description": "1 : Gros oeuvre"}, {"description": "2 : Electricite"}]}}}}""";
-		ParsedNotice notice = parser.parse(JsonMapper.builder()
+		SourceNotice notice = parser.parse(JsonMapper.builder()
 			.build()
 			.createObjectNode()
 			.put("idweb", "26-3")
@@ -192,7 +194,7 @@ class BoampNoticeParserTests {
 				{"FNSimple": {"initial": {"natureMarche": {"intitule": "Fournitures"}, "lots": {"lot": [
 				{"numLot": "Lot 1 - Maintenance du matériel ELLEX ou équivalent et de ses accessoires"},
 				{"numLot": "2", "intitule": "Consommables"}]}}}}""";
-		ParsedNotice notice = parser.parse(JsonMapper.builder()
+		SourceNotice notice = parser.parse(JsonMapper.builder()
 			.build()
 			.createObjectNode()
 			.put("idweb", "26-4")
@@ -210,7 +212,7 @@ class BoampNoticeParserTests {
 
 	@Test
 	void neverKeepsAZeroAmount() {
-		ParsedNotice notice = parser.parse("""
+		SourceNotice notice = parser.parse("""
 				{"idweb": "26-2", "nature": "APPEL_OFFRE", "objet": "Travaux",
 				 "donnees": "{\\"FNSimple\\": {\\"initial\\": {\\"natureMarche\\": {\\"valeurEstimee\\": {\\"@devise\\": \\"EUR\\", \\"valeur\\": \\"0\\"}}}}}"}
 				""");
@@ -218,7 +220,7 @@ class BoampNoticeParserTests {
 		assertThat(notice.details().estimatedAmount()).isNull();
 	}
 
-	private ParsedNotice parse(String fixture) {
+	private SourceNotice parse(String fixture) {
 		try (InputStream in = getClass().getResourceAsStream("/boamp/" + fixture + ".json")) {
 			return parser.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
 		}

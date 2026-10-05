@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+/**
+ * Every query is limited to one source: notices of different sources never
+ * meet, even with the same identifier.
+ */
 public interface RawNoticeRepository extends JpaRepository<RawNotice, Long> {
 
 	/**
@@ -21,34 +25,23 @@ public interface RawNoticeRepository extends JpaRepository<RawNotice, Long> {
 			""")
 	int insertIfAbsent(String source, String externalId, String payload, LocalDate publishedAt);
 
-	List<RawNotice> findTop100ByNormalizedAtIsNullOrderByPublishedAtAscIdAsc();
+	List<RawNotice> findTop100BySourceAndNormalizedAtIsNullOrderByPublishedAtAscIdAsc(String source);
 
-	List<RawNotice> findByNormalizationNoteStartingWithOrderByPublishedAtAscIdAsc(String prefix);
+	List<RawNotice> findBySourceAndNormalizationNoteStartingWithOrderByPublishedAtAscIdAsc(String source,
+			String prefix);
 
 	/**
-	 * Notices set aside with the given note whose linked notice
-	 * ({@code annonce_lie}, {@code annonces_anterieures}) is now attached to a
-	 * tender, oldest publication first. The linked identifiers are joined to
-	 * tender_notice, so its index on external_id is used.
+	 * Notices of the source set aside with the given note, one of whose linked
+	 * notices is now attached to a tender of the same source, oldest
+	 * publication first.
 	 */
 	@Query(nativeQuery = true, value = """
 			SELECT r.id FROM raw_notice r
-			WHERE r.id IN (
-			    SELECT o.id FROM raw_notice o
-			    CROSS JOIN LATERAL (
-			        SELECT jsonb_array_elements_text(CASE jsonb_typeof(o.payload -> 'annonce_lie')
-			            WHEN 'array' THEN o.payload -> 'annonce_lie'
-			            WHEN 'string' THEN jsonb_build_array(o.payload -> 'annonce_lie')
-			            ELSE CAST('[]' AS jsonb) END) AS linked
-			        UNION ALL
-			        SELECT jsonb_array_elements_text(CASE jsonb_typeof(o.payload -> 'annonces_anterieures')
-			            WHEN 'array' THEN o.payload -> 'annonces_anterieures'
-			            WHEN 'string' THEN jsonb_build_array(o.payload -> 'annonces_anterieures')
-			            ELSE CAST('[]' AS jsonb) END)) l
-			    JOIN tender_notice n ON n.external_id = l.linked
-			    WHERE o.normalization_note = :note)
+			WHERE r.source = :source AND r.normalization_note = :note
+			  AND EXISTS (SELECT 1 FROM tender_notice n JOIN tender t ON t.id = n.tender_id
+			              WHERE t.source = r.source AND n.external_id = ANY (r.linked_ids))
 			ORDER BY r.published_at, r.id
 			""")
-	List<Long> findWaitingForAKnownNotice(String note);
+	List<Long> findWaitingForAKnownNotice(String source, String note);
 
 }

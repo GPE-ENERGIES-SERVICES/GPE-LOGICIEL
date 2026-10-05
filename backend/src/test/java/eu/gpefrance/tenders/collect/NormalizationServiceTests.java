@@ -56,7 +56,7 @@ class NormalizationServiceTests {
 			store(fixture.hashCode() + "", fixture(fixture));
 		}
 
-		assertThat(service.normalizePending().total()).isEqualTo(9);
+		assertThat(service.normalizePending("BOAMP").total()).isEqualTo(9);
 
 		assertThat(tenders.findAll()).extracting(Tender::getExternalId)
 			.containsExactlyInAnyOrder("26-94229", "26-94446", "26-94039", "26-94116", "26-93202", "26-91123");
@@ -71,7 +71,7 @@ class NormalizationServiceTests {
 	void storesLotsWithTheTender() {
 		store("26-94446", fixture("eforms-services"));
 
-		service.normalizePending();
+		service.normalizePending("BOAMP");
 
 		inTransaction(() -> {
 			Tender tender = tenders.findBySourceAndExternalId("BOAMP", "26-94446").orElseThrow();
@@ -88,7 +88,7 @@ class NormalizationServiceTests {
 		store("26-100", notice("26-100", "APPEL_OFFRE", "INITIAL", null, "2026-11-10T12:00:00"));
 		store("26-101", notice("26-101", "RECTIFICATIF", "RECTIFICATIF", "26-100", "2026-11-20T12:00:00"));
 
-		service.normalizePending();
+		service.normalizePending("BOAMP");
 
 		inTransaction(() -> {
 			assertThat(tenders.count()).isEqualTo(1);
@@ -105,7 +105,7 @@ class NormalizationServiceTests {
 		store("26-100", notice("26-100", "APPEL_OFFRE", "INITIAL", null, "2026-11-10T12:00:00"));
 		store("26-102", notice("26-102", "APPEL_OFFRE", "RECTIFICATIF", "26-100", "2026-11-25T12:00:00"));
 
-		service.normalizePending();
+		service.normalizePending("BOAMP");
 
 		inTransaction(() -> {
 			assertThat(tenders.findAll()).singleElement().satisfies(tender -> {
@@ -123,7 +123,7 @@ class NormalizationServiceTests {
 		store("26-101", notice("26-101", "ATTRIBUTION", "INITIAL", "26-100", null));
 		store("26-201", notice("26-201", "ANNULATION", "INITIAL", "26-200", null));
 
-		service.normalizePending();
+		service.normalizePending("BOAMP");
 
 		assertThat(tenders.findBySourceAndExternalId("BOAMP", "26-100").orElseThrow().getStatus())
 			.isEqualTo(TenderStatus.CLOSED);
@@ -134,9 +134,9 @@ class NormalizationServiceTests {
 	@Test
 	void processesEachNoticeOnlyOnce() {
 		store("26-100", notice("26-100", "APPEL_OFFRE", "INITIAL", null, null));
-		service.normalizePending();
+		service.normalizePending("BOAMP");
 
-		assertThat(service.normalizePending().total()).isZero();
+		assertThat(service.normalizePending("BOAMP").total()).isZero();
 		assertThat(tenders.count()).isEqualTo(1);
 	}
 
@@ -146,7 +146,7 @@ class NormalizationServiceTests {
 				+ "\"donnees\": \"not json\"}");
 		store("26-200", notice("26-200", "APPEL_OFFRE", "INITIAL", null, null));
 
-		assertThat(service.normalizePending()).isEqualTo(new NormalizationReport(1, 0, 0, 1));
+		assertThat(service.normalizePending("BOAMP")).isEqualTo(new NormalizationReport(1, 0, 0, 1));
 
 		assertThat(tenders.findAll()).extracting(Tender::getExternalId).containsExactly("26-200");
 		assertThat(rawNotices.findAll()).extracting(RawNotice::getNormalizationNote)
@@ -154,16 +154,37 @@ class NormalizationServiceTests {
 	}
 
 	@Test
+	void readingANoticeAgainKeepsItWithItsTender() {
+		// A complete rectification collected before its initial notice makes its own tender.
+		store("26-102", notice("26-102", "APPEL_OFFRE", "RECTIFICATIF", "26-100", "2026-11-25T12:00:00"));
+		service.normalizePending("BOAMP");
+		store("26-100", notice("26-100", "APPEL_OFFRE", "INITIAL", null, "2026-11-10T12:00:00"));
+		service.normalizePending("BOAMP");
+
+		jdbc.update("UPDATE raw_notice SET normalized_at = NULL");
+		assertThat(service.normalizePending("BOAMP")).isEqualTo(new NormalizationReport(0, 2, 0, 0));
+
+		inTransaction(() -> {
+			Tender rectified = tenders.findBySourceAndExternalId("BOAMP", "26-102").orElseThrow();
+			assertThat(rectified.getNotices()).extracting(TenderNotice::getExternalId).containsExactly("26-102");
+			assertThat(rectified.getDeadline()).isEqualTo(Instant.parse("2026-11-25T11:00:00Z"));
+			assertThat(tenders.findBySourceAndExternalId("BOAMP", "26-100").orElseThrow().getNotices())
+				.extracting(TenderNotice::getExternalId)
+				.containsExactly("26-100");
+		});
+	}
+
+	@Test
 	void retriesANoticeInErrorAtTheNextRun() {
 		store("26-100", "{\"idweb\": \"26-100\", \"nature\": \"APPEL_OFFRE\", \"objet\": \"Travaux\", "
 				+ "\"donnees\": \"not json\"}");
-		assertThat(service.normalizePending()).isEqualTo(new NormalizationReport(0, 0, 0, 1));
+		assertThat(service.normalizePending("BOAMP")).isEqualTo(new NormalizationReport(0, 0, 0, 1));
 		// The cause is fixed meanwhile, here by a readable payload.
 		jdbc.update("UPDATE raw_notice SET payload = CAST(? AS jsonb)", notice("26-100", "APPEL_OFFRE", "INITIAL", null, null));
 
-		assertThat(service.normalizePending()).isEqualTo(new NormalizationReport(1, 0, 0, 0));
+		assertThat(service.normalizePending("BOAMP")).isEqualTo(new NormalizationReport(1, 0, 0, 0));
 		assertThat(tenders.findAll()).extracting(Tender::getExternalId).containsExactly("26-100");
-		assertThat(service.normalizePending().total()).isZero();
+		assertThat(service.normalizePending("BOAMP").total()).isZero();
 	}
 
 	private void store(String idweb, String json) {

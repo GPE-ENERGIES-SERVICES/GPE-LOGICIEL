@@ -8,6 +8,8 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import eu.gpefrance.tenders.collect.SourceRecord;
+
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -28,8 +30,8 @@ public class BoampClient {
 		this.restClient = builder.baseUrl(properties.baseUrl()).build();
 	}
 
-	public List<BoampRecord> fetchPublishedOn(LocalDate date) {
-		List<BoampRecord> records = new ArrayList<>();
+	public List<SourceRecord> fetchPublishedOn(LocalDate date) {
+		List<SourceRecord> records = new ArrayList<>();
 		int offset = 0;
 		long total;
 		do {
@@ -70,12 +72,12 @@ public class BoampClient {
 
 	/**
 	 * A notice without identifier is returned all the same: the collection
-	 * rejects it without stopping, see {@link BoampRecord#isValid()}.
+	 * rejects it without stopping, see {@link SourceRecord#isValid()}.
 	 */
-	private static BoampRecord toRecord(JsonNode result) {
+	private static SourceRecord toRecord(JsonNode result) {
 		String idweb = result.path("idweb").asString(null);
 		String publishedAt = result.path("dateparution").asString(null);
-		return new BoampRecord(idweb == null || idweb.isBlank() ? null : idweb,
+		return new SourceRecord(idweb == null || idweb.isBlank() ? null : idweb,
 				publishedAt == null ? null : LocalDate.parse(publishedAt), result.toString());
 	}
 

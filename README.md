@@ -28,7 +28,7 @@ Le backend est découpé par module :
 
 | Package       | Rôle                                                                      |
 |---------------|---------------------------------------------------------------------------|
-| `collect`     | Collecte BOAMP planifiée, journal, conversion vers le format commun       |
+| `collect`     | Collecte planifiée par source (BOAMP), journal, conversion vers le format commun |
 | `tender`      | Appels d'offres, lots, historique des avis, suivi, clôture                |
 | `filter`      | Critères de l'entreprise et filtrage par règles                           |
 | `document`    | Dépôt du DCE, décompression, classement des pièces, texte page par page   |

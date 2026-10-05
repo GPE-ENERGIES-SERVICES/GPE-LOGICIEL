@@ -17,7 +17,7 @@ Navigateur ──> frontend (Next.js) ──/api──> backend (Spring Boot) �
 
 | Package du backend | Rôle |
 |--------------------|------|
-| `collect`  | Collecte planifiée du BOAMP, avis bruts, journal, normalisation |
+| `collect`  | Collecte planifiée par source (connecteurs, BOAMP aujourd'hui), avis bruts, journal, normalisation |
 | `tender`   | Appels d'offres, lots, historique des avis, suivi, clôture automatique |
 | `filter`   | Critères de l'entreprise, filtrage par règles et raison enregistrée |
 | `document` | Dépôt du DCE, décompression sécurisée, classement, texte page par page |
@@ -88,7 +88,7 @@ Toutes les valeurs sont lues dans `.env`, jamais commité.
 | `BACKUP_DIR`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS` | Sauvegarde quotidienne |
 
 Autres réglages dans `backend/src/main/resources/application.properties` : horaires de
-collecte (`collect.cron`), limites de taille des dépôts (`documents.*`), taille maximale du
+collecte (`collect.cron`), sources mises de côté (`collect.disabled-sources`), limites de taille des dépôts (`documents.*`), taille maximale du
 texte envoyé à l'IA (`analysis.max-characters`).
 
 Les critères de filtrage se règlent dans l'interface (Paramètres, administrateur).
@@ -143,13 +143,31 @@ date limite contradictoire) sont dans `frontend/src/lib/analysis.ts`.
 
 ## Ajouter une source d'avis
 
-La V1 ne lit que le BOAMP. Pour une autre source (TED par exemple) :
+Le BOAMP est aujourd'hui la seule source. Une source se compose de deux beans Spring portant le
+même nom de source (par exemple `TED`), sur le modèle de `collect/boamp` :
 
-1. Écrire un client et un parseur sur le modèle de `collect/boamp` qui produisent des
-   `ParsedNotice` (format commun).
-2. Conserver les avis bruts dans `raw_notice` avec un nom de source distinct.
-3. Planifier la collecte comme `CollectScheduler` ; la normalisation, le filtrage et le reste
-   de la chaîne sont communs. Le rapprochement entre sources reste à concevoir.
+1. un `SourceConnector` (`BoampConnector`) : son nom, son mode d'accès (`SourceAccess`) et la
+   lecture des avis publiés un jour donné, rendus en `SourceRecord` (identifiant dans la source,
+   date, contenu en JSON ; une page HTML ou un fichier est rendu en JSON par le connecteur) ;
+2. un `SourceParser` (`BoampNoticeParser`) : la lecture d'un avis stocké en `SourceNotice`
+   (type d'avis, avis liés de la même source, `TenderDetails`). Une information absente reste
+   `null` ou vide.
+
+Rien d'autre à modifier : `CollectService`, `NormalizationService` et `CollectScheduler`
+trouvent les connecteurs et les parseurs par injection. Chaque source a son verrou, son point
+de départ, son journal (`collect_run.source`) et son bilan ; l'échec d'une source n'arrête pas les
+autres. `collect.disabled-sources=TED` met une source de côté.
+
+Modes d'accès : `AUTOMATED` (API ou open data publics) et `AUTHENTICATED` (compte ou clé de
+l'entreprise, fournis par l'environnement) sont collectés ; `MANUAL` (export déposé par une
+personne) et `NOT_AUTOMATABLE` (CAPTCHA, protection anti-robot) ne sont jamais interrogés. Aucune
+protection n'est contournée ; une source qui refuse l'accès fait échouer son run, retenté au
+créneau suivant.
+
+Identité : `source + external_id`, pour les avis bruts comme pour les consultations ; un avis
+n'est rattaché qu'à une consultation de sa source. Deux sources qui publient le même marché
+donnent deux consultations : leur rapprochement (règles déterministes, validation humaine)
+reste à concevoir.
 
 ## Sauvegarde et restauration
 
@@ -186,17 +204,19 @@ Suivi : `docker compose logs backup` affiche chaque sauvegarde et les échecs
 ## Cycle de vie des données
 
 ```
-API open data BOAMP (un jour de parution à la fois)   collect/boamp/BoampClient
+Source (BOAMP : API open data, un jour de parution à la fois)   SourceConnector (BoampConnector → BoampClient)
   → avis bruts, JSON intact                             raw_notice, unique (source, external_id)
-  → format commun                                       collect/boamp/BoampNoticeParser
-  → création ou rattachement à la consultation          collect/NormalizationService
+  → format commun                                       SourceParser (BoampNoticeParser) → SourceNotice
+  → création ou rattachement à la consultation          collect/NormalizationService, par source
   → consultations, lots, historique des avis            tender (unique source, external_id), lot, tender_notice
   → critères de l'entreprise, clôture des échéances     filter/FilterService, tender/TenderLifecycleService
 ```
 
 Orchestration : `collect/CollectService`, déclenché par `CollectScheduler` (`collect.cron`, 7 h et
-13 h les jours ouvrés), par le bouton des paramètres ou par `POST /api/collect-runs?since=AAAA-MM-JJ`
-(administrateur, `scripts/import-boamp.sh`). Une seule collecte à la fois.
+13 h les jours ouvrés : chaque source active l'une après l'autre), par le bouton des paramètres
+(toutes les sources actives) ou par `POST /api/collect-runs?source=BOAMP&since=AAAA-MM-JJ`
+(administrateur, `scripts/import-boamp.sh`). Une seule collecte à la fois par source. Une source
+jamais collectée commence `collect.initial-days` jours en arrière (7).
 
 - **Doublons** : un avis BOAMP (`idweb`) n'est stocké qu'une fois (`INSERT … ON CONFLICT DO
   NOTHING`), une consultation qu'une fois par (source, identifiant de l'avis initial), un avis
@@ -214,7 +234,12 @@ Orchestration : `collect/CollectService`, déclenché par `CollectScheduler` (`c
   attribution) ou `CANCELLED` et reste consultable dans les Archives.
 - **Avis en attente** : un rectificatif ou une attribution dont l'avis initial n'a pas été
   collecté est mis de côté (« Initial notice not collected ») et appliqué dès que cet avis
-  initial est importé, par exemple par un chargement initial plus ancien.
+  initial est importé, par exemple par un chargement initial plus ancien. Les avis liés lus par
+  le parseur sont conservés dans `raw_notice.linked_ids` : la reprise ne relit pas le format de
+  la source. Un avis relu (reprise, rejeu) reste rattaché à sa consultation.
+- **Limite connue** : un rectificatif complet reçu avant son avis initial crée sa propre
+  consultation ; si l'avis initial est importé ensuite, il en crée une seconde pour le même
+  marché (16 cas après le chargement du 05/09/2026, sans statut, suivi ni DCE).
 - **Erreurs** : un avis sans identifiant est écarté sans arrêter la collecte ; un avis illisible
   est noté en erreur et retenté à la collecte suivante. Si le BOAMP ne répond pas (délais
   `spring.http.clients.*`), la collecte échoue sans avancer son point de départ : la suivante

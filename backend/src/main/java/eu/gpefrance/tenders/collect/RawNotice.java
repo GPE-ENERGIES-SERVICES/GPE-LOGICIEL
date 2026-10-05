@@ -2,6 +2,8 @@ package eu.gpefrance.tenders.collect;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -49,13 +51,28 @@ public class RawNotice {
 	@Column(name = "normalization_note")
 	private String normalizationNote;
 
+	/** Identifiers, in the same source, of the earlier notices it refers to, once read. */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "linked_ids")
+	private List<String> linkedIds;
+
 	protected RawNotice() {
 	}
 
 	/**
 	 * @param note why the notice did not create or update a tender, if so
+	 * @param linkedIds the earlier notices it refers to, as read by the parser
 	 */
-	public void markNormalized(String note, Instant now) {
+	public void markNormalized(String note, List<String> linkedIds, Instant now) {
+		this.normalizedAt = now;
+		this.normalizationNote = note;
+		this.linkedIds = new ArrayList<>(linkedIds);
+	}
+
+	/**
+	 * The notice could not be read: tried again at the next collection.
+	 */
+	public void markFailed(String note, Instant now) {
 		this.normalizedAt = now;
 		this.normalizationNote = note;
 	}
@@ -90,6 +107,10 @@ public class RawNotice {
 
 	public String getNormalizationNote() {
 		return normalizationNote;
+	}
+
+	public List<String> getLinkedIds() {
+		return linkedIds;
 	}
 
 }

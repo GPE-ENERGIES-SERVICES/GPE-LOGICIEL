@@ -1,6 +1,6 @@
-package eu.gpefrance.tenders.collect.boamp;
+package eu.gpefrance.tenders.collect;
 
-public enum BoampNoticeType {
+public enum NoticeType {
 
 	/** Initial call for tenders. */
 	CALL_FOR_TENDERS,
