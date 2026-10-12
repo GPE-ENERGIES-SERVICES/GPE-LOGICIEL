@@ -1,0 +1,64 @@
+{
+  "notice-identifier": "bec0b3e1-0218-4123-9849-68af1ca1b587",
+  "title-proc": {
+    "fra": "Délivrance de cartes-cadeaux"
+  },
+  "notice-type": "can-standard",
+  "publication-number": "696545-2026",
+  "buyer-profile": [
+    "https://achats.hauts-de-seine.fr/"
+  ],
+  "procedure-identifier": "1ff10451-6429-4570-aaa8-a22113d007b7",
+  "procedure-type": "open",
+  "classification-cpv": [
+    "66133000",
+    "18530000",
+    "66133000",
+    "18530000"
+  ],
+  "publication-date": "2026-10-09+02:00",
+  "buyer-name": {
+    "fra": [
+      "Département des Hauts-de-Seine"
+    ]
+  },
+  "contract-nature-main-proc": "services",
+  "links": {
+    "xml": {
+      "MUL": "https://ted.europa.eu/en/notice/696545-2026/xml"
+    },
+    "pdf": {
+      "FRA": "https://ted.europa.eu/fr/notice/696545-2026/pdf"
+    },
+    "pdfs": {
+      "FRA": "https://ted.europa.eu/fr/notice/696545-2026/pdfs"
+    },
+    "html": {
+      "FRA": "https://ted.europa.eu/fr/notice/-/detail/696545-2026"
+    },
+    "htmlDirect": {
+      "FRA": "https://ted.europa.eu/fr/notice/696545-2026/html"
+    }
+  },
+  "notice-version": 1,
+  "buyer-post-code": [
+    "92000"
+  ],
+  "identifier-lot": [
+    "LOT-0000"
+  ],
+  "buyer-city": {
+    "mul": [
+      "Nanterre"
+    ]
+  },
+  "title-lot": {
+    "fra": [
+      "Délivrance de cartes-cadeaux"
+    ]
+  },
+  "description-proc": {
+    "fra": "Le marché porte sur l'émission et la livraison de cartes-cadeaux en version physique (et/ou dématérialisé), au bénéfice des agents du Département, de leurs enfants et des agents partant à la retraite. Les cartes-cadeaux sont multi-enseignes, utilisables en plusieurs fois comme une carte bancaire, non rechargeables et délivrées en fonction des évènements (en conformité avec l'URSSAF). La dépense s'effectue à l'euro près. Le présent marché est un accord-cadre mono-attributaire s'exécutant au fur et à mesure par l'émission de bons de commande dans les conditions fixées aux articles R.2162-13 et R.2162-14 du Code de la commande publique, dans les limites financières ci-après : Montant minimum annuel : 200 000 euro(s) HT Montant maximum annuel : 800 000 euro(s) HT"
+  },
+  "internal-identifier-proc": "20260451"
+}

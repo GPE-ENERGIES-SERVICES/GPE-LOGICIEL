@@ -1,0 +1,132 @@
+{
+  "deadline-receipt-tender-date-lot": [
+    "2026-11-10+01:00",
+    "2026-11-10+01:00",
+    "2026-11-10+01:00",
+    "2026-11-10+01:00",
+    "2026-11-10+01:00"
+  ],
+  "notice-type": "cn-standard",
+  "publication-number": "698125-2026",
+  "buyer-profile": [
+    "http://marchespublicsmanche.fr"
+  ],
+  "submission-url-lot": [
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=demat.termes&amp;IDM=1885479",
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=demat.termes&amp;IDM=1885479",
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=demat.termes&amp;IDM=1885479",
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=demat.termes&amp;IDM=1885479",
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=demat.termes&amp;IDM=1885479"
+  ],
+  "procedure-identifier": "5c87fdc2-d20a-42e9-9b11-59f45d4a37af",
+  "document-url-lot": [
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=dematEnt.login&amp;type=DCE&amp;IDM=1885479",
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=dematEnt.login&amp;type=DCE&amp;IDM=1885479",
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=dematEnt.login&amp;type=DCE&amp;IDM=1885479",
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=dematEnt.login&amp;type=DCE&amp;IDM=1885479",
+    "https://www.marches-publics.info/mpiaws/index.cfm?fuseaction=dematEnt.login&amp;type=DCE&amp;IDM=1885479"
+  ],
+  "place-of-performance-post-code-lot": [
+    "50050",
+    "50050",
+    "50050",
+    "50050",
+    "50050"
+  ],
+  "publication-date": "2026-10-09+02:00",
+  "estimated-value-proc": "10000000",
+  "contract-nature-main-proc": "works",
+  "links": {
+    "xml": {
+      "MUL": "https://ted.europa.eu/en/notice/698125-2026/xml"
+    },
+    "pdf": {
+      "FRA": "https://ted.europa.eu/fr/notice/698125-2026/pdf"
+    },
+    "pdfs": {
+      "FRA": "https://ted.europa.eu/fr/notice/698125-2026/pdfs"
+    },
+    "html": {
+      "FRA": "https://ted.europa.eu/fr/notice/-/detail/698125-2026"
+    },
+    "htmlDirect": {
+      "FRA": "https://ted.europa.eu/fr/notice/698125-2026/html"
+    }
+  },
+  "buyer-post-code": [
+    "50050"
+  ],
+  "identifier-lot": [
+    "LOT-0001",
+    "LOT-0002",
+    "LOT-0003",
+    "LOT-0004",
+    "LOT-0005"
+  ],
+  "buyer-city": {
+    "mul": [
+      "Saint-Lo"
+    ]
+  },
+  "notice-identifier": "128e9011-31c6-49c9-9b18-76b66293757a",
+  "title-proc": {
+    "fra": "Fourniture et mise en oeuvre de matériaux bitumineux coulé à chaud pour les besoins du département de la Manche"
+  },
+  "place-of-performance-subdiv-lot": [
+    "FRD12",
+    "FRD12",
+    "FRD12",
+    "FRD12",
+    "FRD12"
+  ],
+  "estimated-value-cur-proc": "EUR",
+  "procedure-type": "open",
+  "deadline-receipt-tender-time-lot": [
+    "12:00:00+01:00",
+    "12:00:00+01:00",
+    "12:00:00+01:00",
+    "12:00:00+01:00",
+    "12:00:00+01:00"
+  ],
+  "classification-cpv": [
+    "45233220",
+    "45200000",
+    "45233220",
+    "45233220",
+    "45233220",
+    "45233220",
+    "45233220",
+    "45233220",
+    "45200000",
+    "45233220",
+    "45200000",
+    "45233220",
+    "45200000",
+    "45233220",
+    "45200000",
+    "45233220",
+    "45200000"
+  ],
+  "buyer-name": {
+    "fra": [
+      "Département de la Manche"
+    ]
+  },
+  "notice-version": 1,
+  "place-of-performance-subdiv-proc": [
+    "FRD12"
+  ],
+  "title-lot": {
+    "fra": [
+      "Lot 1 : ATD du Cotentin",
+      "Lot 2 : ATD des Marais",
+      "Lot 3 : ATD du Centre Manche",
+      "Lot 4 : ATD Mer et Bocage",
+      "Lot 5 : ATD Sud Manche"
+    ]
+  },
+  "description-proc": {
+    "fra": "Fourniture et mise en oeuvre de matériaux bitumineux coulé à chaud pour les besoins du département de la Manche"
+  },
+  "internal-identifier-proc": "DR-104-26"
+}

@@ -1,0 +1,81 @@
+{
+  "notice-identifier": "e622fac0-e1a8-445d-b90c-1c422b4e88fc",
+  "title-proc": {
+    "fra": "PRESTATION MISE A DISPOSITION DE CONTENANTS, ENLEVEMENT ET TRAITEMENT DES DECHETS DE LA DIRECTION TERRITORIALE HAUT-DE-FRANCE DU CEREMA – SITES DE SEQUEDIN ET SAINT-QUENTIN"
+  },
+  "notice-type": "veat",
+  "place-of-performance-subdiv-lot": [
+    "FRE11",
+    "FRE21"
+  ],
+  "publication-number": "698621-2026",
+  "buyer-profile": [
+    "https://www.marches-publics.gouv.fr/entreprise"
+  ],
+  "procedure-identifier": "d3e830e3-bb96-41d8-b373-974a73a96f76",
+  "place-of-performance-city-proc": [
+    "Saint-Quentin"
+  ],
+  "place-of-performance-post-code-proc": [
+    "02100"
+  ],
+  "place-of-performance-post-code-lot": [
+    "02100"
+  ],
+  "procedure-type": "oth-single",
+  "classification-cpv": [
+    "90500000",
+    "90500000",
+    "90500000"
+  ],
+  "publication-date": "2026-10-09+02:00",
+  "buyer-name": {
+    "fra": [
+      "CEREMA"
+    ]
+  },
+  "contract-nature-main-proc": "services",
+  "links": {
+    "xml": {
+      "MUL": "https://ted.europa.eu/en/notice/698621-2026/xml"
+    },
+    "pdf": {
+      "FRA": "https://ted.europa.eu/fr/notice/698621-2026/pdf"
+    },
+    "pdfs": {
+      "FRA": "https://ted.europa.eu/fr/notice/698621-2026/pdfs"
+    },
+    "html": {
+      "FRA": "https://ted.europa.eu/fr/notice/-/detail/698621-2026"
+    },
+    "htmlDirect": {
+      "FRA": "https://ted.europa.eu/fr/notice/698621-2026/html"
+    }
+  },
+  "notice-version": 1,
+  "buyer-post-code": [
+    "69003"
+  ],
+  "identifier-lot": [
+    "LOT-0001",
+    "LOT-0002"
+  ],
+  "place-of-performance-subdiv-proc": [
+    "FRE21"
+  ],
+  "buyer-city": {
+    "mul": [
+      "Lyon"
+    ]
+  },
+  "title-lot": {
+    "fra": [
+      "La présente consultation vise des prestations de mise à disposition de contenants, de collecte, de transport et de traitement des déchets dangereux et non-dangereux produits par la Direction territoriale Cerema des Hauts-de-France sur les sites de Sequedin (59)",
+      "La présente consultation vise des prestations de mise à disposition de contenants, de collecte, de transport et de traitement des déchets dangereux et non-dangereux produits par la Direction territoriale Cerema des Hauts-de-France sur les sites de St Quentin (02)"
+    ]
+  },
+  "description-proc": {
+    "fra": "La présente consultation vise des prestations de mise à disposition de contenants, de collecte, de transport et de traitement des déchets dangereux et non-dangereux produits par la Direction territoriale Cerema des Hauts-de-France sur les sites de Sequedin (59) et de St Quentin (02)"
+  },
+  "internal-identifier-proc": "26-102_AC"
+}

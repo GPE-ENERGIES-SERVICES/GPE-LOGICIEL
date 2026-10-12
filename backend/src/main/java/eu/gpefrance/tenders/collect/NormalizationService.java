@@ -106,7 +106,7 @@ public class NormalizationService {
 			Outcome outcome = transaction.execute(status -> {
 				RawNotice notice = rawNotices.findById(rawNoticeId).orElseThrow();
 				SourceNotice parsed = parser.parse(notice.getPayload());
-				Applied applied = apply(notice, parsed);
+				Applied applied = apply(notice, parsed, parser.linksNoticesByProcedure());
 				notice.markNormalized(applied.note(), parsed.linkedIds(), clock.instant());
 				return applied.outcome();
 			});
@@ -126,19 +126,24 @@ public class NormalizationService {
 		}
 	}
 
-	private Applied apply(RawNotice raw, SourceNotice notice) {
+	/**
+	 * @param byProcedure whether the source links its notices by procedure
+	 * identifier, see {@link SourceParser#linksNoticesByProcedure()}
+	 */
+	private Applied apply(RawNotice raw, SourceNotice notice, boolean byProcedure) {
 		Instant now = clock.instant();
 		if (notice.type() == NoticeType.CALL_FOR_TENDERS) {
-			return createTender(raw, notice, NoticeKind.INITIAL, now);
+			return createTender(raw, notice, NoticeKind.INITIAL, now, byProcedure);
 		}
 		if (notice.type() == NoticeType.OTHER) {
 			return Applied.ignored("Not a call for tenders");
 		}
-		Optional<Tender> linked = linkedTender(raw, notice);
+		Optional<Tender> linked = linkedTender(raw, notice, byProcedure);
 		if (linked.isEmpty()) {
 			// A complete rectification carries the whole tender: it can stand alone.
 			return notice.type() == NoticeType.COMPLETE_RECTIFICATION
-					? createTender(raw, notice, NoticeKind.RECTIFICATION, now) : Applied.ignored(INITIAL_NOT_COLLECTED);
+					? createTender(raw, notice, NoticeKind.RECTIFICATION, now, byProcedure)
+					: Applied.ignored(INITIAL_NOT_COLLECTED);
 		}
 		Tender tender = linked.get();
 		// A rectification published before one already applied only completes the history.
@@ -169,11 +174,13 @@ public class NormalizationService {
 		return Applied.UPDATED;
 	}
 
-	private Applied createTender(RawNotice raw, SourceNotice notice, NoticeKind kind, Instant now) {
+	private Applied createTender(RawNotice raw, SourceNotice notice, NoticeKind kind, Instant now,
+			boolean byProcedure) {
 		if (notice.details().title() == null) {
 			return Applied.ignored("Notice without title");
 		}
-		Optional<Tender> rectified = kind == NoticeKind.INITIAL ? rectifiedBefore(raw, notice) : Optional.empty();
+		Optional<Tender> rectified = kind == NoticeKind.INITIAL ? rectifiedBefore(raw, notice, byProcedure)
+				: Optional.empty();
 		if (rectified.isPresent()) {
 			// The rectification citing it came later and prevails: the initial notice only completes.
 			Tender tender = rectified.get();
@@ -192,9 +199,10 @@ public class NormalizationService {
 	 * The tender made by a complete rectification received before this initial
 	 * notice and citing it, in the same source: the initial notice joins it
 	 * instead of making a second tender for the same consultation. Only an
-	 * explicit citation counts; with several candidates, none is chosen.
+	 * explicit citation counts, or for a source that links its notices by
+	 * procedure, the same procedure; with several candidates, none is chosen.
 	 */
-	private Optional<Tender> rectifiedBefore(RawNotice raw, SourceNotice notice) {
+	private Optional<Tender> rectifiedBefore(RawNotice raw, SourceNotice notice, boolean byProcedure) {
 		if (tenders.findBySourceAndExternalId(raw.getSource(), notice.externalId()).isPresent()) {
 			return Optional.empty();
 		}
@@ -204,7 +212,26 @@ public class NormalizationService {
 					raw.getSource(), notice.externalId(), candidates);
 			return Optional.empty();
 		}
+		if (candidates.isEmpty() && byProcedure) {
+			return sameProcedure(raw, notice);
+		}
 		return candidates.stream().findFirst().flatMap(tenders::findById);
+	}
+
+	/**
+	 * The only tender of the same source with the procedure of the notice.
+	 */
+	private Optional<Tender> sameProcedure(RawNotice raw, SourceNotice notice) {
+		if (notice.procedureId() == null) {
+			return Optional.empty();
+		}
+		List<Tender> found = tenders.findBySourceAndProcedureId(raw.getSource(), notice.procedureId());
+		if (found.size() > 1) {
+			log.warn("{} notice {} has the procedure {} of several tenders {}: none is chosen", raw.getSource(),
+					notice.externalId(), notice.procedureId(), found.stream().map(Tender::getId).toList());
+			return Optional.empty();
+		}
+		return found.stream().findFirst();
 	}
 
 	private static boolean isLatest(Tender tender, LocalDate publishedAt) {
@@ -230,17 +257,20 @@ public class NormalizationService {
 	/**
 	 * The tender the notice is attached to, if it was applied before: read
 	 * again, a notice stays with its tender. Otherwise the tender of the
-	 * notices it refers to, in its source.
+	 * notices it refers to, in its source; for a source that links its
+	 * notices by procedure, the tender of the same source and procedure.
 	 */
-	private Optional<Tender> linkedTender(RawNotice raw, SourceNotice notice) {
+	private Optional<Tender> linkedTender(RawNotice raw, SourceNotice notice, boolean byProcedure) {
 		Optional<Tender> attached = tenderNotices.findByRawNoticeId(raw.getId()).map(TenderNotice::getTender);
-		if (attached.isPresent() || notice.linkedIds().isEmpty()) {
+		if (attached.isPresent()) {
 			return attached;
 		}
-		return tenderNotices.findByTenderSourceAndExternalIdInOrderByIdAsc(raw.getSource(), notice.linkedIds())
-			.stream()
-			.map(TenderNotice::getTender)
-			.findFirst();
+		Optional<Tender> cited = notice.linkedIds().isEmpty() ? Optional.empty()
+				: tenderNotices.findByTenderSourceAndExternalIdInOrderByIdAsc(raw.getSource(), notice.linkedIds())
+					.stream()
+					.map(TenderNotice::getTender)
+					.findFirst();
+		return cited.isPresent() || !byProcedure ? cited : sameProcedure(raw, notice);
 	}
 
 	private static String truncate(String note) {

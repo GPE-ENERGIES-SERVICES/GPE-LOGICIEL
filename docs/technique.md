@@ -143,7 +143,7 @@ date limite contradictoire) sont dans `frontend/src/lib/analysis.ts`.
 
 ## Ajouter une source d'avis
 
-Le BOAMP est aujourd'hui la seule source. Une source se compose de deux beans Spring portant le
+Sources : le BOAMP (`collect/boamp`) et TED (`collect/ted`). Une source se compose de deux beans Spring portant le
 même nom de source (par exemple `TED`), sur le modèle de `collect/boamp` :
 
 1. un `SourceConnector` (`BoampConnector`) : son nom, son mode d'accès (`SourceAccess`) et la
@@ -183,6 +183,44 @@ qui partagent un identifiant de procédure, avec les données de GPE qui y sont 
 modification eForms (`ChangedNoticeIdentifier`) que le BOAMP publie avec `etat = INITIAL` et que
 `BoampNoticeParser` lit donc comme des avis initiaux. Ni correction du parseur ni fusion sans
 validation.
+
+### TED
+
+TED (Tenders Electronic Daily, Office des publications de l'UE) est lu par l'API Search v3
+(`POST https://api.ted.europa.eu/v3/notices/search`, `ted.base-url`), ouverte sans compte ni clé
+pour les avis publiés ; la politique d'usage de TED (700 requêtes par minute) est très
+au-dessus d'une collecte (une requête par 250 avis, environ 80 à 300 avis français par jour
+ouvré). `TedClient` demande les avis des acheteurs français (`buyer-country=FRA`) jour de
+publication par jour, avec les seuls champs lus par `TedNoticeParser` (`TedClient.FIELDS`) ;
+les liens vers l'avis ne sont gardés qu'en français et en XML multilingue (un avis stocké pèse
+environ 2 Ko au lieu de 6).
+
+Lecture (`TedNoticeParser`) :
+
+- type : `cn-standard`, `cn-social`, `cn-desg` = appel d'offres ; avec
+  `change-notice-version-identifier` = rectificatif complet (eForms répète tout l'avis), ou
+  annulation si `change-reason-code = cancel` ; `can-*` = attribution ; le reste (`pin-*`,
+  `veat`, `can-modif`…) est ignoré ;
+- rattachement : l'avis modifié est cité tantôt par son numéro de publication, tantôt par son
+  identifiant eForms (`uuid-01`) ; TED est donc la seule source dont les avis se rattachent
+  aussi par identifiant de procédure (`SourceParser.linksNoticesByProcedure`), dans la même
+  source et seulement s'il n'y a qu'une consultation candidate ;
+- départements : codes postaux du lieu d'exécution, sinon ses régions NUTS 3
+  (`NutsDepartments`, table NUTS 2024 d'Eurostat rapprochée du COG de l'INSEE : 101 régions,
+  101 départements), sinon code postal de l'acheteur ;
+- date limite : la plus proche des lots pour les offres, sinon (procédure restreinte ou
+  négociée) pour les candidatures ;
+- plateforme : `document-url-lot`, sinon `submission-url-lot`, sinon le profil d'acheteur.
+
+Vérification réelle du 12/10/2026 (base jetable) : 5 jours, 1 198 avis, 0 erreur,
+754 consultations, toutes avec titre, département et identifiant de procédure, 2 sans date
+limite (absente de l'avis). Limite : une attribution dont l'appel d'offres n'a pas été collecté
+reste en attente (424 sur ces 5 jours, consultations plus anciennes) et ne sera appliquée que
+si cet appel d'offres est importé et cité par son numéro de publication.
+
+TED est mis de côté par `collect.disabled-sources=TED` tant que ses avis ne sont pas
+rapprochés des consultations BOAMP de la même procédure (80 % des procédures françaises de TED
+sont aussi au BOAMP).
 
 ## Sauvegarde et restauration
 

@@ -1,0 +1,96 @@
+{
+  "change-reason-code": "cancel",
+  "deadline-receipt-tender-date-lot": [
+    "2026-09-25+01:00",
+    "2026-09-25+01:00"
+  ],
+  "notice-type": "cn-standard",
+  "publication-number": "570202-2026",
+  "buyer-profile": [
+    "https://www.achatpublic.com/sdm/ent2/gen/ficheCsl.action?PCSLID=CSL_2026_N-5zDkpRTK"
+  ],
+  "submission-url-lot": [
+    "https://www.achatpublic.com/sdm/ent2/gen/ficheCsl.action?PCSLID=CSL_2026_N-5zDkpRTK",
+    "https://www.achatpublic.com/sdm/ent2/gen/ficheCsl.action?PCSLID=CSL_2026_N-5zDkpRTK"
+  ],
+  "procedure-identifier": "57f7c1e7-f0e7-46b6-839f-aef6e33c704b",
+  "document-url-lot": [
+    "https://www.achatpublic.com/sdm/ent2/gen/ficheCsl.action?PCSLID=CSL_2026_N-5zDkpRTK",
+    "https://www.achatpublic.com/sdm/ent2/gen/ficheCsl.action?PCSLID=CSL_2026_N-5zDkpRTK"
+  ],
+  "publication-date": "2026-08-18+02:00",
+  "estimated-value-proc": "200000",
+  "contract-nature-main-proc": "services",
+  "links": {
+    "xml": {
+      "MUL": "https://ted.europa.eu/en/notice/570202-2026/xml"
+    },
+    "pdf": {
+      "FRA": "https://ted.europa.eu/fr/notice/570202-2026/pdf"
+    },
+    "pdfs": {
+      "FRA": "https://ted.europa.eu/fr/notice/570202-2026/pdfs"
+    },
+    "html": {
+      "FRA": "https://ted.europa.eu/fr/notice/-/detail/570202-2026"
+    },
+    "htmlDirect": {
+      "FRA": "https://ted.europa.eu/fr/notice/570202-2026/html"
+    }
+  },
+  "buyer-post-code": [
+    "34400"
+  ],
+  "identifier-lot": [
+    "LOT-0001",
+    "LOT-0002"
+  ],
+  "buyer-city": {
+    "mul": [
+      "Lunel-Viel"
+    ]
+  },
+  "notice-identifier": "1eec029e-ae8d-410e-9806-b3da2381de24",
+  "title-proc": {
+    "fra": "ASSISTANCE A MAITRISE D’OUVRAGE (AMO) POUR LE SUIVI D’EXPLOITATION ET LE CONTROLE FINANCIER DE L’UNITE DE VALORISATION ENERGETIQUE (UVE) DE LUNEL-VIEL"
+  },
+  "place-of-performance-subdiv-lot": [
+    "FRJ13",
+    "FRJ13"
+  ],
+  "place-of-performance-city-proc": [
+    "Lunel-Viel"
+  ],
+  "estimated-value-cur-proc": "EUR",
+  "change-notice-version-identifier": "3deb3666-27a9-46cd-bccc-38fa62534a46-01",
+  "procedure-type": "open",
+  "deadline-receipt-tender-time-lot": [
+    "12:00:00+01:00",
+    "12:00:00+01:00"
+  ],
+  "classification-cpv": [
+    "79100000",
+    "79311000",
+    "79100000",
+    "66171000"
+  ],
+  "buyer-name": {
+    "fra": [
+      "Syndicat Mixte Entre Pic et Etang"
+    ]
+  },
+  "notice-version": 1,
+  "place-of-performance-subdiv-proc": [
+    "FRJ13"
+  ],
+  "title-lot": {
+    "fra": [
+      "CONTROLE FINANCIER",
+      "CONTROLE FINANCIER"
+    ]
+  },
+  "description-proc": {
+    "fra": "Le titulaire réalise, pour le compte du Syndicat, les contrôle technique, administratif, juridique et financier de l’exécution du contrat de délégation de service public d’exploitation de l’UVE et de tous les actes s’y rattachant. Il doit pour cela disposer d’une excellente connaissance des clauses contractuelles établies entre le Syndicat et l’exploitant de l’UVE. Il conseille le Syndicat sur les mesures à prendre pour mettre en conformité et améliorer les prestations du contrat. Le titulaire est en lien direct avec l’exploitant de l’UVE de Lunel-Viel qui doit au Syndicat, et donc à l’assistant à maîtrise d’ouvrage qu’il missionne, tous les éléments de suivi. Le titulaire formalise les demandes de communication d’éléments et trace de manière écrite toutes les insuffisances, qu’elles soient temporaires (défaut de communication d’un élément) ou contractuelle (non atteinte des objectifs). Le titulaire conseille le Syndicat sur les suites à donner en ajustant la réponse à l’enjeu. Tous les écarts vis-à-vis de la règlementation et des dispositions contractuelles font l’objet d’une note descriptive à l’attention du Syndicat doublé d’une proposition de correspondance que le Syndicat pourra adresser à l’exploitant."
+  },
+  "internal-identifier-proc": "26-M03"
+}

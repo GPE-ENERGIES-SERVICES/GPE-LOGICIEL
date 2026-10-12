@@ -17,4 +17,16 @@ public interface SourceParser {
 	 */
 	SourceNotice parse(String payload);
 
+	/**
+	 * Whether the notices of the source are linked by their procedure
+	 * identifier when the notices they cite do not give their tender: a
+	 * change, an award or a cancellation then joins the only tender of the
+	 * same source and procedure, and an initial notice the tender made before
+	 * it by its change. Only for a source whose procedure identifiers are
+	 * reliable; never across sources.
+	 */
+	default boolean linksNoticesByProcedure() {
+		return false;
+	}
+
 }

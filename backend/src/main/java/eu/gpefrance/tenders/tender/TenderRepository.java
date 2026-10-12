@@ -14,6 +14,8 @@ public interface TenderRepository extends JpaRepository<Tender, Long>, JpaSpecif
 
 	Optional<Tender> findBySourceAndExternalId(String source, String externalId);
 
+	List<Tender> findBySourceAndProcedureId(String source, String procedureId);
+
 	/**
 	 * Tenders of the source made by a complete rectification received before
 	 * its initial notice, whose rectification cites the given notice

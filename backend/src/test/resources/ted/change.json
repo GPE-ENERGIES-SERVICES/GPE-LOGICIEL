@@ -1,0 +1,128 @@
+{
+  "change-reason-code": "cor-buy",
+  "deadline-receipt-tender-date-lot": [
+    "2026-10-14+02:00",
+    "2026-10-14+02:00",
+    "2026-10-14+02:00",
+    "2026-10-14+02:00"
+  ],
+  "notice-type": "cn-standard",
+  "publication-number": "696670-2026",
+  "buyer-profile": [
+    "https://www.achatpublic.com/sdm/ent2/gen/index.jsp"
+  ],
+  "submission-url-lot": [
+    "https://marchespublics.auvergnerhonealpes.eu",
+    "https://marchespublics.auvergnerhonealpes.eu",
+    "https://marchespublics.auvergnerhonealpes.eu",
+    "https://marchespublics.auvergnerhonealpes.eu"
+  ],
+  "change-description": {
+    "fra": [
+      "La rubrique Date limite de réception des offres (BT-131(d)-Lot) est modifiée de la manière suivante : au lieu de \"12/10/2026\", lire à présent : \"14/10/2026\". L'heure demeure inchangée. La rubrique Date d'ouverture (BT-132(d)-Lot) est modifiée de la manière suivante : au lieu de \"12/10/2026\", lire à présent : \"14/10/2026\". L'heure demeure inchangée.",
+      "La rubrique Date limite de réception des offres (BT-131(d)-Lot) est modifiée de la manière suivante : au lieu de \"12/10/2026\", lire à présent : \"14/10/2026\". L'heure demeure inchangée. La rubrique Date d'ouverture (BT-132(d)-Lot) est modifiée de la manière suivante : au lieu de \"12/10/2026\", lire à présent : \"14/10/2026\". L'heure demeure inchangée.",
+      "La rubrique Date limite de réception des offres (BT-131(d)-Lot) est modifiée de la manière suivante : au lieu de \"12/10/2026\", lire à présent : \"14/10/2026\". L'heure demeure inchangée. La rubrique Date d'ouverture (BT-132(d)-Lot) est modifiée de la manière suivante : au lieu de \"12/10/2026\", lire à présent : \"14/10/2026\". L'heure demeure inchangée.",
+      "La rubrique Date limite de réception des offres (BT-131(d)-Lot) est modifiée de la manière suivante : au lieu de \"12/10/2026\", lire à présent : \"14/10/2026\". L'heure demeure inchangée. La rubrique Date d'ouverture (BT-132(d)-Lot) est modifiée de la manière suivante : au lieu de \"12/10/2026\", lire à présent : \"14/10/2026\". L'heure demeure inchangée."
+    ]
+  },
+  "procedure-identifier": "9f6c99ee-0017-44b8-9d56-a84d1d115566",
+  "document-url-lot": [
+    "https://www.achatpublic.com/sdm/ent2/gen/index.jsp",
+    "https://www.achatpublic.com/sdm/ent2/gen/index.jsp",
+    "https://www.achatpublic.com/sdm/ent2/gen/index.jsp",
+    "https://www.achatpublic.com/sdm/ent2/gen/index.jsp"
+  ],
+  "place-of-performance-post-code-proc": [
+    "38000"
+  ],
+  "place-of-performance-post-code-lot": [
+    "38000",
+    "38000",
+    "38000",
+    "38000"
+  ],
+  "publication-date": "2026-10-09+02:00",
+  "estimated-value-proc": "0.00",
+  "contract-nature-main-proc": "services",
+  "links": {
+    "xml": {
+      "MUL": "https://ted.europa.eu/en/notice/696670-2026/xml"
+    },
+    "pdf": {
+      "FRA": "https://ted.europa.eu/fr/notice/696670-2026/pdf"
+    },
+    "pdfs": {
+      "FRA": "https://ted.europa.eu/fr/notice/696670-2026/pdfs"
+    },
+    "html": {
+      "FRA": "https://ted.europa.eu/fr/notice/-/detail/696670-2026"
+    },
+    "htmlDirect": {
+      "FRA": "https://ted.europa.eu/fr/notice/696670-2026/html"
+    }
+  },
+  "buyer-post-code": [
+    "69269"
+  ],
+  "identifier-lot": [
+    "LOT-0001",
+    "LOT-0003",
+    "LOT-0002",
+    "LOT-0004"
+  ],
+  "buyer-city": {
+    "mul": [
+      "Lyon cedex 2"
+    ]
+  },
+  "notice-identifier": "5275b05f-3a52-4ae8-8338-bcd1b4405650",
+  "title-proc": {
+    "fra": "AT38_LR_4Lots_2027"
+  },
+  "place-of-performance-subdiv-lot": [
+    "FRK24",
+    "FRK24",
+    "FRK24",
+    "FRK24"
+  ],
+  "place-of-performance-city-proc": [
+    "ISERE"
+  ],
+  "estimated-value-cur-proc": "EUR",
+  "change-notice-version-identifier": "4bbb43f2-3f35-43a8-a2c8-d791fbb00b27-01",
+  "procedure-type": "open",
+  "deadline-receipt-tender-time-lot": [
+    "12:00:00+02:00",
+    "12:00:00+02:00",
+    "12:00:00+02:00",
+    "12:00:00+02:00"
+  ],
+  "classification-cpv": [
+    "60112000",
+    "60112000",
+    "60112000",
+    "60112000",
+    "60112000"
+  ],
+  "buyer-name": {
+    "fra": [
+      "DM - Direction des mobilités"
+    ]
+  },
+  "notice-version": 2,
+  "place-of-performance-subdiv-proc": [
+    "FRK24"
+  ],
+  "title-lot": {
+    "fra": [
+      "Secteur Oisans",
+      "secteur Matheysine",
+      "Secteur Vercors",
+      "secteur Grésivaudan"
+    ]
+  },
+  "description-proc": {
+    "fra": "Marchés de roulage de l'Isère millésime 2027 (démarrage des prestations au 1er sept 2027)"
+  },
+  "internal-identifier-proc": "DAF_2026_000317"
+}
