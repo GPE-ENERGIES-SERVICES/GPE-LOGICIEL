@@ -4,8 +4,6 @@
  * deadlines stay current.
  */
 
-export type Random = ReturnType<typeof seededRandom>;
-
 export function seededRandom(seed: number) {
   let state = seed;
   const random = () => {

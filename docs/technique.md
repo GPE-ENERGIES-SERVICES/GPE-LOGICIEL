@@ -282,13 +282,17 @@ Un lien vers une plateforme n'est pas un fichier : les deux sont séparés.
 
 ## Sauvegarde et restauration
 
-Le service `backup` (image PostgreSQL) sauvegarde chaque jour à `BACKUP_TIME` (heure de
-Paris) :
+Le service `backup` (image PostgreSQL) sauvegarde une fois par jour, à `BACKUP_TIME` (heure de
+Paris) ou, si l'ordinateur était éteint ou en veille à cette heure, dès qu'il fonctionne de
+nouveau (vérification toutes les 10 minutes, `BACKUP_CHECK_EVERY`) :
 
 - la base : `database_AAAA-MM-JJ_HHMM.dump` (format `pg_dump` personnalisé) ;
 - les fichiers déposés : `files_AAAA-MM-JJ_HHMM.tar.gz`.
 
-Les sauvegardes de plus de `BACKUP_KEEP_DAYS` jours sont supprimées. `BACKUP_DIR` doit être
+Une machine qui reste éteinte ne fait aucune sauvegarde : vérifier régulièrement la date de la
+dernière (`ls backups`). Les sauvegardes quotidiennes de plus de `BACKUP_KEEP_DAYS` jours sont
+supprimées ; une sauvegarde nommée autrement (par exemple `database_avant-ted_…`, faite avant un
+déploiement) n'est jamais supprimée automatiquement. `BACKUP_DIR` doit être
 un dossier copié hors du serveur (partage réseau, dossier synchronisé, copie nocturne) : une
 sauvegarde restée sur le serveur ne protège pas d'une panne de disque.
 
