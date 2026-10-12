@@ -48,6 +48,9 @@ public class BoampNoticeParser implements SourceParser {
 
 	private static final Pattern EFORMS_LOT = Pattern.compile("^LOT-0*(\\d+)$");
 
+	/** Key of the eForms change section giving the notice that a change notice rectifies. */
+	private static final String CHANGED_NOTICE = "efbc:ChangedNoticeIdentifier";
+
 	private static final Set<String> AMOUNT_KEYS = Set.of("cbc:EstimatedOverallContractAmount", "valeurEstimee",
 			"estimationValeurTotal");
 
@@ -90,7 +93,7 @@ public class BoampNoticeParser implements SourceParser {
 				amount(findFirst(donnees, AMOUNT_KEYS::contains)), date(record.get("dateparution")), deadline(record),
 				noticeUrl(record, idweb), platformUrl(donnees), lots(donnees));
 
-		return new SourceNotice(idweb, type(record), linkedIds(record), details, changeDescription(donnees),
+		return new SourceNotice(idweb, type(record, donnees), linkedIds(record), details, changeDescription(donnees),
 				text(record.get("contractfolderid")));
 	}
 
@@ -102,9 +105,20 @@ public class BoampNoticeParser implements SourceParser {
 		return json == null ? jsonMapper.createObjectNode() : jsonMapper.readTree(json);
 	}
 
-	private static NoticeType type(JsonNode record) {
+	/**
+	 * The BOAMP publishes some eForms change notices with {@code etat =
+	 * INITIAL}: the change section ({@code efbc:ChangedNoticeIdentifier}) of
+	 * the full notice says it rectifies an earlier one. Only that explicit
+	 * marker counts: a notice merely citing another one ({@code annonce_lie})
+	 * may be a relaunch and stays a call for tenders.
+	 */
+	private static NoticeType type(JsonNode record, JsonNode donnees) {
 		String nature = text(record.get("nature"));
 		String etat = text(record.get("etat"));
+		if ("APPEL_OFFRE".equals(nature) && "INITIAL".equals(etat)
+				&& findFirst(donnees, CHANGED_NOTICE::equals) != null) {
+			return NoticeType.COMPLETE_RECTIFICATION;
+		}
 		if ("ATTRIBUTION".equals(nature)) {
 			return NoticeType.AWARD;
 		}

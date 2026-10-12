@@ -182,12 +182,14 @@ public class NormalizationService {
 			case COMPLETE_RECTIFICATION -> {
 				if (latest) {
 					tender.update(notice.details(), now);
+					tender.reopenIfDeadlineToCome(now);
 				}
 				attach(tender, raw, notice, NoticeKind.RECTIFICATION);
 			}
 			case RECTIFICATION -> {
 				if (latest && notice.details().deadline() != null) {
 					tender.changeDeadline(notice.details().deadline(), now);
+					tender.reopenIfDeadlineToCome(now);
 				}
 				attach(tender, raw, notice, NoticeKind.RECTIFICATION);
 			}

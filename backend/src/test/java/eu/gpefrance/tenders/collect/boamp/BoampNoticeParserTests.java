@@ -106,6 +106,34 @@ class BoampNoticeParserTests {
 		assertThat(details.lots().get(2).title()).isEqualTo("03 : Impression de flyers, dépliants et affiches");
 	}
 
+	/**
+	 * Real notices of one procedure, both published by the BOAMP with etat =
+	 * INITIAL: each is an eForms change notice of the previous one.
+	 */
+	@Test
+	void readsAnEformsChangeNoticePublishedAsInitialAsACompleteRectification() {
+		SourceNotice first = parse("change-as-initial-1");
+		SourceNotice second = parse("change-as-initial-2");
+
+		assertThat(first.type()).isEqualTo(NoticeType.COMPLETE_RECTIFICATION);
+		assertThat(second.type()).isEqualTo(NoticeType.COMPLETE_RECTIFICATION);
+		assertThat(second.linkedIds()).containsExactly("26-77966", "26-92510");
+		assertThat(second.procedureId()).isEqualTo(first.procedureId())
+			.isEqualTo("bac8a6d9-67fe-4707-832a-25485824ecdc");
+		assertThat(second.details().deadline()).isEqualTo(Instant.parse("2026-10-16T10:00:00Z"));
+	}
+
+	@Test
+	void keepsANoticeCitingAnotherWithoutChangeSectionAsACallForTenders() {
+		// The same notice without its eForms change section: only cited, as a relaunch is.
+		String withoutChange = fixture("change-as-initial-2").replace("efbc:ChangedNoticeIdentifier", "efbc:Other");
+
+		SourceNotice notice = parser.parse(withoutChange);
+
+		assertThat(notice.type()).isEqualTo(NoticeType.CALL_FOR_TENDERS);
+		assertThat(notice.linkedIds()).containsExactly("26-77966", "26-92510");
+	}
+
 	@Test
 	void readsTheProcedureIdentifierOfAnEformsNoticeOnly() {
 		assertThat(parse("eforms-works").procedureId()).isEqualTo("9d230084-9a6a-4272-bd8f-a9b7d123fa86");
@@ -229,8 +257,12 @@ class BoampNoticeParserTests {
 	}
 
 	private SourceNotice parse(String fixture) {
-		try (InputStream in = getClass().getResourceAsStream("/boamp/" + fixture + ".json")) {
-			return parser.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+		return parser.parse(fixture(fixture));
+	}
+
+	private String fixture(String name) {
+		try (InputStream in = getClass().getResourceAsStream("/boamp/" + name + ".json")) {
+			return new String(in.readAllBytes(), StandardCharsets.UTF_8);
 		}
 		catch (IOException ex) {
 			throw new UncheckedIOException(ex);

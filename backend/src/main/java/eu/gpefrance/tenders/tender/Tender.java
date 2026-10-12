@@ -278,6 +278,19 @@ public class Tender {
 		this.followUpAt = now;
 	}
 
+	/**
+	 * A tender closed because its deadline passed is open again when a
+	 * rectification of its source gives a deadline still to come. A tender
+	 * awarded, cancelled or unsuccessful stays so.
+	 */
+	public void reopenIfDeadlineToCome(Instant now) {
+		boolean awarded = notices.stream()
+			.anyMatch(notice -> notice.getKind() == NoticeKind.AWARD && notice.getSource().equals(source));
+		if (status == TenderStatus.CLOSED && !awarded && deadline != null && deadline.isAfter(now)) {
+			changeStatus(TenderStatus.ACTIVE, now);
+		}
+	}
+
 	public void cancel(Instant now) {
 		changeStatus(TenderStatus.CANCELLED, now);
 	}
