@@ -39,7 +39,7 @@ public interface RawNoticeRepository extends JpaRepository<RawNotice, Long> {
 			SELECT r.id FROM raw_notice r
 			WHERE r.source = :source AND r.normalization_note = :note
 			  AND EXISTS (SELECT 1 FROM tender_notice n JOIN tender t ON t.id = n.tender_id
-			              WHERE t.source = r.source AND n.external_id = ANY (r.linked_ids))
+			              WHERE t.source = r.source AND n.source = r.source AND n.external_id = ANY (r.linked_ids))
 			ORDER BY r.published_at, r.id
 			""")
 	List<Long> findWaitingForAKnownNotice(String source, String note);

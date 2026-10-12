@@ -165,9 +165,8 @@ protection n'est contournée ; une source qui refuse l'accès fait échouer son 
 créneau suivant.
 
 Identité : `source + external_id`, pour les avis bruts comme pour les consultations ; un avis
-n'est rattaché qu'à une consultation de sa source. Deux sources qui publient le même marché
-donnent deux consultations : leur rapprochement (règles déterministes, validation humaine)
-reste à concevoir.
+ne modifie qu'une consultation de sa source. Chaque avis de l'historique (`tender_notice`) garde
+sa source (V17).
 
 Identifiant de procédure : un parseur donne dans `SourceNotice.procedureId` l'identifiant eForms
 de la procédure (BOAMP `contractfolderid`, TED `procedure-identifier`), identique pour tous les
@@ -218,9 +217,32 @@ limite (absente de l'avis). Limite : une attribution dont l'appel d'offres n'a p
 reste en attente (424 sur ces 5 jours, consultations plus anciennes) et ne sera appliquée que
 si cet appel d'offres est importé et cité par son numéro de publication.
 
-TED est mis de côté par `collect.disabled-sources=TED` tant que ses avis ne sont pas
-rapprochés des consultations BOAMP de la même procédure (80 % des procédures françaises de TED
-sont aussi au BOAMP).
+### Rapprochement entre sources
+
+80 % des procédures françaises de TED sont aussi au BOAMP, avec le même identifiant de procédure
+eForms (mesure du 12/10/2026 sur 1 460 procédures). Seul cet identifiant exact sert au
+rapprochement : jamais une ressemblance de titre, d'acheteur ou de date.
+
+- **TED après le BOAMP** (cas courant ; le BOAMP est collecté avant TED, `@Order`) : un avis TED
+  sans consultation TED, dont la procédure est celle d'une seule consultation d'une autre source,
+  n'en crée pas : il est ajouté à l'historique de cette consultation avec sa source
+  (`SourceParser.defersToOtherSources`, TED seulement). Il ne la modifie jamais : ni champs, ni
+  statut, ni identifiant de procédure ; le résultat « attribué » et le filtre des marchés
+  attribués ne lisent que les avis de la source de la consultation, et un rectificatif BOAMP
+  reste « le plus récent » face aux avis TED. Le bilan TED le compte en « mises à jour ».
+- **Ambiguïté** : si la procédure est celle de plusieurs consultations d'autres sources, l'avis
+  TED est mis de côté (« Procedure of several tenders of other sources »), sans consultation ni
+  fusion.
+- **TED avant le BOAMP** : la consultation TED existe déjà ; le BOAMP crée la sienne comme avant,
+  et un rapprochement est proposé (`tender_match`, `SAME_PROCEDURE`, `PROPOSED`), visible sur
+  les deux fiches (`matches`). Aucune fusion : la décision (et la reprise des données de GPE
+  d'une fiche à l'autre) reste à faire par une personne.
+- **Consultation absente du BOAMP** : TED crée sa consultation, filtrée par les critères de
+  l'entreprise comme les autres.
+
+`scripts/report-cross-source.sql` (lecture seule) liste les rapprochements proposés et les avis
+TED mis de côté, avec les données de GPE de chaque côté. L'écran de validation des
+rapprochements (confirmer, rejeter, fusionner de façon réversible) n'est pas encore fait.
 
 ## Sauvegarde et restauration
 

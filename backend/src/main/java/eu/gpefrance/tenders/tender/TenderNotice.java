@@ -30,6 +30,10 @@ public class TenderNotice {
 	@JoinColumn(name = "tender_id")
 	private Tender tender;
 
+	/** Source that published the notice: the tender's own, or another one publishing the same consultation. */
+	@Column(nullable = false, updatable = false)
+	private String source;
+
 	@Column(name = "raw_notice_id", nullable = false, updatable = false)
 	private Long rawNoticeId;
 
@@ -52,9 +56,10 @@ public class TenderNotice {
 	protected TenderNotice() {
 	}
 
-	TenderNotice(Tender tender, Long rawNoticeId, String externalId, NoticeKind kind, LocalDate publishedAt,
-			Instant deadline, String details) {
+	TenderNotice(Tender tender, String source, Long rawNoticeId, String externalId, NoticeKind kind,
+			LocalDate publishedAt, Instant deadline, String details) {
 		this.tender = tender;
+		this.source = source;
 		this.rawNoticeId = rawNoticeId;
 		this.externalId = externalId;
 		this.kind = kind;
@@ -69,6 +74,10 @@ public class TenderNotice {
 
 	public Tender getTender() {
 		return tender;
+	}
+
+	public String getSource() {
+		return source;
 	}
 
 	public Long getRawNoticeId() {

@@ -70,8 +70,9 @@ class ProcedureIdMigrationTests {
 		long raw = jdbc.queryForObject("""
 				INSERT INTO raw_notice (source, external_id, payload, collected_at)
 				VALUES (?, ?, CAST(? AS jsonb), now()) RETURNING id""", Long.class, source, externalId, payload);
-		jdbc.update("INSERT INTO tender_notice (tender_id, raw_notice_id, external_id, kind) VALUES (?, ?, ?, 'INITIAL')",
-				tenderId, raw, externalId);
+		jdbc.update("""
+				INSERT INTO tender_notice (tender_id, raw_notice_id, external_id, kind, source)
+				VALUES (?, ?, ?, 'INITIAL', ?)""", tenderId, raw, externalId, source);
 	}
 
 	private String procedure(long tenderId) {

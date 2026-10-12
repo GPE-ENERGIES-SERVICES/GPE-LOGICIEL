@@ -163,7 +163,8 @@ public record TenderSearch(String q, List<String> department, String region, Str
 		Subquery<Long> awards = query.subquery(Long.class);
 		Root<TenderNotice> notice = awards.from(TenderNotice.class);
 		awards.select(notice.get("id"))
-			.where(cb.equal(notice.get("tender"), root), cb.equal(notice.get("kind"), NoticeKind.AWARD));
+			.where(cb.equal(notice.get("tender"), root), cb.equal(notice.get("kind"), NoticeKind.AWARD),
+					cb.equal(notice.get("source"), root.get("source")));
 		Predicate awarded = cb.exists(awards);
 		Expression<TenderStatus> status = root.get("status");
 		return cb.or(results.stream().map(result -> switch (result) {

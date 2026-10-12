@@ -83,6 +83,15 @@ public class TedNoticeParser implements SourceParser {
 		return true;
 	}
 
+	/**
+	 * Most French consultations on TED are on the BOAMP too, with the same
+	 * procedure identifier: the BOAMP tender stays the reference.
+	 */
+	@Override
+	public boolean defersToOtherSources() {
+		return true;
+	}
+
 	@Override
 	public SourceNotice parse(String payload) {
 		JsonNode notice = jsonMapper.readTree(payload);

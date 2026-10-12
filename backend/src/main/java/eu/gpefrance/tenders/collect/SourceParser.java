@@ -29,4 +29,17 @@ public interface SourceParser {
 		return false;
 	}
 
+	/**
+	 * Whether the source defers to the other sources for the consultations
+	 * they publish too: a notice that has no tender in its source, whose
+	 * procedure identifier is the one of a single tender of another source,
+	 * is only added to the history of that tender, which it never changes.
+	 * With several such tenders, the notice is set aside for a person. The
+	 * other sources are unchanged: when they publish later a consultation of
+	 * a tender of this source, a match is proposed instead.
+	 */
+	default boolean defersToOtherSources() {
+		return false;
+	}
+
 }

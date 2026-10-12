@@ -3,6 +3,7 @@ package eu.gpefrance.tenders.collect.boamp;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import eu.gpefrance.tenders.collect.SourceAccess;
@@ -14,6 +15,7 @@ import eu.gpefrance.tenders.collect.SourceRecord;
  * {@link BoampNoticeParser}.
  */
 @Component
+@Order(1)
 public class BoampConnector implements SourceConnector {
 
 	public static final String SOURCE = "BOAMP";

@@ -24,11 +24,15 @@ public class TenderService {
 
 	private final TenderFollowRepository follows;
 
+	private final TenderMatchRepository matches;
+
 	private final Clock clock;
 
-	public TenderService(TenderRepository tenders, TenderFollowRepository follows, Clock clock) {
+	public TenderService(TenderRepository tenders, TenderFollowRepository follows, TenderMatchRepository matches,
+			Clock clock) {
 		this.tenders = tenders;
 		this.follows = follows;
+		this.matches = matches;
 		this.clock = clock;
 	}
 
@@ -73,14 +77,14 @@ public class TenderService {
 
 	@Transactional(readOnly = true)
 	public TenderDetailResponse detail(Long id, Long userId) {
-		return TenderDetailResponse.from(find(id), isFollowed(id, userId));
+		return TenderDetailResponse.from(find(id), isFollowed(id, userId), matchesOf(id));
 	}
 
 	@Transactional
 	public TenderDetailResponse followUp(Long id, FollowUpRequest request, String user, Long userId) {
 		Tender tender = find(id);
 		tender.followUp(request.status(), request.commentOr(tender.getFollowUpComment()), user, clock.instant());
-		return TenderDetailResponse.from(tender, isFollowed(id, userId));
+		return TenderDetailResponse.from(tender, isFollowed(id, userId), matchesOf(id));
 	}
 
 	/**
@@ -96,6 +100,23 @@ public class TenderService {
 		else if (!followed) {
 			follows.deleteById(key);
 		}
+	}
+
+	/**
+	 * The tenders of other sources matched with this one, whichever side it
+	 * is on; a rejected match is left out.
+	 */
+	private List<TenderDetailResponse.MatchResponse> matchesOf(Long tenderId) {
+		return matches.findByTenderIdOrMatchedTenderIdOrderByIdAsc(tenderId, tenderId)
+			.stream()
+			.filter(match -> match.getStatus() != TenderMatch.MatchStatus.REJECTED)
+			.map(match -> {
+				Tender other = find(match.getTenderId().equals(tenderId) ? match.getMatchedTenderId()
+						: match.getTenderId());
+				return new TenderDetailResponse.MatchResponse(match.getId(), other.getId(), other.getSource(),
+						other.getExternalId(), other.getTitle(), match.getRule(), match.getStatus());
+			})
+			.toList();
 	}
 
 	private boolean isFollowed(Long tenderId, Long userId) {

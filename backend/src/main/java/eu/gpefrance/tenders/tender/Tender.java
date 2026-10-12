@@ -232,9 +232,23 @@ public class Tender {
 		return true;
 	}
 
+	/**
+	 * Adds a notice of the source of the tender to its history.
+	 */
 	public TenderNotice addNotice(Long rawNoticeId, String externalId, NoticeKind kind, LocalDate publishedAt,
 			Instant deadline, String details) {
-		TenderNotice notice = new TenderNotice(this, rawNoticeId, externalId, kind, publishedAt, deadline, details);
+		return addNotice(source, rawNoticeId, externalId, kind, publishedAt, deadline, details);
+	}
+
+	/**
+	 * Adds a notice to the history of the tender. A notice of another source
+	 * publishing the same consultation is only kept in the history: it never
+	 * changes the tender.
+	 */
+	public TenderNotice addNotice(String noticeSource, Long rawNoticeId, String externalId, NoticeKind kind,
+			LocalDate publishedAt, Instant deadline, String details) {
+		TenderNotice notice = new TenderNotice(this, noticeSource, rawNoticeId, externalId, kind, publishedAt,
+				deadline, details);
 		notices.add(notice);
 		return notice;
 	}

@@ -180,8 +180,8 @@ class LateInitialNoticeMigrationTests {
 	private void attach(Long tenderId, String externalId, NoticeKind kind, String... cited) {
 		long rawId = raw(externalId, cited);
 		jdbc.update("""
-				INSERT INTO tender_notice (tender_id, raw_notice_id, external_id, kind, published_at)
-				VALUES (?, ?, ?, ?, DATE '2026-09-25')""", tenderId, rawId, externalId, kind.name());
+				INSERT INTO tender_notice (tender_id, raw_notice_id, external_id, kind, published_at, source)
+				VALUES (?, ?, ?, ?, DATE '2026-09-25', 'BOAMP')""", tenderId, rawId, externalId, kind.name());
 	}
 
 	private long raw(String externalId, String... linkedIds) {

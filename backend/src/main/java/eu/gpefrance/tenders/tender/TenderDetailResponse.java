@@ -17,9 +17,13 @@ public record TenderDetailResponse(Long id, String source, String externalId, St
 		Instant deadline, String noticeUrl, String platformUrl, TenderStatus status, Boolean retained,
 		String filterReason, FollowUpStatus followUpStatus, String followUpComment, String followUpBy,
 		Instant followUpAt, List<LotResponse> lots, List<NoticeResponse> notices, ResultResponse result,
-		boolean followed) {
+		boolean followed, List<MatchResponse> matches) {
 
-	static TenderDetailResponse from(Tender tender, boolean followed) {
+	/**
+	 * @param matches the tenders of other sources proposed or confirmed as the
+	 * same consultation
+	 */
+	static TenderDetailResponse from(Tender tender, boolean followed, List<MatchResponse> matches) {
 		return new TenderDetailResponse(tender.getId(), tender.getSource(), tender.getExternalId(), tender.getTitle(),
 				tender.getDescription(), tender.getBuyer(), tender.getReference(), tender.getLocation(),
 				tender.getDepartments(), tender.getMarketTypes(), tender.getProcedureType(), tender.getCpvCodes(),
@@ -33,20 +37,23 @@ public record TenderDetailResponse(Long id, String source, String externalId, St
 					.toList(),
 				tender.getNotices()
 					.stream()
-					.map(notice -> new NoticeResponse(notice.getExternalId(), notice.getKind(),
+					.map(notice -> new NoticeResponse(notice.getSource(), notice.getExternalId(), notice.getKind(),
 							notice.getPublishedAt(), notice.getDeadline(), notice.getDetails()))
 					.toList(),
-				ResultResponse.of(tender), followed);
+				ResultResponse.of(tender), followed, matches);
 	}
 
 	/**
 	 * Outcome read from the notices and the status: AWARDED once an award
-	 * notice is published, CANCELLED or UNSUCCESSFUL from the status.
+	 * notice of the source of the tender is published (not one of another
+	 * source kept in its history), CANCELLED or UNSUCCESSFUL from the status.
 	 */
 	public record ResultResponse(String kind) {
 
 		static ResultResponse of(Tender tender) {
-			if (tender.getNotices().stream().anyMatch(notice -> notice.getKind() == NoticeKind.AWARD)) {
+			if (tender.getNotices()
+				.stream()
+				.anyMatch(notice -> notice.getKind() == NoticeKind.AWARD && notice.getSource().equals(tender.getSource()))) {
 				return new ResultResponse("AWARDED");
 			}
 			return switch (tender.getStatus()) {
@@ -60,8 +67,21 @@ public record TenderDetailResponse(Long id, String source, String externalId, St
 	public record LotResponse(String number, String title, BigDecimal estimatedAmount) {
 	}
 
-	public record NoticeResponse(String externalId, NoticeKind kind, LocalDate publishedAt, Instant deadline,
-			String details) {
+	/**
+	 * @param source the source that published the notice: the one of the
+	 * tender, or another one publishing the same consultation
+	 */
+	public record NoticeResponse(String source, String externalId, NoticeKind kind, LocalDate publishedAt,
+			Instant deadline, String details) {
+	}
+
+	/**
+	 * A tender of another source that is probably the same consultation.
+	 * @param tenderId the other tender
+	 * @param rule why they were matched, such as SAME_PROCEDURE
+	 */
+	public record MatchResponse(Long id, Long tenderId, String source, String externalId, String title,
+			String rule, TenderMatch.MatchStatus status) {
 	}
 
 }
