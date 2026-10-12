@@ -214,6 +214,10 @@ public class NormalizationService {
 	}
 
 	private static void attach(Tender tender, RawNotice raw, SourceNotice notice, NoticeKind kind) {
+		if (!tender.identifyProcedure(notice.procedureId())) {
+			log.warn("{} notice {} gives the procedure {} to a tender of the procedure {}: the first one is kept",
+					raw.getSource(), notice.externalId(), notice.procedureId(), tender.getProcedureId());
+		}
 		boolean alreadyAttached = tender.getNotices()
 			.stream()
 			.anyMatch(existing -> existing.getRawNoticeId().equals(raw.getId()));

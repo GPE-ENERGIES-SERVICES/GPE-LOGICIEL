@@ -41,6 +41,15 @@ public class Tender {
 	@Column(name = "external_id", nullable = false, updatable = false)
 	private String externalId;
 
+	/**
+	 * Identifier of the procedure shared by every eForms notice of the
+	 * consultation, whatever the source that publishes it (BOAMP
+	 * contractfolderid, TED procedure-identifier), in lower case. Null when no
+	 * notice gave one.
+	 */
+	@Column(name = "procedure_id")
+	private String procedureId;
+
 	@Column(nullable = false)
 	private String title;
 
@@ -207,6 +216,22 @@ public class Tender {
 		updatedAt = now;
 	}
 
+	/**
+	 * Records the procedure identifier given by a notice, if none is known
+	 * yet. A different identifier is never written over the first one.
+	 * @return false when the notice gives another identifier than the one known
+	 */
+	public boolean identifyProcedure(String procedureId) {
+		if (procedureId == null || procedureId.equals(this.procedureId)) {
+			return true;
+		}
+		if (this.procedureId != null) {
+			return false;
+		}
+		this.procedureId = procedureId;
+		return true;
+	}
+
 	public TenderNotice addNotice(Long rawNoticeId, String externalId, NoticeKind kind, LocalDate publishedAt,
 			Instant deadline, String details) {
 		TenderNotice notice = new TenderNotice(this, rawNoticeId, externalId, kind, publishedAt, deadline, details);
@@ -271,6 +296,10 @@ public class Tender {
 
 	public String getExternalId() {
 		return externalId;
+	}
+
+	public String getProcedureId() {
+		return procedureId;
 	}
 
 	public String getTitle() {

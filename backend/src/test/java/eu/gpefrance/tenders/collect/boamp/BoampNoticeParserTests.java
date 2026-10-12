@@ -107,6 +107,14 @@ class BoampNoticeParserTests {
 	}
 
 	@Test
+	void readsTheProcedureIdentifierOfAnEformsNoticeOnly() {
+		assertThat(parse("eforms-works").procedureId()).isEqualTo("9d230084-9a6a-4272-bd8f-a9b7d123fa86");
+		assertThat(parse("eforms-change").procedureId()).isEqualTo("5e37d2bf-7ea0-417c-8f45-b4a97b825e1a");
+		assertThat(parse("mapa").procedureId()).isNull();
+		assertThat(parse("award").procedureId()).isNull();
+	}
+
+	@Test
 	void parsesAMapaNotice() {
 		TenderDetails details = parse("mapa").details();
 

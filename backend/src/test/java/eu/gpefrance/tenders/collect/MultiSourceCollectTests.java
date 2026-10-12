@@ -227,6 +227,19 @@ class MultiSourceCollectTests {
 	}
 
 	@Test
+	void theTenderKeepsTheFirstProcedureIdentifierOfItsNotices() {
+		testSource.publish(TODAY, withProcedure(test("26-1", "CALL_FOR_TENDERS", null, null), "AB-12"),
+				withProcedure(test("26-2", "RECTIFICATION", "26-1", null), "other"),
+				test("26-3", "CALL_FOR_TENDERS", null, null));
+
+		service.collect("TEST", CollectTrigger.MANUAL, TODAY);
+
+		assertThat(tenders.findBySourceAndExternalId("TEST", "26-1").orElseThrow().getProcedureId())
+			.isEqualTo("ab-12");
+		assertThat(tenders.findBySourceAndExternalId("TEST", "26-3").orElseThrow().getProcedureId()).isNull();
+	}
+
+	@Test
 	void theRunKeepsTheFullReportOfItsSource() {
 		testSource.publish(TODAY, test("26-1", "CALL_FOR_TENDERS", null, null),
 				test("26-2", "RECTIFICATION", "26-9", null), new SourceRecord(null, TODAY, "{}"));
@@ -360,6 +373,12 @@ class MultiSourceCollectTests {
 		return new SourceRecord(idweb, TODAY, json);
 	}
 
+	private static SourceRecord withProcedure(SourceRecord record, String procedureId) {
+		String payload = record.payload().strip();
+		return new SourceRecord(record.externalId(), record.publishedAt(),
+				payload.substring(0, payload.length() - 1) + ", \"procedure\": \"" + procedureId + "\"}");
+	}
+
 	private static SourceRecord test(String id, String type, String linkedId, String deadline) {
 		String json = """
 				{"id": "%s", "type": "%s", "linked": %s, "title": "Marché %s", "deadline": %s}
@@ -473,7 +492,7 @@ class MultiSourceCollectTests {
 					List.of("13"), List.of(MarketType.WORKS), null, List.of(), null, LocalDate.of(2026, 10, 5),
 					deadline == null ? null : Instant.parse(deadline), null, null, List.of());
 			return new SourceNotice(notice.get("id").asString(), NoticeType.valueOf(notice.get("type").asString()),
-					linked, details, null);
+					linked, details, null, notice.path("procedure").asString(null));
 		}
 
 	}

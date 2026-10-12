@@ -169,6 +169,21 @@ n'est rattaché qu'à une consultation de sa source. Deux sources qui publient l
 donnent deux consultations : leur rapprochement (règles déterministes, validation humaine)
 reste à concevoir.
 
+Identifiant de procédure : un parseur donne dans `SourceNotice.procedureId` l'identifiant eForms
+de la procédure (BOAMP `contractfolderid`, TED `procedure-identifier`), identique pour tous les
+avis d'une consultation quelle que soit la source. Il est conservé en minuscules dans
+`tender.procedure_id` (V16) ; le premier connu n'est jamais remplacé (un désaccord est écrit dans
+les journaux). V16 l'a renseigné pour les consultations BOAMP déjà collectées dont les avis
+donnent un seul identifiant (4 230 sur 7 378 au 12/10/2026, les autres avis n'étant pas au format
+eForms).
+
+`scripts/report-shared-procedures.sql` (lecture seule) liste les consultations d'une même source
+qui partagent un identifiant de procédure, avec les données de GPE qui y sont attachées. Au
+12/10/2026 : 70 procédures (143 consultations BOAMP), aucune donnée de GPE. Cause : des avis de
+modification eForms (`ChangedNoticeIdentifier`) que le BOAMP publie avec `etat = INITIAL` et que
+`BoampNoticeParser` lit donc comme des avis initiaux. Ni correction du parseur ni fusion sans
+validation.
+
 ## Sauvegarde et restauration
 
 Le service `backup` (image PostgreSQL) sauvegarde chaque jour à `BACKUP_TIME` (heure de

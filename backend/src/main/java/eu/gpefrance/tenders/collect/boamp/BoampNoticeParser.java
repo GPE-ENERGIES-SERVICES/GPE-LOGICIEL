@@ -90,7 +90,8 @@ public class BoampNoticeParser implements SourceParser {
 				amount(findFirst(donnees, AMOUNT_KEYS::contains)), date(record.get("dateparution")), deadline(record),
 				noticeUrl(record, idweb), platformUrl(donnees), lots(donnees));
 
-		return new SourceNotice(idweb, type(record), linkedIds(record), details, changeDescription(donnees));
+		return new SourceNotice(idweb, type(record), linkedIds(record), details, changeDescription(donnees),
+				text(record.get("contractfolderid")));
 	}
 
 	/**
