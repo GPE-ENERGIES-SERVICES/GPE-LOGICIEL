@@ -218,6 +218,8 @@ for (const tender of MOCK_TENDERS) {
     {
       id: tender.id,
       version: 1,
+      origin: "UPLOAD",
+      dceLinkId: null,
       status: "DONE",
       errorMessage: null,
       uploadedBy: tender.followUpBy ?? rnd.pick(COLLEAGUES),

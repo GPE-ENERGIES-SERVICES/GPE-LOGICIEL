@@ -635,6 +635,7 @@ function makeTender(id: number, past: boolean): TenderDetail {
   const notices: TenderDetail["notices"] = [];
   const rectified = rnd.chance(past ? 0.08 : 0.12) && deadlineOn - publishedOn > 14;
   notices.push({
+    source,
     externalId,
     kind: "INITIAL",
     publishedAt,
@@ -643,6 +644,7 @@ function makeTender(id: number, past: boolean): TenderDetail {
   });
   if (rectified) {
     notices.push({
+      source,
       externalId: `${year.slice(2)}-${rnd.between(160000, 170000)}`,
       kind: "RECTIFICATION",
       publishedAt: day(Math.min(0, publishedOn + 6)),
@@ -659,6 +661,7 @@ function makeTender(id: number, past: boolean): TenderDetail {
     if (draw < 0.42) {
       result = { kind: "AWARDED" };
       notices.push({
+        source,
         externalId: `${year.slice(2)}-${rnd.between(170000, 199999)}`,
         kind: "AWARD",
         publishedAt: day(Math.max(deadlineOn + 5, Math.min(deadlineOn + rnd.between(30, 75), -2))),
@@ -669,6 +672,7 @@ function makeTender(id: number, past: boolean): TenderDetail {
       status = "UNSUCCESSFUL";
       result = { kind: "UNSUCCESSFUL" };
       notices.push({
+        source,
         externalId: `${year.slice(2)}-${rnd.between(170000, 199999)}`,
         kind: "CANCELLATION",
         publishedAt: day(Math.min(deadlineOn + rnd.between(15, 40), -2)),
@@ -685,6 +689,7 @@ function makeTender(id: number, past: boolean): TenderDetail {
   }
   if (status === "CANCELLED") {
     notices.push({
+      source,
       externalId: `${year.slice(2)}-${rnd.between(170000, 199999)}`,
       kind: "CANCELLATION",
       publishedAt: day(Math.min(0, publishedOn + rnd.between(3, 10))),

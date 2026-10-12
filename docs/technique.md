@@ -269,6 +269,12 @@ Un lien vers une plateforme n'est pas un fichier : les deux sont séparés.
 - **API** : `GET /api/tenders/{id}/dce-links` (liens, quelle que soit la source de la
   consultation) et `GET /api/tenders/{id}/dossiers` (fichiers). Un bouton de téléchargement ne
   doit exister que pour un document de dossier, jamais pour un lien.
+- **Fiche consultation** : la section « Documents (DCE) » montre d'abord « Accès au DCE »
+  (`components/DceLinks` : plateforme, avis qui l'indique, état, lien « Ouvrir la plateforme »),
+  puis les dossiers déposés ou récupérés. L'historique des publications
+  (`components/NoticeHistory`) indique la source de chaque avis et les consultations d'autres
+  sources proposées comme identiques ; le badge « Modifiée par un rectificatif » ne compare que
+  les avis de la source de la consultation.
 - **Récupération automatique** : `document/DceRetriever` fixe le contrat d'une future
   implémentation, une par plateforme dont les conditions d'utilisation le permettent ; aucune
   n'existe. Rien n'est téléchargé automatiquement. Une plateforme qui demande un compte, une

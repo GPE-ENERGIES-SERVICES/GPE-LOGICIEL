@@ -93,11 +93,26 @@ export type TenderDetail = TenderSummary & {
   followUpAt: string | null;
   lots: { number: string; title: string | null; estimatedAmount: number | null }[];
   notices: {
+    /** Source that published the notice: the one of the tender, or another publishing the same consultation. */
+    source: string;
     externalId: string;
     kind: NoticeKind;
     publishedAt: string | null;
     deadline: string | null;
     details: string | null;
   }[];
+  /** Consultations of other sources found to be the same one (same procedure), to be confirmed by a person. */
+  matches?: TenderMatch[];
 };
 
+
+export type TenderMatch = {
+  id: number;
+  /** The tender of the other source. */
+  tenderId: number;
+  source: string;
+  externalId: string;
+  title: string;
+  rule: "SAME_PROCEDURE";
+  status: "PROPOSED" | "CONFIRMED" | "REJECTED";
+};

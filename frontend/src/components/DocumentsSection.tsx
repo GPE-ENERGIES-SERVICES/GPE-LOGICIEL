@@ -15,6 +15,7 @@ import { changePieceType, getDossiers, retryDossier, uploadDossier } from "@/ser
 import { available, DEMO_DATA } from "@/services/http";
 import type { DocumentInfo, Dossier, PieceType } from "@/types/document";
 
+import { DceLinks } from "./DceLinks";
 import { DocumentSearch } from "./DocumentSearch";
 
 const ACCEPTED = ".zip,.pdf,.doc,.docx,.odt,.rtf,.xls,.xlsx,.xlsm,.ods,.csv,.dwg,.dxf,.jpg,.jpeg,.png,.tif,.tiff";
@@ -93,8 +94,10 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
   return (
     <div className="dossier">
       <p>
-        <strong>Version {dossier.version}</strong> déposée le {formatDateTime(dossier.uploadedAt)}
-        {dossier.uploadedBy ? ` par ${dossier.uploadedBy}` : ""}
+        <strong>Version {dossier.version}</strong>{" "}
+        {dossier.origin === "RETRIEVED"
+          ? `récupérée sur la plateforme le ${formatDateTime(dossier.uploadedAt)}`
+          : `déposée le ${formatDateTime(dossier.uploadedAt)}${dossier.uploadedBy ? ` par ${dossier.uploadedBy}` : ""}`}
         <span className={dossier.status === "FAILED" ? "badge urgent" : "badge"}>
           {DOSSIER_STATUS_LABELS[dossier.status]}
         </span>
@@ -183,6 +186,9 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
 
   return (
     <div>
+      <h3>Accès au DCE</h3>
+      <DceLinks tenderId={tenderId} />
+      <h3>Dossiers déposés</h3>
       <form className="upload" onSubmit={submit}>
         <p className="hint">
           Téléchargez le DCE sur la plateforme de l&apos;acheteur puis déposez-le ici (archive ZIP ou fichiers). Chaque

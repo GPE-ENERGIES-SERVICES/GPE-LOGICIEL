@@ -1,6 +1,11 @@
-import type { DocumentHit, DocumentInfo, Dossier, PieceType } from "@/types/document";
+import type { DceLink, DocumentHit, DocumentInfo, Dossier, PieceType } from "@/types/document";
 
 import { api, upload } from "./http";
+
+/** Where the consultation file can be obtained, as the notices of each source give it: links, not files. */
+export function getDceLinks(tenderId: number): Promise<DceLink[]> {
+  return api(`/api/tenders/${tenderId}/dce-links`);
+}
 
 /** Versions of the consultation file uploaded for a tender, the latest first. */
 export function getDossiers(tenderId: number): Promise<Dossier[]> {

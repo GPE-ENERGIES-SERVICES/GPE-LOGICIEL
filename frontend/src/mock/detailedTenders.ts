@@ -79,8 +79,9 @@ export const DETAILED_TENDERS: TenderDetail[] = [
     platformName: PLATFORMS.securises.name,
     platformUrl: PLATFORMS.securises.url,
     notices: [
-      { externalId: "26-118452", kind: "INITIAL", publishedAt: day(-6), deadline: at(9, 12), details: null },
+      { source: "BOAMP", externalId: "26-118452", kind: "INITIAL", publishedAt: day(-6), deadline: at(9, 12), details: null },
       {
+        source: "BOAMP",
         externalId: "26-121907",
         kind: "RECTIFICATION",
         publishedAt: day(-1),
@@ -138,7 +139,7 @@ export const DETAILED_TENDERS: TenderDetail[] = [
     },
     platformName: PLATFORMS.place.name,
     platformUrl: PLATFORMS.place.url,
-    notices: [{ externalId: "26-120388", kind: "INITIAL", publishedAt: day(-3), deadline: at(27, 16), details: null }],
+    notices: [{ source: "BOAMP", externalId: "26-120388", kind: "INITIAL", publishedAt: day(-3), deadline: at(27, 16), details: null }],
   },
   {
     id: 3,
@@ -193,7 +194,7 @@ export const DETAILED_TENDERS: TenderDetail[] = [
     },
     platformName: PLATFORMS.place.name,
     platformUrl: PLATFORMS.place.url,
-    notices: [{ externalId: "26-109214", kind: "INITIAL", publishedAt: day(-20), deadline: at(5, 12), details: null }],
+    notices: [{ source: "BOAMP", externalId: "26-109214", kind: "INITIAL", publishedAt: day(-20), deadline: at(5, 12), details: null }],
   },
   {
     id: 4,
@@ -243,7 +244,7 @@ export const DETAILED_TENDERS: TenderDetail[] = [
     },
     platformName: PLATFORMS.achatpublic.name,
     platformUrl: PLATFORMS.achatpublic.url,
-    notices: [{ externalId: "26-101577", kind: "INITIAL", publishedAt: day(-30), deadline: at(2, 12), details: null }],
+    notices: [{ source: "BOAMP", externalId: "26-101577", kind: "INITIAL", publishedAt: day(-30), deadline: at(2, 12), details: null }],
   },
   {
     id: 5,
@@ -289,7 +290,7 @@ export const DETAILED_TENDERS: TenderDetail[] = [
     },
     platformName: PLATFORMS.info.name,
     platformUrl: PLATFORMS.info.url,
-    notices: [{ externalId: "26-113940", kind: "INITIAL", publishedAt: day(-12), deadline: at(1, 12), details: null }],
+    notices: [{ source: "BOAMP", externalId: "26-113940", kind: "INITIAL", publishedAt: day(-12), deadline: at(1, 12), details: null }],
   },
   {
     id: 6,
@@ -342,8 +343,8 @@ export const DETAILED_TENDERS: TenderDetail[] = [
     platformName: PLATFORMS.achatpublic.name,
     platformUrl: PLATFORMS.achatpublic.url,
     notices: [
-      { externalId: "26-034871", kind: "INITIAL", publishedAt: day(-240), deadline: at(-205, 12), details: null },
-      { externalId: "26-071206", kind: "AWARD", publishedAt: day(-150), deadline: null, details: null },
+      { source: "BOAMP", externalId: "26-034871", kind: "INITIAL", publishedAt: day(-240), deadline: at(-205, 12), details: null },
+      { source: "BOAMP", externalId: "26-071206", kind: "AWARD", publishedAt: day(-150), deadline: null, details: null },
     ],
   },
 ];

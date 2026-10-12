@@ -288,13 +288,20 @@ public class TedNoticeParser implements SourceParser {
 
 	/**
 	 * Where the consultation documents are: the address given for the
-	 * documents, or else for the submission, or else the buyer profile.
+	 * documents, or else for the submission, or else the buyer profile. Read
+	 * as the BOAMP addresses: an address starting with "www." is taken as
+	 * https, anything else than an http(s) address is skipped.
 	 */
 	private static String platformUrl(JsonNode notice) {
 		for (String field : List.of("document-url-lot", "submission-url-lot", "buyer-profile")) {
-			List<String> urls = texts(notice.get(field));
-			if (!urls.isEmpty()) {
-				return urls.getFirst().replace("&amp;", "&");
+			for (String value : texts(notice.get(field))) {
+				String url = value.replace("&amp;", "&");
+				if (url.startsWith("www.")) {
+					url = "https://" + url;
+				}
+				if (url.startsWith("http://") || url.startsWith("https://")) {
+					return url;
+				}
 			}
 		}
 		return null;

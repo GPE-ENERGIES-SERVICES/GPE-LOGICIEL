@@ -12,7 +12,7 @@ import type { Alert, AlertInput, AlertSummary } from "@/types/alert";
 import type { AwardedContract, AwardSearch } from "@/types/award";
 import type { TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
-import type { DocumentHit, DocumentInfo, PieceType } from "@/types/document";
+import type { DceLink, DocumentHit, DocumentInfo, PieceType } from "@/types/document";
 import type { CollectJournal, CollectRun, CollectSource } from "@/types/settings";
 import type {
   FollowUpStatus,
@@ -650,6 +650,27 @@ function lastBoampRun(): CollectRun {
   };
 }
 
+/** The address of the platform given by the notice of the tender: a link to open by hand. */
+function dceLinks(tender: TenderDetail): DceLink[] {
+  if (!tender.platformUrl) {
+    return [];
+  }
+  const seen = `${tender.publishedAt ?? new Date().toISOString().slice(0, 10)}T07:00:00Z`;
+  return [
+    {
+      id: tender.id,
+      source: tender.source,
+      url: tender.platformUrl,
+      platform: new URL(tender.platformUrl).hostname.replace(/^www\./, ""),
+      status: "AVAILABLE",
+      statusDetail: null,
+      firstSeenAt: seen,
+      lastSeenAt: seen,
+      checkedAt: null,
+    },
+  ];
+}
+
 function collectJournal(): CollectJournal {
   return { running: false, runs: [lastBoampRun()] };
 }
@@ -679,6 +700,7 @@ const ROUTES: Route[] = [
   ["PUT", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, true)],
   ["DELETE", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, false)],
   ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id] ?? []],
+  ["GET", /^\/api\/tenders\/(\d+)\/dce-links$/, (id) => dceLinks(find(id))],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
   ["GET", /^\/api\/tenders\/(\d+)\/documents\/search$/, (id, url) => searchDocuments(id, url)],
   ["GET", /^\/api\/tenders\/(\d+)\/awards$/, (id) => MOCK_AWARDS.filter((award) => award.tenderId === find(id).id)],

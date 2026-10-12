@@ -7,6 +7,7 @@ import { Suspense, useState, type ReactNode } from "react";
 import { AnalysisSection } from "@/components/analysis/AnalysisSection";
 import { DeadlineBadge } from "@/components/DeadlineBadge";
 import { DocumentsSection } from "@/components/DocumentsSection";
+import { NoticeHistory } from "@/components/NoticeHistory";
 import { FollowButton } from "@/components/FollowButton";
 import { FollowUpForm } from "@/components/FollowUpForm";
 import {
@@ -17,7 +18,6 @@ import {
   formatLongDateTime,
   FOLLOW_UP_LABELS,
   MARKET_TYPE_LABELS,
-  NOTICE_KIND_LABELS,
   PROCEDURE_LABELS,
   STATUS_LABELS,
 } from "@/lib/format";
@@ -98,8 +98,14 @@ function TenderDetails() {
   const outcome =
     tender.result?.kind === "AWARDED" ? "Attribuée" : tender.status !== "ACTIVE" ? STATUS_LABELS[tender.status] : null;
 
-  // Rule RM2: when a rectification moved the deadline, the change is highlighted.
-  const announcedDeadlines = new Set(tender.notices.map((notice) => notice.deadline).filter(Boolean));
+  // Rule RM2: when a rectification moved the deadline, the change is highlighted. Only the notices of the source
+  // of the consultation count: another source publishing it never changes it.
+  const announcedDeadlines = new Set(
+    tender.notices
+      .filter((notice) => notice.source === tender.source)
+      .map((notice) => notice.deadline)
+      .filter(Boolean),
+  );
   const deadlineChanged = announcedDeadlines.size > 1;
   const deadline = (
     <>
@@ -120,7 +126,6 @@ function TenderDetails() {
   const info = tender.keyInfo;
   const visit = info?.siteVisit;
   const platform = tender.platformName ?? (tender.platformUrl ? hostOf(tender.platformUrl) : null);
-  const notices = [...tender.notices].sort((a, b) => (a.publishedAt ?? "").localeCompare(b.publishedAt ?? ""));
   const cpv = tender.cpv ?? tender.cpvCodes.map((code) => ({ code, label: "" }));
 
   return (
@@ -341,16 +346,7 @@ function TenderDetails() {
 
       <section className="card">
         <h2>Historique des publications</h2>
-        <ol className="history">
-          {notices.map((notice) => (
-            <li key={notice.externalId}>
-              <strong>{NOTICE_KIND_LABELS[notice.kind]}</strong> du {formatDate(notice.publishedAt)} (
-              {notice.externalId})
-              {notice.deadline && <> — date limite annoncée : {formatDateTime(notice.deadline)}</>}
-              {notice.details && <p className="description">{notice.details}</p>}
-            </li>
-          ))}
-        </ol>
+        <NoticeHistory tender={tender} />
       </section>
     </article>
   );

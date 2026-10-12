@@ -149,6 +149,19 @@ class TedNoticeParserTests {
 	}
 
 	@Test
+	void readsThePlatformAddressAsTheBoampAddresses() {
+		String withoutScheme = """
+				{"publication-number": "1-2026", "notice-type": "cn-standard",
+				 "document-url-lot": ["www.marches-securises.fr"]}""";
+		String notAnAddress = """
+				{"publication-number": "1-2026", "notice-type": "cn-standard",
+				 "document-url-lot": ["voir le règlement"], "buyer-profile": ["https://achats.example.fr"]}""";
+
+		assertThat(parser.parse(withoutScheme).details().platformUrl()).isEqualTo("https://www.marches-securises.fr");
+		assertThat(parser.parse(notAnAddress).details().platformUrl()).isEqualTo("https://achats.example.fr");
+	}
+
+	@Test
 	void refusesANoticeWithoutPublicationNumber() {
 		assertThatThrownBy(() -> parser.parse("{\"notice-type\": \"cn-standard\"}"))
 			.isInstanceOf(IllegalArgumentException.class);
