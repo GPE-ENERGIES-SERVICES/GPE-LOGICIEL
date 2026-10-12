@@ -43,6 +43,14 @@ public class Dossier {
 	@Column(name = "error_message")
 	private String errorMessage;
 
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, updatable = false)
+	private DossierOrigin origin = DossierOrigin.UPLOAD;
+
+	/** The link the files were retrieved from, for a retrieved dossier. */
+	@Column(name = "dce_link_id", updatable = false)
+	private Long dceLinkId;
+
 	@Column(name = "uploaded_by", updatable = false)
 	private String uploadedBy;
 
@@ -109,6 +117,14 @@ public class Dossier {
 
 	public String getErrorMessage() {
 		return errorMessage;
+	}
+
+	public DossierOrigin getOrigin() {
+		return origin;
+	}
+
+	public Long getDceLinkId() {
+		return dceLinkId;
 	}
 
 	public String getUploadedBy() {

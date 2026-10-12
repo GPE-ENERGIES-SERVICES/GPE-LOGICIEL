@@ -3,12 +3,14 @@ package eu.gpefrance.tenders.document;
 import java.time.Instant;
 import java.util.List;
 
-public record DossierResponse(Long id, int version, DossierStatus status, String errorMessage, String uploadedBy,
-		Instant uploadedAt, Instant processedAt, List<DocumentResponse> documents) {
+public record DossierResponse(Long id, int version, DossierOrigin origin, Long dceLinkId, DossierStatus status,
+		String errorMessage, String uploadedBy, Instant uploadedAt, Instant processedAt,
+		List<DocumentResponse> documents) {
 
 	static DossierResponse from(Dossier dossier) {
-		return new DossierResponse(dossier.getId(), dossier.getVersion(), dossier.getStatus(),
-				dossier.getErrorMessage(), dossier.getUploadedBy(), dossier.getUploadedAt(), dossier.getProcessedAt(),
+		return new DossierResponse(dossier.getId(), dossier.getVersion(), dossier.getOrigin(),
+				dossier.getDceLinkId(), dossier.getStatus(), dossier.getErrorMessage(), dossier.getUploadedBy(),
+				dossier.getUploadedAt(), dossier.getProcessedAt(),
 				dossier.getDocuments().stream().map(DocumentResponse::from).toList());
 	}
 

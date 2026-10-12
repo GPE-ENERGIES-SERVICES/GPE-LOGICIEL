@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import eu.gpefrance.tenders.document.DceLinkService;
 import eu.gpefrance.tenders.tender.NoticeKind;
 import eu.gpefrance.tenders.tender.Tender;
 import eu.gpefrance.tenders.tender.TenderMatch;
@@ -60,6 +61,8 @@ public class NormalizationService {
 
 	private final TenderMatchRepository matches;
 
+	private final DceLinkService dceLinks;
+
 	private final Map<String, SourceParser> parsers;
 
 	private final TransactionTemplate transaction;
@@ -67,12 +70,13 @@ public class NormalizationService {
 	private final Clock clock;
 
 	public NormalizationService(RawNoticeRepository rawNotices, TenderRepository tenders,
-			TenderNoticeRepository tenderNotices, TenderMatchRepository matches, List<SourceParser> parsers,
-			TransactionTemplate transaction, Clock clock) {
+			TenderNoticeRepository tenderNotices, TenderMatchRepository matches, DceLinkService dceLinks,
+			List<SourceParser> parsers, TransactionTemplate transaction, Clock clock) {
 		this.rawNotices = rawNotices;
 		this.tenders = tenders;
 		this.tenderNotices = tenderNotices;
 		this.matches = matches;
+		this.dceLinks = dceLinks;
 		this.parsers = parsers.stream().collect(Collectors.toUnmodifiableMap(SourceParser::source, Function.identity()));
 		this.transaction = transaction;
 		this.clock = clock;
@@ -121,6 +125,11 @@ public class NormalizationService {
 				RawNotice notice = rawNotices.findById(rawNoticeId).orElseThrow();
 				SourceNotice parsed = parser.parse(notice.getPayload());
 				Applied applied = apply(notice, parsed, parser);
+				if (applied.tender() != null) {
+					// Where to obtain the consultation file, as this notice gives it, with its source.
+					dceLinks.record(applied.tender().getId(), notice.getSource(), parsed.details().platformUrl(),
+							clock.instant());
+				}
 				notice.markNormalized(applied.note(), parsed.linkedIds(), clock.instant());
 				return applied.outcome();
 			});
@@ -148,7 +157,7 @@ public class NormalizationService {
 		Optional<Tender> attached = tenderNotices.findByRawNoticeId(raw.getId()).map(TenderNotice::getTender);
 		if (attached.isPresent() && !attached.get().getSource().equals(raw.getSource())) {
 			// Read again, a notice kept in the history of a tender of another source stays there only.
-			return Applied.UPDATED;
+			return Applied.updated(attached.get());
 		}
 		if (notice.type() == NoticeType.CALL_FOR_TENDERS) {
 			return createTender(raw, notice, NoticeKind.INITIAL, now, parser);
@@ -192,7 +201,7 @@ public class NormalizationService {
 			}
 			default -> throw new IllegalStateException("Unexpected notice type " + notice.type());
 		}
-		return Applied.UPDATED;
+		return Applied.updated(tender);
 	}
 
 	private Applied createTender(RawNotice raw, SourceNotice notice, NoticeKind kind, Instant now,
@@ -207,7 +216,7 @@ public class NormalizationService {
 			Tender tender = rectified.get();
 			tender.complete(notice.details(), now);
 			attach(tender, raw, notice, kind);
-			return Applied.UPDATED;
+			return Applied.updated(tender);
 		}
 		Optional<Tender> known = tenders.findBySourceAndExternalId(raw.getSource(), notice.externalId());
 		if (known.isEmpty() && parser.defersToOtherSources()) {
@@ -222,7 +231,7 @@ public class NormalizationService {
 		if (known.isEmpty()) {
 			proposeMatches(tender, now);
 		}
-		return known.isPresent() ? Applied.UPDATED : Applied.CREATED;
+		return known.isPresent() ? Applied.updated(tender) : Applied.created(tender);
 	}
 
 	/**
@@ -247,8 +256,9 @@ public class NormalizationService {
 					others.stream().map(Tender::getId).toList());
 			return Optional.of(Applied.ignored(SHARED_PROCEDURE));
 		}
-		attach(others.getFirst(), raw, notice, kindOf(notice.type()));
-		return Optional.of(Applied.UPDATED);
+		Tender other = others.getFirst();
+		attach(other, raw, notice, kindOf(notice.type()));
+		return Optional.of(Applied.updated(other));
 	}
 
 	/**
@@ -378,15 +388,20 @@ public class NormalizationService {
 
 	/**
 	 * @param note why the notice did not create or update a tender, if so
+	 * @param tender the tender the notice was attached to, if any
 	 */
-	private record Applied(Outcome outcome, String note) {
+	private record Applied(Outcome outcome, String note, Tender tender) {
 
-		static final Applied CREATED = new Applied(Outcome.CREATED, null);
+		static Applied created(Tender tender) {
+			return new Applied(Outcome.CREATED, null, tender);
+		}
 
-		static final Applied UPDATED = new Applied(Outcome.UPDATED, null);
+		static Applied updated(Tender tender) {
+			return new Applied(Outcome.UPDATED, null, tender);
+		}
 
 		static Applied ignored(String note) {
-			return new Applied(Outcome.IGNORED, note);
+			return new Applied(Outcome.IGNORED, note, null);
 		}
 
 	}

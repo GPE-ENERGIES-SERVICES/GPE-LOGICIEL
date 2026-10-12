@@ -244,6 +244,36 @@ rapprochement : jamais une ressemblance de titre, d'acheteur ou de date.
 TED mis de côté, avec les données de GPE de chaque côté. L'écran de validation des
 rapprochements (confirmer, rejeter, fusionner de façon réversible) n'est pas encore fait.
 
+## DCE : liens, fichiers et récupération future
+
+Un lien vers une plateforme n'est pas un fichier : les deux sont séparés.
+
+- **Liens** (`dce_link`, V18, `document/DceLink`) : chaque adresse où obtenir le DCE d'une
+  consultation, telle qu'un avis la donne (profil d'acheteur, page du DCE, page de dépôt), avec
+  la source de cet avis, la plateforme (hôte sans `www.`), le statut de récupération, les dates
+  de première et dernière vue et de dernière tentative. Une adresse n'est gardée qu'une fois par
+  consultation ; seules les adresses http(s) sont retenues. Enregistrées à la normalisation par
+  `DceLinkService` pour chaque avis appliqué, y compris un avis TED ajouté à l'historique d'une
+  consultation BOAMP (souvent l'adresse exacte du DCE, plus précise que le profil d'acheteur du
+  BOAMP), sans modifier la consultation. V18 a repris l'adresse connue des consultations déjà
+  collectées (6 100 au 12/10/2026).
+- **Statuts** (`DceLinkStatus`) : `AVAILABLE` (lien connu, DCE à télécharger à la main sur la
+  plateforme), `TO_FETCH`, `FETCHED`, `FAILED`, `ACCESS_REQUIRED` (compte, identification ou
+  CAPTCHA : action manuelle). Aujourd'hui tous les liens sont `AVAILABLE`.
+- **Fichiers** : un DCE obtenu est une version de dossier (`dossier`, `document`), stockée dans
+  `STORAGE_DIR` ; la base ne garde que les métadonnées (nom, type de pièce, taille, SHA-256,
+  chemin, état de lecture, nombre de pages, texte page par page). `dossier.origin` (V18) dit
+  comment il a été obtenu : `UPLOAD` (déposé par un utilisateur) ou `RETRIEVED` (récupéré
+  depuis `dossier.dce_link_id`). Chaque nouveau dépôt est une nouvelle version ; les
+  précédentes restent.
+- **API** : `GET /api/tenders/{id}/dce-links` (liens, quelle que soit la source de la
+  consultation) et `GET /api/tenders/{id}/dossiers` (fichiers). Un bouton de téléchargement ne
+  doit exister que pour un document de dossier, jamais pour un lien.
+- **Récupération automatique** : `document/DceRetriever` fixe le contrat d'une future
+  implémentation, une par plateforme dont les conditions d'utilisation le permettent ; aucune
+  n'existe. Rien n'est téléchargé automatiquement. Une plateforme qui demande un compte, une
+  identification ou un CAPTCHA n'est jamais contournée : le lien passe en `ACCESS_REQUIRED`.
+
 ## Sauvegarde et restauration
 
 Le service `backup` (image PostgreSQL) sauvegarde chaque jour à `BACKUP_TIME` (heure de

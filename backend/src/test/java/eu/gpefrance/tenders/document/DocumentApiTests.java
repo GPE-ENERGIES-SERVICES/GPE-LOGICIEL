@@ -64,7 +64,7 @@ class DocumentApiTests {
 		assertThat(upload(new MockMultipartFile("files", "DCE.zip", "application/zip", archive)))
 			.hasStatus(HttpStatus.ACCEPTED)
 			.bodyJson()
-			.isLenientlyEqualTo("{\"version\": 1, \"uploadedBy\": \"Marie Durand\"}");
+			.isLenientlyEqualTo("{\"version\": 1, \"origin\": \"UPLOAD\", \"uploadedBy\": \"Marie Durand\"}");
 
 		DossierResponse dossier = waitUntilProcessed();
 		assertThat(dossier.status()).isEqualTo(DossierStatus.DONE);

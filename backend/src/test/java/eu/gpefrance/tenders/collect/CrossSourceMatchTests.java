@@ -28,6 +28,8 @@ import eu.gpefrance.tenders.ClockConfiguration;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
 import eu.gpefrance.tenders.collect.boamp.BoampClient;
 import eu.gpefrance.tenders.collect.ted.TedClient;
+import eu.gpefrance.tenders.document.DceLink;
+import eu.gpefrance.tenders.document.DceLinkService;
 import eu.gpefrance.tenders.tender.NoticeKind;
 import eu.gpefrance.tenders.tender.Tender;
 import eu.gpefrance.tenders.tender.TenderDetailResponse;
@@ -69,6 +71,9 @@ class CrossSourceMatchTests {
 	private TenderService tenderService;
 
 	@Autowired
+	private DceLinkService dceLinks;
+
+	@Autowired
 	private JdbcTemplate jdbc;
 
 	@Autowired
@@ -89,7 +94,8 @@ class CrossSourceMatchTests {
 
 	@BeforeEach
 	void cleanDatabase() {
-		jdbc.execute("TRUNCATE collect_run, tender_match, tender_follow, tender_notice, lot, tender, raw_notice "
+		jdbc.execute("TRUNCATE collect_run, dce_link, tender_match, tender_follow, tender_notice, lot, tender, "
+				+ "raw_notice "
 				+ "RESTART IDENTITY CASCADE");
 		given(boampClient.fetchPublishedOn(any())).willReturn(List.of());
 		given(tedClient.fetchPublishedOn(any())).willReturn(List.of());
@@ -120,6 +126,11 @@ class CrossSourceMatchTests {
 			.containsExactly(tuple("BOAMP", "26-1", NoticeKind.INITIAL), tuple("TED", "698125-2026", NoticeKind.INITIAL),
 					tuple("TED", "698900-2026", NoticeKind.RECTIFICATION),
 					tuple("TED", "698950-2026", NoticeKind.AWARD)));
+		// The addresses given by the TED notices (DCE page, buyer profile of the award) are kept apart, with
+		// their source; the BOAMP tender keeps its own.
+		assertThat(onlyTender().getPlatformUrl()).isNull();
+		assertThat(dceLinks.linksOf(onlyTender().getId())).extracting(DceLink::getSource, DceLink::getPlatform)
+			.containsExactly(tuple("TED", "marches-publics.info"), tuple("TED", "achats.hauts-de-seine.fr"));
 		TenderDetailResponse detail = tenderService.detail(onlyTender().getId(), 1L);
 		assertThat(detail.result()).isNull();
 		assertThat(detail.notices()).extracting(TenderDetailResponse.NoticeResponse::source)
