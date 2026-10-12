@@ -14,9 +14,22 @@ public interface TenderRepository extends JpaRepository<Tender, Long>, JpaSpecif
 
 	Optional<Tender> findBySourceAndExternalId(String source, String externalId);
 
-	List<Tender> findBySourceAndProcedureId(String source, String procedureId);
+	/** The tenders of the source with the procedure, merged duplicates left out. */
+	List<Tender> findBySourceAndProcedureIdAndMergedIntoIdIsNull(String source, String procedureId);
 
-	List<Tender> findByProcedureIdAndSourceNotOrderByIdAsc(String procedureId, String source);
+	/** Procedure identifiers shared by several tenders not merged, any source, oldest first. */
+	@Query(nativeQuery = true, value = """
+			SELECT procedure_id FROM tender
+			WHERE procedure_id IS NOT NULL AND merged_into_id IS NULL
+			GROUP BY procedure_id HAVING count(*) > 1
+			ORDER BY min(id)
+			""")
+	List<String> findSharedProcedures();
+
+	List<Tender> findByProcedureIdAndMergedIntoIdIsNullOrderByIdAsc(String procedureId);
+
+	/** The tenders of the other sources with the procedure, merged duplicates left out. */
+	List<Tender> findByProcedureIdAndSourceNotAndMergedIntoIdIsNullOrderByIdAsc(String procedureId, String source);
 
 	/**
 	 * Tenders of the source made by a complete rectification received before

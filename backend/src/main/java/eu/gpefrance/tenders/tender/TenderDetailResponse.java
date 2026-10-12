@@ -10,6 +10,7 @@ import java.util.List;
  * @param result outcome of a past tender, {@code null} while it is open or
  * when unknown
  * @param followed followed by the logged-in user
+ * @param mergedIntoId the tender this duplicate was merged into, null otherwise
  */
 public record TenderDetailResponse(Long id, String source, String externalId, String title, String description,
 		String buyer, String reference, String location, List<String> departments, List<MarketType> marketTypes,
@@ -17,7 +18,7 @@ public record TenderDetailResponse(Long id, String source, String externalId, St
 		Instant deadline, String noticeUrl, String platformUrl, TenderStatus status, Boolean retained,
 		String filterReason, FollowUpStatus followUpStatus, String followUpComment, String followUpBy,
 		Instant followUpAt, List<LotResponse> lots, List<NoticeResponse> notices, ResultResponse result,
-		boolean followed, List<MatchResponse> matches) {
+		boolean followed, List<MatchResponse> matches, Long mergedIntoId) {
 
 	/**
 	 * @param matches the tenders of other sources proposed or confirmed as the
@@ -40,7 +41,7 @@ public record TenderDetailResponse(Long id, String source, String externalId, St
 					.map(notice -> new NoticeResponse(notice.getSource(), notice.getExternalId(), notice.getKind(),
 							notice.getPublishedAt(), notice.getDeadline(), notice.getDetails()))
 					.toList(),
-				ResultResponse.of(tender), followed, matches);
+				ResultResponse.of(tender), followed, matches, tender.getMergedIntoId());
 	}
 
 	/**

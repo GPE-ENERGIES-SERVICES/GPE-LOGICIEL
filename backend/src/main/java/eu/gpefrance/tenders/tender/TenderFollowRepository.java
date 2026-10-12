@@ -14,4 +14,6 @@ public interface TenderFollowRepository extends JpaRepository<TenderFollow, Tend
 	@Query("select f.tenderId from TenderFollow f where f.userId = :userId and f.tenderId in :tenderIds")
 	List<Long> findFollowed(Long userId, Collection<Long> tenderIds);
 
+	boolean existsByTenderId(Long tenderId);
+
 }

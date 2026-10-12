@@ -41,7 +41,7 @@ public class TenderNotice {
 	private String externalId;
 
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, updatable = false)
+	@Column(nullable = false)
 	private NoticeKind kind;
 
 	@Column(name = "published_at", updatable = false)
@@ -66,6 +66,18 @@ public class TenderNotice {
 		this.publishedAt = publishedAt;
 		this.deadline = deadline;
 		this.details = details;
+	}
+
+	/**
+	 * Gives the notice the kind it has when read again by the rules of today,
+	 * as when a duplicate made before a fix of its source is merged.
+	 */
+	public void relabel(NoticeKind newKind) {
+		this.kind = newKind;
+	}
+
+	void moveTo(Tender newTender) {
+		this.tender = newTender;
 	}
 
 	public Long getId() {

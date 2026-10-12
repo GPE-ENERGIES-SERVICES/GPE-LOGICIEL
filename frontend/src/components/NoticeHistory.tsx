@@ -15,6 +15,13 @@ export function NoticeHistory({ tender }: { tender: TenderDetail }) {
   const matches = (tender.matches ?? []).filter((match) => match.status !== "REJECTED");
   return (
     <>
+      {tender.mergedIntoId && (
+        <p className="banner">
+          Cette consultation est un doublon fusionné dans la{" "}
+          <Link href={`/tenders/${tender.mergedIntoId}`}>consultation N° {tender.mergedIntoId}</Link> : elle
+          n&apos;apparaît plus dans les listes.
+        </p>
+      )}
       <ol className="history">
         {notices.map((notice) => (
           <li key={`${notice.source}-${notice.externalId}`}>

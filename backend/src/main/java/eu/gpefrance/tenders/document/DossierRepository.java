@@ -10,6 +10,8 @@ public interface DossierRepository extends JpaRepository<Dossier, Long> {
 
 	List<Dossier> findByTenderIdOrderByVersionDesc(Long tenderId);
 
+	boolean existsByTenderId(Long tenderId);
+
 	@Query("select coalesce(max(d.version), 0) from Dossier d where d.tenderId = :tenderId")
 	int findLastVersion(Long tenderId);
 

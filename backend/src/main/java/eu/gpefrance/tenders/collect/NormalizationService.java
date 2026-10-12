@@ -3,6 +3,7 @@ package eu.gpefrance.tenders.collect;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -177,33 +178,83 @@ public class NormalizationService {
 		}
 		Tender tender = linked.get();
 		// A rectification published before one already applied only completes the history.
-		boolean latest = isLatest(tender, raw.getSource(), notice.details().publishedAt());
+		applyLaterNotice(tender, notice, isLatest(tender, raw.getSource(), notice.details().publishedAt()), now);
+		attach(tender, raw, notice, kindOf(notice.type()));
+		return Applied.updated(tender);
+	}
+
+	/**
+	 * What a rectification, an award or a cancellation of its source changes
+	 * on a tender: a rectification only when no later one was applied.
+	 */
+	private static void applyLaterNotice(Tender tender, SourceNotice notice, boolean latest, Instant now) {
 		switch (notice.type()) {
 			case COMPLETE_RECTIFICATION -> {
 				if (latest) {
 					tender.update(notice.details(), now);
 					tender.reopenIfDeadlineToCome(now);
 				}
-				attach(tender, raw, notice, NoticeKind.RECTIFICATION);
 			}
 			case RECTIFICATION -> {
 				if (latest && notice.details().deadline() != null) {
 					tender.changeDeadline(notice.details().deadline(), now);
 					tender.reopenIfDeadlineToCome(now);
 				}
-				attach(tender, raw, notice, NoticeKind.RECTIFICATION);
 			}
-			case AWARD -> {
-				tender.close(now);
-				attach(tender, raw, notice, NoticeKind.AWARD);
-			}
-			case CANCELLATION -> {
-				tender.cancel(now);
-				attach(tender, raw, notice, NoticeKind.CANCELLATION);
-			}
+			case AWARD -> tender.close(now);
+			case CANCELLATION -> tender.cancel(now);
 			default -> throw new IllegalStateException("Unexpected notice type " + notice.type());
 		}
-		return Applied.updated(tender);
+	}
+
+	/**
+	 * A stored notice read again by the parser of its source, with the rules
+	 * of today: how it would be applied if it was collected now.
+	 */
+	public SourceNotice read(RawNotice raw) {
+		return parsers.get(raw.getSource()).parse(raw.getPayload());
+	}
+
+	/**
+	 * The kind a stored notice gets in the history of a tender when read now;
+	 * empty for a notice that is not one of a tender.
+	 */
+	public Optional<NoticeKind> currentKind(RawNotice raw) {
+		NoticeType type = read(raw).type();
+		return type == NoticeType.OTHER ? Optional.empty() : Optional.of(kindOf(type));
+	}
+
+	/**
+	 * Applies to a tender the notices it has just taken from a duplicate
+	 * merged into it, oldest first, by the rules of the collection: only the
+	 * notices of its own source change it, a rectification only when it is
+	 * the latest, an initial notice only completes what is unknown. The
+	 * notices are already in its history.
+	 */
+	public void applyTakenNotices(Tender tender, List<TenderNotice> taken, Instant now) {
+		SourceParser parser = parsers.get(tender.getSource());
+		List<TenderNotice> ownSource = taken.stream()
+			.filter(notice -> notice.getSource().equals(tender.getSource()))
+			.sorted(Comparator.comparing(TenderNotice::getPublishedAt, Comparator.nullsFirst(Comparator.naturalOrder()))
+				.thenComparing(TenderNotice::getId))
+			.toList();
+		for (TenderNotice taking : ownSource) {
+			SourceNotice notice = parser.parse(rawNotices.findById(taking.getRawNoticeId()).orElseThrow().getPayload());
+			boolean latest = isLatest(tender, tender.getSource(), notice.details().publishedAt());
+			switch (notice.type()) {
+				case CALL_FOR_TENDERS -> {
+					if (latest) {
+						tender.update(notice.details(), now);
+					}
+					else {
+						tender.complete(notice.details(), now);
+					}
+				}
+				case OTHER -> {
+				}
+				default -> applyLaterNotice(tender, notice, latest, now);
+			}
+		}
 	}
 
 	private Applied createTender(RawNotice raw, SourceNotice notice, NoticeKind kind, Instant now,
@@ -247,7 +298,8 @@ public class NormalizationService {
 		if (notice.procedureId() == null) {
 			return Optional.empty();
 		}
-		List<Tender> others = tenders.findByProcedureIdAndSourceNotOrderByIdAsc(notice.procedureId(),
+		List<Tender> others = tenders
+			.findByProcedureIdAndSourceNotAndMergedIntoIdIsNullOrderByIdAsc(notice.procedureId(),
 				raw.getSource());
 		if (others.isEmpty()) {
 			return Optional.empty();
@@ -272,7 +324,8 @@ public class NormalizationService {
 		if (tender.getProcedureId() == null) {
 			return;
 		}
-		for (Tender other : tenders.findByProcedureIdAndSourceNotOrderByIdAsc(tender.getProcedureId(),
+		for (Tender other : tenders
+			.findByProcedureIdAndSourceNotAndMergedIntoIdIsNullOrderByIdAsc(tender.getProcedureId(),
 				tender.getSource())) {
 			if (!matches.existsByTenderIdAndMatchedTenderId(tender.getId(), other.getId())) {
 				matches.save(new TenderMatch(tender.getId(), other.getId(), TenderMatch.SAME_PROCEDURE, now));
@@ -322,7 +375,8 @@ public class NormalizationService {
 		if (notice.procedureId() == null) {
 			return Optional.empty();
 		}
-		List<Tender> found = tenders.findBySourceAndProcedureId(raw.getSource(), notice.procedureId());
+		List<Tender> found = tenders.findBySourceAndProcedureIdAndMergedIntoIdIsNull(raw.getSource(),
+				notice.procedureId());
 		if (found.size() > 1) {
 			log.warn("{} notice {} has the procedure {} of several tenders {}: none is chosen", raw.getSource(),
 					notice.externalId(), notice.procedureId(), found.stream().map(Tender::getId).toList());

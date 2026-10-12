@@ -75,6 +75,8 @@ public record TenderSearch(String q, List<String> department, String region, Str
 	Specification<Tender> toSpecification(TenderTab tab, Long userId, Instant now) {
 		return (root, query, cb) -> {
 			List<Predicate> predicates = new ArrayList<>();
+			// A duplicate merged into another tender is never listed.
+			predicates.add(cb.isNull(root.get("mergedIntoId")));
 			predicates.add(tabPredicate(tab, userId, root, query, cb));
 			HibernateCriteriaBuilder hcb = (HibernateCriteriaBuilder) cb;
 			if (q != null && !q.isBlank()) {

@@ -24,7 +24,7 @@ public class DceLink {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "tender_id", nullable = false, updatable = false)
+	@Column(name = "tender_id", nullable = false)
 	private Long tenderId;
 
 	/** Source of the notice that gave the address. */
@@ -66,6 +66,11 @@ public class DceLink {
 		this.status = DceLinkStatus.AVAILABLE;
 		this.firstSeenAt = now;
 		this.lastSeenAt = now;
+	}
+
+	/** Moves the link to another tender, as when a duplicate is merged into it. */
+	public void moveTo(Long newTenderId) {
+		this.tenderId = newTenderId;
 	}
 
 	void seenAgain(Instant now) {

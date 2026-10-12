@@ -244,6 +244,44 @@ rapprochement : jamais une ressemblance de titre, d'acheteur ou de date.
 TED mis de côté, avec les données de GPE de chaque côté. L'écran de validation des
 rapprochements (confirmer, rejeter, fusionner de façon réversible) n'est pas encore fait.
 
+### Doublons : décision humaine, fusion réversible
+
+Écran : Paramètres → « Doublons à vérifier » (administrateurs), API `/api/duplicates` (V19,
+`duplicate/DuplicateService`).
+
+- **Groupes** : consultations non fusionnées qui partagent exactement un identifiant de
+  procédure eForms. Chaque groupe explique pourquoi (citation d'un avis par un rectificatif, relu
+  avec les règles actuelles) ; il est « certain » s'il compte deux consultations d'une même source
+  dont l'une a été créée par un rectificatif citant l'autre, sinon « à vérifier ». La consultation
+  proposée à la conservation : celle qui porte des données de l'équipe, sinon celle qui est citée.
+- **Fusionner** : les avis et liens DCE du doublon passent sur la consultation conservée et sont
+  appliqués selon les règles de la collecte (le dernier rectificatif de la source donne la date
+  limite ; une consultation close seulement par échéance est rouverte si la date est à venir) ;
+  les avis de la source sont réétiquetés comme relus aujourd'hui (rectificatif et non avis
+  initial). Le doublon n'est pas supprimé : `tender.merged_into_id` le masque des listes et sa
+  fiche renvoie vers la consultation conservée. Le statut, le commentaire et les suivis de l'équipe
+  ne changent jamais. Refusée si les identifiants de procédure diffèrent ou si seul le doublon
+  porte des données de l'équipe ; si les deux en portent, confirmation explicite obligatoire.
+- **Ce ne sont pas des doublons** : la paire n'est plus proposée.
+- **Trace et annulation** : chaque décision est gardée (`duplicate_decision` : motif, auteur,
+  date). Une fusion garde l'état complet de la consultation conservée avant elle, les avis et liens
+  déplacés et les étiquettes changées : l'annulation rend exactement l'état précédent. Elle est
+  refusée si la consultation conservée a reçu un nouvel avis depuis (à vérifier à la main).
+- **Lot** : `GET /api/duplicates/batch` donne l'aperçu des fusions des groupes certains sans
+  donnée de l'équipe sur le doublon, avec un jeton ; `POST` avec ce jeton ne fait que ces
+  fusions-là (refusé si les doublons ont changé depuis l'aperçu).
+
+Essai sur une copie des données réelles (12/10/2026) : 96 groupes, 89 certains, 7 à vérifier ;
+lot de 89 fusions puis 89 annulations : base identique à l'état initial (empreinte des
+consultations, avis et liens). Cas 5155 / 7826 : après fusion, 5155 « Réponse envoyée »
+conservée, date limite 16/10, deux rectificatifs dans l'historique, 7826 masquée ; annulation :
+état identique.
+
+Retour arrière de V19 : annuler toutes les fusions depuis l'écran, puis
+`DROP TABLE duplicate_decision; ALTER TABLE tender DROP COLUMN merged_into_id;`. Sans cela, l'ancien
+code fonctionne aussi sur un schéma en V19 (colonnes ajoutées seulement), mais montrerait de
+nouveau les doublons fusionnés.
+
 ## DCE : liens, fichiers et récupération future
 
 Un lien vers une plateforme n'est pas un fichier : les deux sont séparés.

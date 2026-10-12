@@ -50,6 +50,13 @@ public class Tender {
 	@Column(name = "procedure_id")
 	private String procedureId;
 
+	/**
+	 * The tender this one was merged into by a person, as a duplicate: it is
+	 * then hidden from the lists, never deleted, and the merge can be undone.
+	 */
+	@Column(name = "merged_into_id")
+	private Long mergedIntoId;
+
 	@Column(nullable = false)
 	private String title;
 
@@ -291,6 +298,55 @@ public class Tender {
 		}
 	}
 
+	/**
+	 * Takes a notice of another tender, such as a duplicate being merged into
+	 * this one: the same notice, with the same identifier, moves.
+	 */
+	public void takeNotice(TenderNotice notice) {
+		notice.getTender().notices.remove(notice);
+		notice.moveTo(this);
+		notices.add(notice);
+	}
+
+	public void markMergedInto(Long tenderId) {
+		this.mergedIntoId = tenderId;
+	}
+
+	public void unmerge() {
+		this.mergedIntoId = null;
+	}
+
+	/**
+	 * Gives back the state saved before a merge. The decision of the team and
+	 * the follows are kept as they are now.
+	 */
+	public void restore(TenderState state) {
+		title = state.title();
+		description = state.description();
+		buyer = state.buyer();
+		reference = state.reference();
+		location = state.location();
+		departments = new ArrayList<>(state.departments());
+		marketTypes = new ArrayList<>(state.marketTypes());
+		procedureType = state.procedureType();
+		cpvCodes = new ArrayList<>(state.cpvCodes());
+		estimatedAmount = state.estimatedAmount();
+		publishedAt = state.publishedAt();
+		deadline = state.deadline();
+		noticeUrl = state.noticeUrl();
+		platformUrl = state.platformUrl();
+		procedureId = state.procedureId();
+		status = state.status();
+		retained = state.retained();
+		filterReason = state.filterReason();
+		filteredAt = state.filteredAt();
+		updatedAt = state.updatedAt();
+		lots.clear();
+		for (int i = 0; i < state.lots().size(); i++) {
+			lots.add(new Lot(this, i + 1, state.lots().get(i)));
+		}
+	}
+
 	public void cancel(Instant now) {
 		changeStatus(TenderStatus.CANCELLED, now);
 	}
@@ -323,6 +379,10 @@ public class Tender {
 
 	public String getExternalId() {
 		return externalId;
+	}
+
+	public Long getMergedIntoId() {
+		return mergedIntoId;
 	}
 
 	public String getProcedureId() {

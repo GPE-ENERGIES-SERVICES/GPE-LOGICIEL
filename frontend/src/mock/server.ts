@@ -692,6 +692,10 @@ const ROUTES: Route[] = [
   ["POST", /^\/api\/auth\/logout$/, () => undefined],
   ["GET", /^\/api\/collect-runs$/, () => collectJournal()],
   ["GET", /^\/api\/collect-runs\/sources$/, () => collectSources()],
+  // The demo data has no duplicates.
+  ["GET", /^\/api\/duplicates$/, () => []],
+  ["GET", /^\/api\/duplicates\/decisions$/, () => []],
+  ["GET", /^\/api\/duplicates\/batch$/, () => ({ token: "", merges: [], leftForReview: 0 })],
   ["GET", /^\/api\/tenders$/, (_, url) => search(url.searchParams)],
   ["GET", /^\/api\/tenders\/counts$/, (_, url) => counts(url.searchParams)],
   ["GET", /^\/api\/tenders\/status-counts$/, (_, url) => statusCounts(url.searchParams)],

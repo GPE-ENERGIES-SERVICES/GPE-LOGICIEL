@@ -105,6 +105,8 @@ export type TenderDetail = TenderSummary & {
   }[];
   /** Consultations of other sources found to be the same one (same procedure), to be confirmed by a person. */
   matches?: TenderMatch[];
+  /** The tender this duplicate was merged into, if so. */
+  mergedIntoId?: number | null;
 };
 
 
