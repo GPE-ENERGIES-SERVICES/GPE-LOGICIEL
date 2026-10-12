@@ -1,4 +1,4 @@
-import type { CollectJournal, FilterCriteria } from "@/types/settings";
+import type { CollectJournal, CollectSource, FilterCriteria } from "@/types/settings";
 import type { Role, User } from "@/types/user";
 
 import { api } from "./http";
@@ -19,6 +19,11 @@ export function getCollectJournal(limit: number): Promise<CollectJournal> {
 
 export function startCollect(): Promise<void> {
   return api("/api/collect-runs", { method: "POST" });
+}
+
+/** Every source, with its last run and its last successful one. */
+export function getCollectSources(): Promise<CollectSource[]> {
+  return api("/api/collect-runs/sources");
 }
 
 export function getUsers(): Promise<User[]> {

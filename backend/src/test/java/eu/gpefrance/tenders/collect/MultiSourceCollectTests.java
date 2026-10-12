@@ -227,6 +227,46 @@ class MultiSourceCollectTests {
 	}
 
 	@Test
+	void theRunKeepsTheFullReportOfItsSource() {
+		testSource.publish(TODAY, test("26-1", "CALL_FOR_TENDERS", null, null),
+				test("26-2", "RECTIFICATION", "26-9", null), new SourceRecord(null, TODAY, "{}"));
+
+		CollectRun first = service.collect("TEST", CollectTrigger.MANUAL, TODAY);
+		CollectRun second = service.collect("TEST", CollectTrigger.MANUAL, TODAY);
+
+		assertThat(first).satisfies(run -> {
+			assertThat(run.getNoticesReceived()).isEqualTo(3);
+			assertThat(run.getNoticesNew()).isEqualTo(2);
+			assertThat(run.getNoticesKnown()).isZero();
+			assertThat(run.getNoticesRejected()).isEqualTo(1);
+			assertThat(run.getTendersCreated()).isEqualTo(1);
+			assertThat(run.getTendersUpdated()).isZero();
+			assertThat(run.getNoticesIgnored()).isEqualTo(1);
+			assertThat(run.getNoticeErrors()).isZero();
+			assertThat(run.getFinishedAt()).isNotNull();
+		});
+		assertThat(second).satisfies(run -> {
+			assertThat(run.getNoticesNew()).isZero();
+			assertThat(run.getNoticesKnown()).isEqualTo(2);
+			assertThat(run.getNoticesRejected()).isEqualTo(1);
+			assertThat(run.getTendersCreated()).isZero();
+		});
+		assertThat(runs.findById(first.getId()).orElseThrow().getNoticesIgnored()).isEqualTo(1);
+	}
+
+	@Test
+	void eachSourceGivesItsLastRunAndItsLastSuccess() {
+		service.collectActive(CollectTrigger.SCHEDULED);
+
+		assertThat(service.sources()).extracting(CollectService.SourceState::source,
+				CollectService.SourceState::active, state -> state.lastRun() == null ? null : state.lastRun().getStatus(),
+				state -> state.lastSuccess() != null)
+			.contains(tuple("TEST", true, CollectStatus.SUCCESS, true),
+					tuple("FAILING", true, CollectStatus.FAILED, false),
+					tuple("PROTECTED", false, null, false));
+	}
+
+	@Test
 	void aReimportOfEverySourceCreatesNoDuplicate() {
 		given(boampClient.fetchPublishedOn(TODAY)).willReturn(List.of(boamp("26-1", "APPEL_OFFRE", null)));
 		testSource.publish(TODAY, test("26-1", "CALL_FOR_TENDERS", null, null));

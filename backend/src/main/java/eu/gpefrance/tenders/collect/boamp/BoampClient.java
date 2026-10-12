@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.collect.boamp;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +9,8 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import eu.gpefrance.tenders.collect.CollectProperties;
+import eu.gpefrance.tenders.collect.HttpRetry;
 import eu.gpefrance.tenders.collect.SourceRecord;
 
 import tools.jackson.databind.JsonNode;
@@ -26,8 +29,11 @@ public class BoampClient {
 
 	private final RestClient restClient;
 
-	public BoampClient(RestClient.Builder builder, BoampProperties properties) {
+	private final Duration retryDelay;
+
+	public BoampClient(RestClient.Builder builder, BoampProperties properties, CollectProperties collect) {
 		this.restClient = builder.baseUrl(properties.baseUrl()).build();
+		this.retryDelay = collect.retryDelay();
 	}
 
 	public List<SourceRecord> fetchPublishedOn(LocalDate date) {
@@ -35,7 +41,9 @@ public class BoampClient {
 		int offset = 0;
 		long total;
 		do {
-			JsonNode page = fetchPage(date, offset);
+			int from = offset;
+			JsonNode page = HttpRetry.once("BOAMP page " + date + " at " + from, retryDelay,
+					() -> fetchPage(date, from));
 			total = page.path("total_count").asLong();
 			if (total > MAX_RESULTS) {
 				throw new IllegalStateException(

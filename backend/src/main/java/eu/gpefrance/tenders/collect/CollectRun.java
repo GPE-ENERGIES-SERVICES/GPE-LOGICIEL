@@ -55,6 +55,26 @@ public class CollectRun {
 	@Column(name = "error_message")
 	private String errorMessage;
 
+	/** Notices received that were already stored: duplicates skipped. */
+	@Column(name = "notices_known", nullable = false)
+	private int noticesKnown;
+
+	/** Notices received without identifier, not stored. */
+	@Column(name = "notices_rejected", nullable = false)
+	private int noticesRejected;
+
+	@Column(name = "tenders_created", nullable = false)
+	private int tendersCreated;
+
+	@Column(name = "tenders_updated", nullable = false)
+	private int tendersUpdated;
+
+	@Column(name = "notices_ignored", nullable = false)
+	private int noticesIgnored;
+
+	@Column(name = "notice_errors", nullable = false)
+	private int noticeErrors;
+
 	protected CollectRun() {
 	}
 
@@ -80,6 +100,22 @@ public class CollectRun {
 		this.errorMessage = message == null || message.length() <= MAX_ERROR_LENGTH
 				? message
 				: message.substring(0, MAX_ERROR_LENGTH);
+		this.finishedAt = finishedAt;
+	}
+
+	/**
+	 * Completes the run once its notices are converted to tenders. The
+	 * conversion also covers the notices of the source left pending by
+	 * earlier runs.
+	 * @param rejected notices received without identifier
+	 */
+	public void report(int rejected, NormalizationReport normalization, Instant finishedAt) {
+		this.noticesRejected = rejected;
+		this.noticesKnown = Math.max(0, noticesReceived - noticesNew - rejected);
+		this.tendersCreated = normalization.created();
+		this.tendersUpdated = normalization.updated();
+		this.noticesIgnored = normalization.ignored();
+		this.noticeErrors = normalization.errors();
 		this.finishedAt = finishedAt;
 	}
 
@@ -121,6 +157,30 @@ public class CollectRun {
 
 	public String getErrorMessage() {
 		return errorMessage;
+	}
+
+	public int getNoticesKnown() {
+		return noticesKnown;
+	}
+
+	public int getNoticesRejected() {
+		return noticesRejected;
+	}
+
+	public int getTendersCreated() {
+		return tendersCreated;
+	}
+
+	public int getTendersUpdated() {
+		return tendersUpdated;
+	}
+
+	public int getNoticesIgnored() {
+		return noticesIgnored;
+	}
+
+	public int getNoticeErrors() {
+		return noticeErrors;
 	}
 
 }

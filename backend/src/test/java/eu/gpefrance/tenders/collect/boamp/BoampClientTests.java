@@ -2,22 +2,29 @@ package eu.gpefrance.tenders.collect.boamp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.ExpectedCount.once;
+import static org.springframework.test.web.client.ExpectedCount.twice;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.hamcrest.Matchers.startsWith;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
+import eu.gpefrance.tenders.collect.CollectProperties;
 import eu.gpefrance.tenders.collect.SourceRecord;
 
 class BoampClientTests {
@@ -32,7 +39,8 @@ class BoampClientTests {
 	void setUp() {
 		RestClient.Builder builder = RestClient.builder();
 		server = MockRestServiceServer.bindTo(builder).build();
-		client = new BoampClient(builder, new BoampProperties(BASE_URL));
+		client = new BoampClient(builder, new BoampProperties(BASE_URL),
+				new CollectProperties(7, Set.of(), Duration.ZERO));
 	}
 
 	@Test
@@ -79,11 +87,32 @@ class BoampClientTests {
 	}
 
 	@Test
-	void propagatesServerErrors() {
-		server.expect(requestTo(startsWith(BASE_URL + "/records"))).andRespond(withServerError());
+	void propagatesAServerErrorThatLastsAfterOneNewAttempt() {
+		server.expect(twice(), requestTo(startsWith(BASE_URL + "/records"))).andRespond(withServerError());
 
 		assertThatThrownBy(() -> client.fetchPublishedOn(LocalDate.of(2026, 10, 2)))
 			.isInstanceOf(HttpServerErrorException.class);
+		server.verify();
+	}
+
+	@Test
+	void triesAPageAgainOnceAfterAServerError() {
+		server.expect(once(), requestTo(startsWith(BASE_URL + "/records"))).andRespond(withServerError());
+		server.expect(once(), requestTo(startsWith(BASE_URL + "/records")))
+			.andRespond(withSuccess(page(1, "26-1"), MediaType.APPLICATION_JSON));
+
+		assertThat(client.fetchPublishedOn(LocalDate.of(2026, 10, 2))).extracting(SourceRecord::externalId)
+			.containsExactly("26-1");
+		server.verify();
+	}
+
+	@Test
+	void doesNotRepeatARefusedRequest() {
+		server.expect(once(), requestTo(startsWith(BASE_URL + "/records"))).andRespond(withBadRequest());
+
+		assertThatThrownBy(() -> client.fetchPublishedOn(LocalDate.of(2026, 10, 2)))
+			.isInstanceOf(HttpClientErrorException.class);
+		server.verify();
 	}
 
 	@Test

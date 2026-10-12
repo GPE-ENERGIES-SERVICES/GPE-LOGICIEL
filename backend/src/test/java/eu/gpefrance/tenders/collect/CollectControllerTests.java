@@ -60,6 +60,48 @@ class CollectControllerTests {
 	}
 
 	@Test
+	void returnsTheReportOfEachRun() {
+		CollectRun run = new CollectRun("TED", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 5),
+				Instant.parse("2026-10-05T05:00:00Z"));
+		run.succeed(10, 6, Instant.parse("2026-10-05T05:01:00Z"));
+		run.report(1, new NormalizationReport(4, 1, 1, 0), Instant.parse("2026-10-05T05:02:00Z"));
+		given(runs.findAllByOrderByStartedAtDesc(any(Pageable.class))).willReturn(List.of(run));
+
+		assertThat(mvc.get().uri("/api/collect-runs").with(TestUsers.user()))
+			.hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"runs": [{"source": "TED", "noticesReceived": 10, "noticesNew": 6, "noticesKnown": 3,
+					"noticesRejected": 1, "tendersCreated": 4, "tendersUpdated": 1, "noticesIgnored": 1,
+					"noticeErrors": 0, "finishedAt": "2026-10-05T05:02:00Z"}]}
+					""");
+	}
+
+	@Test
+	void returnsTheStateOfEachSource() {
+		CollectRun success = new CollectRun("BOAMP", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 4),
+				Instant.parse("2026-10-04T05:00:00Z"));
+		success.succeed(5, 5, Instant.parse("2026-10-04T05:01:00Z"));
+		CollectRun failure = new CollectRun("BOAMP", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 5),
+				Instant.parse("2026-10-05T05:00:00Z"));
+		failure.fail(0, 0, "timeout", Instant.parse("2026-10-05T05:00:30Z"));
+		given(collectService.sources()).willReturn(List.of(
+				new CollectService.SourceState("BOAMP", SourceAccess.AUTOMATED, true, false, failure, success),
+				new CollectService.SourceState("PLACE", SourceAccess.NOT_AUTOMATABLE, false, false, null, null)));
+
+		assertThat(mvc.get().uri("/api/collect-runs/sources").with(TestUsers.user()))
+			.hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					[{"source": "BOAMP", "access": "AUTOMATED", "active": true, "running": false,
+					  "lastRun": {"status": "FAILED", "errorMessage": "timeout"},
+					  "lastSuccess": {"status": "SUCCESS", "startedAt": "2026-10-04T05:00:00Z"}},
+					 {"source": "PLACE", "access": "NOT_AUTOMATABLE", "active": false, "lastRun": null,
+					  "lastSuccess": null}]
+					""");
+	}
+
+	@Test
 	void requiresAnAuthenticatedUser() {
 		assertThat(mvc.get().uri("/api/collect-runs")).hasStatus(HttpStatus.UNAUTHORIZED);
 	}

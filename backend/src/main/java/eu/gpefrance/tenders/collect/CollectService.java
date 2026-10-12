@@ -177,6 +177,31 @@ public class CollectService {
 		return !running.isEmpty();
 	}
 
+	/**
+	 * Every known source, collected or not, with its last run and its last
+	 * successful one.
+	 */
+	public List<SourceState> sources() {
+		List<String> active = activeSources();
+		return connectors.values()
+			.stream()
+			.map(connector -> new SourceState(connector.source(), connector.access(),
+					active.contains(connector.source()), running.contains(connector.source()),
+					runs.findFirstBySourceOrderByStartedAtDesc(connector.source()).orElse(null),
+					runs.findFirstBySourceAndStatusOrderByStartedAtDesc(connector.source(), CollectStatus.SUCCESS)
+						.orElse(null)))
+			.toList();
+	}
+
+	/**
+	 * @param active collected by the schedule
+	 * @param lastRun most recent run, whatever its outcome, if any
+	 * @param lastSuccess most recent successful run, if any
+	 */
+	public record SourceState(String source, SourceAccess access, boolean active, boolean running, CollectRun lastRun,
+			CollectRun lastSuccess) {
+	}
+
 	private List<SourceConnector> active() {
 		return connectors.values()
 			.stream()
@@ -242,11 +267,13 @@ public class CollectService {
 		}
 		run = runs.save(run);
 		NormalizationReport report = processCollected(source);
+		run.report(rejected, report, clock.instant());
+		run = runs.save(run);
 		log.info("{} import {} in {} s: {} notices received, {} new, {} already known, {} rejected; "
 				+ "{} tenders created, {} updated; {} notices ignored, {} errors", source,
 				run.getStatus() == CollectStatus.SUCCESS ? "finished" : "failed",
-				Duration.between(run.getStartedAt(), clock.instant()).toSeconds(), received, created,
-				received - created - rejected, rejected, report.created(), report.updated(), report.ignored(),
+				Duration.between(run.getStartedAt(), run.getFinishedAt()).toSeconds(), received, created,
+				run.getNoticesKnown(), rejected, report.created(), report.updated(), report.ignored(),
 				report.errors());
 		return run;
 	}

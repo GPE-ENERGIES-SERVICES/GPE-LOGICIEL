@@ -247,16 +247,25 @@ jamais collectée commence `collect.initial-days` jours en arrière (7).
   qui en cite un autre, plus ancien, reçu après lui) donne encore deux consultations ; 3 cas
   laissés en l'état par V14, sans statut, suivi ni DCE.
 - **Erreurs** : un avis sans identifiant est écarté sans arrêter la collecte ; un avis illisible
-  est noté en erreur et retenté à la collecte suivante. Si le BOAMP ne répond pas (délais
-  `spring.http.clients.*`), la collecte échoue sans avancer son point de départ : la suivante
-  reprend les mêmes jours.
-- **Bilan** : chaque import écrit une ligne `BOAMP import finished in … s: … notices received,
-  … new, … already known, … rejected; … tenders created, … updated; … notices ignored, … errors`.
+  est noté en erreur et retenté à la collecte suivante. Si une source ne répond pas (délais
+  `spring.http.clients.*`) ou renvoie une erreur serveur (5xx), la requête est refaite une seule
+  fois après `collect.retry-delay` (10 s, `collect/HttpRetry`) ; un refus (4xx) n'est pas répété.
+  Si l'échec persiste, la collecte de cette source échoue sans avancer son point de départ : la
+  suivante reprend les mêmes jours. Aucune boucle de reprise.
+- **Bilan** : chaque collecte enregistre dans `collect_run` (V15) ses avis reçus, nouveaux,
+  déjà connus (doublons ignorés), écartés sans identifiant, les consultations créées et mises à
+  jour, les avis ignorés et en erreur, son début et sa fin (normalisation comprise). La
+  normalisation reprend aussi les avis de la source laissés en attente par les collectes
+  précédentes. Les collectes antérieures à V15 ont ces compteurs à 0 (leur bilan est dans les
+  journaux). La même ligne est écrite dans les journaux : `BOAMP import finished in … s: …`.
+  `GET /api/collect-runs/sources` donne pour chaque source son mode d'accès, si elle est
+  collectée, sa dernière collecte et sa dernière collecte réussie.
 
 ## Journaux
 
-- Collectes : Paramètres → Journal de collecte (date, avis reçus, nouveaux, erreurs) ; bilan
-  détaillé : `docker compose logs backend | grep "BOAMP import"`.
+- Collectes : Paramètres → Journal de collecte (état de chaque source, dernière collecte
+  réussie ; puis chaque collecte avec son bilan) ; détail : `docker compose logs backend | grep
+  "import"`.
 - Analyses : Paramètres → Analyses par IA (statut, modèle, tokens, coût, erreurs) et qualité
   par information à partir des décisions des utilisateurs.
 - Journal technique : `docker compose logs backend`.

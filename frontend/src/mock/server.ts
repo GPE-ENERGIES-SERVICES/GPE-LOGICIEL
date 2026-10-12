@@ -13,7 +13,7 @@ import type { AwardedContract, AwardSearch } from "@/types/award";
 import type { TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
 import type { DocumentHit, DocumentInfo, PieceType } from "@/types/document";
-import type { CollectJournal } from "@/types/settings";
+import type { CollectJournal, CollectRun, CollectSource } from "@/types/settings";
 import type {
   FollowUpStatus,
   TenderDetail,
@@ -625,27 +625,38 @@ function searchDocuments(id: string, url: URL): DocumentHit[] {
 
 // --- Other screens ----------------------------------------------------------
 
-function collectJournal(): CollectJournal {
+function lastBoampRun(): CollectRun {
   const start = new Date();
   start.setHours(start.getHours() >= 13 ? 13 : 7, 0, 0, 0);
   const today = start.toISOString().slice(0, 10);
+  const noticesNew = tenders.filter((tender) => tender.publishedAt === today).length;
   return {
-    running: false,
-    runs: [
-      {
-        id: 1,
-        source: "BOAMP",
-        trigger: "SCHEDULED",
-        status: "SUCCESS",
-        sinceDate: today,
-        startedAt: start.toISOString(),
-        finishedAt: new Date(start.getTime() + 95_000).toISOString(),
-        noticesReceived: 214,
-        noticesNew: tenders.filter((tender) => tender.publishedAt === today).length,
-        errorMessage: null,
-      },
-    ],
+    id: 1,
+    source: "BOAMP",
+    trigger: "SCHEDULED",
+    status: "SUCCESS",
+    sinceDate: today,
+    startedAt: start.toISOString(),
+    finishedAt: new Date(start.getTime() + 95_000).toISOString(),
+    noticesReceived: 214,
+    noticesNew,
+    noticesKnown: 214 - noticesNew,
+    noticesRejected: 0,
+    tendersCreated: noticesNew,
+    tendersUpdated: 0,
+    noticesIgnored: 0,
+    noticeErrors: 0,
+    errorMessage: null,
   };
+}
+
+function collectJournal(): CollectJournal {
+  return { running: false, runs: [lastBoampRun()] };
+}
+
+function collectSources(): CollectSource[] {
+  const run = lastBoampRun();
+  return [{ source: "BOAMP", access: "AUTOMATED", active: true, running: false, lastRun: run, lastSuccess: run }];
 }
 
 const NO_ANALYSIS: TenderAnalysis = { configured: false, grid: [], latest: null, history: [] };
@@ -659,6 +670,7 @@ const ROUTES: Route[] = [
   ["POST", /^\/api\/auth\/login$/, () => MOCK_USER],
   ["POST", /^\/api\/auth\/logout$/, () => undefined],
   ["GET", /^\/api\/collect-runs$/, () => collectJournal()],
+  ["GET", /^\/api\/collect-runs\/sources$/, () => collectSources()],
   ["GET", /^\/api\/tenders$/, (_, url) => search(url.searchParams)],
   ["GET", /^\/api\/tenders\/counts$/, (_, url) => counts(url.searchParams)],
   ["GET", /^\/api\/tenders\/status-counts$/, (_, url) => statusCounts(url.searchParams)],

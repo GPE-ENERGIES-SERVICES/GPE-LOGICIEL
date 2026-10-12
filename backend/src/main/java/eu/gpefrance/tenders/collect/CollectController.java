@@ -37,6 +37,15 @@ public class CollectController {
 		return new CollectJournalResponse(collectService.isRunning(), recent);
 	}
 
+	@GetMapping("/sources")
+	public List<SourceResponse> sources() {
+		return collectService.sources()
+			.stream()
+			.map(state -> new SourceResponse(state.source(), state.access(), state.active(), state.running(),
+					CollectRunResponse.from(state.lastRun()), CollectRunResponse.from(state.lastSuccess())))
+			.toList();
+	}
+
 	/**
 	 * @param source the source to collect; by default every active source
 	 * @param since first publication day to fetch, for an initial load; by
@@ -50,6 +59,15 @@ public class CollectController {
 	}
 
 	public record CollectJournalResponse(boolean running, List<CollectRunResponse> runs) {
+	}
+
+	/**
+	 * @param active collected by the schedule
+	 * @param lastRun most recent run, null if never collected
+	 * @param lastSuccess most recent successful run, null if none
+	 */
+	public record SourceResponse(String source, SourceAccess access, boolean active, boolean running,
+			CollectRunResponse lastRun, CollectRunResponse lastSuccess) {
 	}
 
 }
