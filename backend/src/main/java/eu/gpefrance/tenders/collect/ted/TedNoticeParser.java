@@ -54,7 +54,16 @@ public class TedNoticeParser implements SourceParser {
 
 	private static final Set<String> AWARD_TYPES = Set.of("can-standard", "can-social", "can-desg", "can-tran");
 
-	private static final Set<String> CALL_TYPES = Set.of("cn-standard", "cn-social", "cn-desg");
+	/**
+	 * Notices that open a competition: contract notices, prior information
+	 * notices used as a call for competition and qualification systems.
+	 */
+	private static final Set<String> CALL_TYPES = Set.of("cn-standard", "cn-social", "cn-desg", "pin-cfc-standard",
+			"pin-cfc-social", "qu-sy");
+
+	private static final Set<String> PRIOR_INFORMATION_CALLS = Set.of("pin-cfc-standard", "pin-cfc-social");
+
+	private static final String QUALIFICATION_SYSTEM = "qu-sy";
 
 	private static final Map<String, ProcedureType> PROCEDURES = Map.of("open", ProcedureType.OPEN, "restricted",
 			ProcedureType.RESTRICTED, "neg-w-call", ProcedureType.NEGOTIATED, "neg-wo-call", ProcedureType.NEGOTIATED,
@@ -204,7 +213,19 @@ public class TedNoticeParser implements SourceParser {
 		return type == null ? List.of() : List.of(type);
 	}
 
+	/**
+	 * The kind of notice prevails for a qualification system or a prior
+	 * information notice used as a call for competition: there is no tender
+	 * to submit yet, only an application or an interest to express.
+	 */
 	private static ProcedureType procedure(JsonNode notice) {
+		String noticeType = text(notice.get("notice-type"));
+		if (QUALIFICATION_SYSTEM.equals(noticeType)) {
+			return ProcedureType.QUALIFICATION_SYSTEM;
+		}
+		if (noticeType != null && PRIOR_INFORMATION_CALLS.contains(noticeType)) {
+			return ProcedureType.PRIOR_INFORMATION_CALL;
+		}
 		String type = text(notice.get("procedure-type"));
 		return type == null ? null : PROCEDURES.getOrDefault(type, ProcedureType.OTHER);
 	}

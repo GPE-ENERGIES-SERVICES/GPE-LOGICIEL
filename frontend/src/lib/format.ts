@@ -124,6 +124,8 @@ export const PROCEDURE_LABELS: Record<ProcedureType, string> = {
   COMPETITIVE_DIALOGUE: "Dialogue compétitif",
   ADAPTED: "Procédure adaptée (MAPA)",
   CONCESSION: "Concession / DSP",
+  QUALIFICATION_SYSTEM: "Système de qualification",
+  PRIOR_INFORMATION_CALL: "Préinformation valant mise en concurrence",
   OTHER: "Autre procédure",
 };
 

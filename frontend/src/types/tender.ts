@@ -7,6 +7,8 @@ export type ProcedureType =
   | "COMPETITIVE_DIALOGUE"
   | "ADAPTED"
   | "CONCESSION"
+  | "QUALIFICATION_SYSTEM"
+  | "PRIOR_INFORMATION_CALL"
   | "OTHER";
 
 export type TenderStatus = "ACTIVE" | "CLOSED" | "CANCELLED" | "UNSUCCESSFUL";

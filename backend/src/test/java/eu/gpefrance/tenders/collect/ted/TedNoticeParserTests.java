@@ -100,6 +100,43 @@ class TedNoticeParserTests {
 	}
 
 	@Test
+	void parsesAQualificationSystemAsACallForCompetition() {
+		SourceNotice notice = parse("qualification-system");
+
+		assertThat(notice.type()).isEqualTo(NoticeType.CALL_FOR_TENDERS);
+		assertThat(notice.procedureId()).isEqualTo("923f310c-f712-4fcd-97b6-d3d5600083d6");
+		assertThat(notice.details().title()).isEqualTo("SQE Travaux et maintenance électrique dans le domaine de la HTB");
+		assertThat(notice.details().procedureType()).isEqualTo(ProcedureType.QUALIFICATION_SYSTEM);
+		assertThat(notice.details().marketTypes()).containsExactly(MarketType.WORKS);
+		assertThat(notice.details().departments()).containsExactly("69");
+		// No tender yet: the deadline is the one of the applications.
+		assertThat(notice.details().deadline()).isEqualTo(Instant.parse("2026-02-09T10:00:00Z"));
+		assertThat(notice.details().platformUrl()).isEqualTo("https://portal.cnr.oalia.com/portal");
+	}
+
+	@Test
+	void parsesAPriorInformationNoticeUsedAsACallForCompetition() {
+		SourceNotice notice = parse("prior-information-call");
+
+		assertThat(notice.type()).isEqualTo(NoticeType.CALL_FOR_TENDERS);
+		assertThat(notice.details().procedureType()).isEqualTo(ProcedureType.PRIOR_INFORMATION_CALL);
+		assertThat(notice.details().title()).startsWith("CONSTRUCTION D'UN POLE VIANDE INTERCOMMUNAL");
+		assertThat(notice.details().departments()).containsExactly("43");
+		assertThat(notice.details().deadline()).isNull();
+		// Changed, it is a complete rectification like a contract notice.
+		String changed = fixture("prior-information-call").replace("\"notice-version\": 1",
+				"\"notice-version\": 2, \"change-notice-version-identifier\": \"39000-2026\"");
+		assertThat(parser.parse(changed).type()).isEqualTo(NoticeType.COMPLETE_RECTIFICATION);
+	}
+
+	@Test
+	void stillIgnoresThePriorInformationNoticesThatOpenNoCompetition() {
+		String priorInformationOnly = fixture("prior-information-call").replace("\"pin-cfc-standard\"", "\"pin-only\"");
+
+		assertThat(parser.parse(priorInformationOnly).type()).isEqualTo(NoticeType.OTHER);
+	}
+
+	@Test
 	void findsTheDepartmentOfAPostCode() {
 		assertThat(TedNoticeParser.departmentOfPostCode("02100")).isEqualTo("02");
 		assertThat(TedNoticeParser.departmentOfPostCode("69269")).isEqualTo("69");

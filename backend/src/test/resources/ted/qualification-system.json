@@ -1,0 +1,86 @@
+{
+  "notice-type": "qu-sy",
+  "publication-number": "7258-2026",
+  "buyer-profile": [
+    "https://portal.cnr.oalia.com/portal"
+  ],
+  "submission-url-lot": [
+    "https://portal.cnr.oalia.com/portal"
+  ],
+  "procedure-identifier": "923f310c-f712-4fcd-97b6-d3d5600083d6",
+  "place-of-performance-post-code-proc": [
+    "69004"
+  ],
+  "place-of-performance-post-code-lot": [
+    "69004"
+  ],
+  "publication-date": "2026-01-07+01:00",
+  "contract-nature-main-proc": "works",
+  "links": {
+    "xml": {
+      "MUL": "https://ted.europa.eu/en/notice/7258-2026/xml"
+    },
+    "pdf": {
+      "FRA": "https://ted.europa.eu/fr/notice/7258-2026/pdf"
+    },
+    "pdfs": {
+      "FRA": "https://ted.europa.eu/fr/notice/7258-2026/pdfs"
+    },
+    "html": {
+      "FRA": "https://ted.europa.eu/fr/notice/-/detail/7258-2026"
+    },
+    "htmlDirect": {
+      "FRA": "https://ted.europa.eu/fr/notice/7258-2026/html"
+    }
+  },
+  "buyer-post-code": [
+    "69004"
+  ],
+  "identifier-lot": [
+    "LOT-0001"
+  ],
+  "buyer-city": {
+    "mul": [
+      "LYON"
+    ]
+  },
+  "deadline-receipt-request-date-lot": [
+    "2026-02-09+01:00"
+  ],
+  "notice-identifier": "af385d85-2dca-4a94-937e-e6f576bfb038",
+  "title-proc": {
+    "fra": "SQE Travaux et maintenance électrique dans le domaine de la HTB"
+  },
+  "place-of-performance-subdiv-lot": [
+    "FRK26"
+  ],
+  "place-of-performance-city-proc": [
+    "LYON"
+  ],
+  "deadline-receipt-request-time-lot": [
+    "11:00:00+01:00"
+  ],
+  "procedure-type": "neg-w-call",
+  "classification-cpv": [
+    "45311200",
+    "45311200"
+  ],
+  "buyer-name": {
+    "fra": [
+      "Compagnie Nationale du Rhône"
+    ]
+  },
+  "notice-version": 1,
+  "place-of-performance-subdiv-proc": [
+    "FRK26"
+  ],
+  "title-lot": {
+    "fra": [
+      "SQE Travaux et maintenance électrique dans le domaine de la HTB"
+    ]
+  },
+  "description-proc": {
+    "fra": "Travaux sur les postes et lignes HTB et leurs matériels associés (hors transformateurs)"
+  },
+  "internal-identifier-proc": "DFAI-AI 25-332 & AOF_078902"
+}
