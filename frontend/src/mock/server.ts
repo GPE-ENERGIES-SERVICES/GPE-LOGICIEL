@@ -636,6 +636,7 @@ function lastBoampRun(): CollectRun {
     trigger: "SCHEDULED",
     status: "SUCCESS",
     sinceDate: today,
+    untilDate: today,
     startedAt: start.toISOString(),
     finishedAt: new Date(start.getTime() + 95_000).toISOString(),
     noticesReceived: 214,
@@ -677,7 +678,23 @@ function collectJournal(): CollectJournal {
 
 function collectSources(): CollectSource[] {
   const run = lastBoampRun();
-  return [{ source: "BOAMP", access: "AUTOMATED", active: true, running: false, lastRun: run, lastSuccess: run }];
+  const next = new Date(run.startedAt);
+  next.setHours(next.getHours() === 7 ? 13 : 31, 0, 0, 0);
+  return [
+    {
+      source: "BOAMP",
+      access: "AUTOMATED",
+      active: true,
+      running: false,
+      lastRun: run,
+      lastSuccess: run,
+      lastFailure: null,
+      nextRun: next.toISOString(),
+      workingHoursSinceSuccess: 0,
+      overdue: false,
+      catchingUp: false,
+    },
+  ];
 }
 
 const NO_ANALYSIS: TenderAnalysis = { configured: false, grid: [], latest: null, history: [] };

@@ -41,6 +41,9 @@ class CollectControllerTests {
 	@MockitoBean
 	private CollectRunRepository runs;
 
+	@MockitoBean
+	private CollectCatchUp catchUp;
+
 	@Test
 	void returnsTheJournalWithTheRunningFlag() {
 		CollectRun run = new CollectRun("BOAMP", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 5),
@@ -98,6 +101,30 @@ class CollectControllerTests {
 					  "lastSuccess": {"status": "SUCCESS", "startedAt": "2026-10-04T05:00:00Z"}},
 					 {"source": "PLACE", "access": "NOT_AUTOMATABLE", "active": false, "lastRun": null,
 					  "lastSuccess": null}]
+					""");
+	}
+
+	@Test
+	void returnsThePeriodCoveredTheNextRunAndTheAlertOfASource() {
+		CollectRun success = new CollectRun("BOAMP", CollectTrigger.CATCH_UP, LocalDate.of(2026, 10, 11),
+				LocalDate.of(2026, 10, 22), Instant.parse("2026-10-22T05:00:00Z"));
+		success.succeed(5, 5, Instant.parse("2026-10-22T05:01:00Z"));
+		CollectRun failure = new CollectRun("BOAMP", CollectTrigger.SCHEDULED, LocalDate.of(2026, 10, 21),
+				LocalDate.of(2026, 10, 23), Instant.parse("2026-10-23T05:00:00Z"));
+		failure.fail(0, 0, "HttpServerErrorException: 503", Instant.parse("2026-10-23T05:00:30Z"));
+		given(collectService.sources()).willReturn(List.of(new CollectService.SourceState("BOAMP",
+				SourceAccess.AUTOMATED, true, false, failure, success, failure, Instant.parse("2026-10-23T11:00:00Z"),
+				30L, true)));
+		given(catchUp.isRunning()).willReturn(true);
+
+		assertThat(mvc.get().uri("/api/collect-runs/sources").with(TestUsers.user()))
+			.hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					[{"source": "BOAMP", "overdue": true, "workingHoursSinceSuccess": 30, "catchingUp": true,
+					  "nextRun": "2026-10-23T11:00:00Z",
+					  "lastSuccess": {"trigger": "CATCH_UP", "sinceDate": "2026-10-11", "untilDate": "2026-10-22"},
+					  "lastFailure": {"status": "FAILED", "errorMessage": "HttpServerErrorException: 503"}}]
 					""");
 	}
 

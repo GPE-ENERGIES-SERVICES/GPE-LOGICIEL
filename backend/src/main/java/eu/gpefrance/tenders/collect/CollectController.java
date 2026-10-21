@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.collect;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -22,7 +23,10 @@ public class CollectController {
 
 	private final CollectRunRepository runs;
 
-	public CollectController(CollectService collectService, CollectRunRepository runs) {
+	private final CollectCatchUp catchUp;
+
+	public CollectController(CollectService collectService, CollectRunRepository runs, CollectCatchUp catchUp) {
+		this.catchUp = catchUp;
 		this.collectService = collectService;
 		this.runs = runs;
 	}
@@ -42,7 +46,9 @@ public class CollectController {
 		return collectService.sources()
 			.stream()
 			.map(state -> new SourceResponse(state.source(), state.access(), state.active(), state.running(),
-					CollectRunResponse.from(state.lastRun()), CollectRunResponse.from(state.lastSuccess())))
+					CollectRunResponse.from(state.lastRun()), CollectRunResponse.from(state.lastSuccess()),
+					CollectRunResponse.from(state.lastFailure()), state.nextRun(), state.workingHoursSinceSuccess(),
+					state.overdue(), catchUp.isRunning()))
 			.toList();
 	}
 
@@ -64,10 +70,19 @@ public class CollectController {
 	/**
 	 * @param active collected by the schedule
 	 * @param lastRun most recent run, null if never collected
-	 * @param lastSuccess most recent successful run, null if none
+	 * @param lastSuccess most recent successful run, null if none; its
+	 * {@code sinceDate} and {@code untilDate} are the period covered
+	 * @param lastFailure most recent failed run, null if none
+	 * @param nextRun next scheduled collection, null for a source not collected
+	 * @param workingHoursSinceSuccess working hours (Monday to Friday) since
+	 * the start of the last successful run
+	 * @param overdue active and without successful collection for more than
+	 * the alert threshold, or never collected
+	 * @param catchingUp a catch-up of missed collections is running
 	 */
 	public record SourceResponse(String source, SourceAccess access, boolean active, boolean running,
-			CollectRunResponse lastRun, CollectRunResponse lastSuccess) {
+			CollectRunResponse lastRun, CollectRunResponse lastSuccess, CollectRunResponse lastFailure,
+			Instant nextRun, Long workingHoursSinceSuccess, boolean overdue, boolean catchingUp) {
 	}
 
 }

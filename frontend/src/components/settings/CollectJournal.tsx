@@ -9,7 +9,7 @@ import type { CollectRun, SourceAccess } from "@/types/settings";
 
 const STATUS_LABELS = { RUNNING: "En cours", SUCCESS: "Réussie", FAILED: "Échec" };
 
-const TRIGGER_LABELS = { SCHEDULED: "Planifiée", MANUAL: "Manuelle" };
+const TRIGGER_LABELS = { SCHEDULED: "Planifiée", MANUAL: "Manuelle", CATCH_UP: "Rattrapage" };
 
 const ACCESS_LABELS: Record<SourceAccess, string> = {
   AUTOMATED: "API ou open data",
@@ -17,6 +17,11 @@ const ACCESS_LABELS: Record<SourceAccess, string> = {
   MANUAL: "Dépôt manuel",
   NOT_AUTOMATABLE: "Consultation manuelle",
 };
+
+/** "du 11/10/2026 au 22/10/2026" for the publication days a run asked. */
+function period(run: CollectRun): string {
+  return run.untilDate ? `du ${formatDate(run.sinceDate)} au ${formatDate(run.untilDate)}` : `depuis le ${formatDate(run.sinceDate)}`;
+}
 
 function duration(run: CollectRun): string {
   if (!run.finishedAt) {
@@ -41,22 +46,53 @@ function Sources({ version }: { version: number }) {
           <th>Source</th>
           <th>Accès</th>
           <th>Collecte automatique</th>
-          <th>Dernière collecte</th>
+          <th>Dernière tentative</th>
           <th>Dernière collecte réussie</th>
+          <th>Publications couvertes</th>
+          <th>Prochaine collecte</th>
+          <th>Dernière erreur</th>
+          <th title="Heures du lundi au vendredi depuis la dernière collecte réussie ; alerte au-delà de 24">
+            Retard
+          </th>
         </tr>
       </thead>
       <tbody>
         {data.map((source) => (
-          <tr key={source.source} className={source.lastRun?.status === "FAILED" ? "row-error" : ""}>
+          <tr
+            key={source.source}
+            className={source.overdue || source.lastRun?.status === "FAILED" ? "row-error" : ""}
+          >
             <td>{source.source}</td>
             <td>{ACCESS_LABELS[source.access]}</td>
-            <td>{source.running ? "En cours" : source.active ? "Oui" : "Non"}</td>
+            <td>
+              {source.running
+                ? source.catchingUp
+                  ? "Rattrapage en cours"
+                  : "En cours"
+                : source.active
+                  ? "Oui"
+                  : "Non"}
+            </td>
             <td>
               {source.lastRun
                 ? `${formatDateTime(source.lastRun.startedAt)} (${STATUS_LABELS[source.lastRun.status]})`
                 : "Jamais"}
             </td>
             <td>{source.lastSuccess ? formatDateTime(source.lastSuccess.startedAt) : "Aucune"}</td>
+            <td>{source.lastSuccess ? period(source.lastSuccess) : "–"}</td>
+            <td>{source.nextRun ? formatDateTime(source.nextRun) : "–"}</td>
+            <td className="error-cell">
+              {source.lastFailure
+                ? `${formatDateTime(source.lastFailure.startedAt)} : ${source.lastFailure.errorMessage ?? "erreur"}`
+                : "–"}
+            </td>
+            <td>
+              {!source.active
+                ? "–"
+                : source.workingHoursSinceSuccess === null
+                  ? "Jamais collectée"
+                  : `${source.workingHoursSinceSuccess} h ouvrées${source.overdue ? " (alerte)" : ""}`}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -105,7 +141,8 @@ export function CollectJournal() {
           {running ? "Collecte en cours…" : "Lancer une collecte"}
         </button>
         <span className="muted">
-          Collectes automatiques à 7 h et 13 h les jours ouvrés, une source après l&apos;autre.
+          Collectes automatiques à 7 h et 13 h les jours ouvrés, une source après l&apos;autre. Une collecte
+          manquée pendant un arrêt est rattrapée au démarrage puis chaque heure, par tranches de 14 jours au plus.
         </span>
       </div>
       {actionError && <p className="error">{actionError}</p>}
@@ -118,7 +155,7 @@ export function CollectJournal() {
               <th>Début</th>
               <th>Source</th>
               <th>Type</th>
-              <th>Avis publiés depuis</th>
+              <th>Publications</th>
               <th>Statut</th>
               <th>Durée</th>
               <th title="Avis reçus de la source">Reçus</th>
@@ -136,7 +173,7 @@ export function CollectJournal() {
                 <td>{formatDateTime(run.startedAt)}</td>
                 <td>{run.source}</td>
                 <td>{TRIGGER_LABELS[run.trigger]}</td>
-                <td>{formatDate(run.sinceDate)}</td>
+                <td>{period(run)}</td>
                 <td>{STATUS_LABELS[run.status]}</td>
                 <td>{duration(run)}</td>
                 <td>{run.noticesReceived}</td>

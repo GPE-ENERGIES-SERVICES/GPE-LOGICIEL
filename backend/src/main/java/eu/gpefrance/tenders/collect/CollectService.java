@@ -2,8 +2,9 @@ package eu.gpefrance.tenders.collect;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,9 +15,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -40,6 +44,12 @@ public class CollectService {
 	/** How far back a collection may start. */
 	static final int MAX_DAYS_BACK = 366;
 
+	/** Error of a run left running by a stop of the application. */
+	static final String INTERRUPTED = "Interrupted by an application restart";
+
+	/** How far back the last scheduled collection is looked for. */
+	private static final Duration SLOT_LOOKBACK = Duration.ofDays(8);
+
 	private static final Logger log = LoggerFactory.getLogger(CollectService.class);
 
 	private final Map<String, SourceConnector> connectors = new LinkedHashMap<>();
@@ -62,13 +72,21 @@ public class CollectService {
 
 	private final TenderLifecycleService lifecycle;
 
+	private final CollectCatchUpProperties catchUp;
+
+	/** The scheduled collections, null when there are none. */
+	private final CronExpression schedule;
+
 	/** Sources being collected. */
 	private final Set<String> running = ConcurrentHashMap.newKeySet();
 
 	public CollectService(List<SourceConnector> connectors, CollectProperties properties,
 			RawNoticeRepository rawNotices, CollectRunRepository runs, TransactionTemplate transaction, Clock clock,
 			@Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor, NormalizationService normalization,
-			FilterService filter, TenderLifecycleService lifecycle) {
+			FilterService filter, TenderLifecycleService lifecycle, CollectCatchUpProperties catchUp,
+			@Value("${collect.cron}") String cron) {
+		this.catchUp = catchUp;
+		this.schedule = Scheduled.CRON_DISABLED.equals(cron) ? null : CronExpression.parse(cron);
 		for (SourceConnector connector : connectors) {
 			if (this.connectors.putIfAbsent(connector.source(), connector) != null) {
 				throw new IllegalStateException("Two connectors for the source " + connector.source());
@@ -91,8 +109,7 @@ public class CollectService {
 	@EventListener(ApplicationReadyEvent.class)
 	public void closeInterruptedRuns() {
 		for (CollectRun run : runs.findAllByStatus(CollectStatus.RUNNING)) {
-			run.fail(run.getNoticesReceived(), run.getNoticesNew(), "Interrupted by an application restart",
-					clock.instant());
+			run.fail(run.getNoticesReceived(), run.getNoticesNew(), INTERRUPTED, clock.instant());
 			runs.save(run);
 		}
 	}
@@ -183,23 +200,101 @@ public class CollectService {
 	 */
 	public List<SourceState> sources() {
 		List<String> active = activeSources();
+		Instant now = clock.instant();
+		Instant nextRun = nextSlot(now);
 		return connectors.values()
 			.stream()
-			.map(connector -> new SourceState(connector.source(), connector.access(),
-					active.contains(connector.source()), running.contains(connector.source()),
-					runs.findFirstBySourceOrderByStartedAtDesc(connector.source()).orElse(null),
-					runs.findFirstBySourceAndStatusOrderByStartedAtDesc(connector.source(), CollectStatus.SUCCESS)
-						.orElse(null)))
+			.map(connector -> {
+				String source = connector.source();
+				boolean isActive = active.contains(source);
+				CollectRun lastSuccess = runs.findFirstBySourceAndStatusOrderByStartedAtDescIdDesc(source,
+						CollectStatus.SUCCESS)
+					.orElse(null);
+				Duration late = lastSuccess == null ? null
+						: WorkingHours.between(lastSuccess.getStartedAt(), now, clock.getZone());
+				boolean overdue = isActive
+						&& (late == null || late.compareTo(Duration.ofHours(catchUp.alertWorkingHours())) > 0);
+				return new SourceState(source, connector.access(), isActive, running.contains(source),
+						runs.findFirstBySourceOrderByStartedAtDescIdDesc(source).orElse(null), lastSuccess,
+						runs.findFirstBySourceAndStatusOrderByStartedAtDescIdDesc(source, CollectStatus.FAILED)
+							.orElse(null),
+						isActive ? nextRun : null, late == null ? null : late.toHours(), overdue);
+			})
 			.toList();
 	}
 
 	/**
 	 * @param active collected by the schedule
 	 * @param lastRun most recent run, whatever its outcome, if any
-	 * @param lastSuccess most recent successful run, if any
+	 * @param lastSuccess most recent successful run, if any; it gives the
+	 * period covered
+	 * @param lastFailure most recent failed run, if any
+	 * @param nextRun next scheduled collection, null for a source not collected
+	 * @param workingHoursSinceSuccess working hours (see {@link WorkingHours})
+	 * since the start of the last successful run, null without one
+	 * @param overdue an active source without successful collection for more
+	 * than {@code collect.catch-up.alert-working-hours}, or never collected
 	 */
 	public record SourceState(String source, SourceAccess access, boolean active, boolean running, CollectRun lastRun,
-			CollectRun lastSuccess) {
+			CollectRun lastSuccess, CollectRun lastFailure, Instant nextRun, Long workingHoursSinceSuccess,
+			boolean overdue) {
+
+		public SourceState(String source, SourceAccess access, boolean active, boolean running, CollectRun lastRun,
+				CollectRun lastSuccess) {
+			this(source, access, active, running, lastRun, lastSuccess, null, null, null, false);
+		}
+
+	}
+
+	/**
+	 * The active sources that missed the last scheduled collection: no run
+	 * started since then, other than one interrupted by a restart, and no
+	 * successful one either. A source whose last scheduled run failed is
+	 * not one: it is tried again at the next scheduled collection.
+	 */
+	public List<String> sourcesMissingTheLastSlot() {
+		Instant now = clock.instant();
+		Instant slot = previousSlot(now);
+		if (slot == null) {
+			return List.of();
+		}
+		return activeSources().stream()
+			.filter(source -> !runs.existsAttemptSince(source, slot, INTERRUPTED))
+			.toList();
+	}
+
+	/**
+	 * Whether the last successful collection of the source asked publication
+	 * days up to today.
+	 */
+	public boolean isUpToDate(String source) {
+		LocalDate today = LocalDate.now(clock);
+		return runs.findFirstBySourceAndStatusOrderByStartedAtDescIdDesc(source, CollectStatus.SUCCESS)
+			.map(last -> !coveredUntil(last).isBefore(today))
+			.orElse(false);
+	}
+
+	/** The next scheduled collection after the given time, null without schedule. */
+	Instant nextSlot(Instant after) {
+		if (schedule == null) {
+			return null;
+		}
+		ZonedDateTime next = schedule.next(after.atZone(clock.getZone()));
+		return next == null ? null : next.toInstant();
+	}
+
+	/** The last scheduled collection at or before the given time, within 8 days. */
+	Instant previousSlot(Instant now) {
+		if (schedule == null) {
+			return null;
+		}
+		Instant previous = null;
+		ZonedDateTime candidate = schedule.next(now.minus(SLOT_LOOKBACK).atZone(clock.getZone()));
+		while (candidate != null && !candidate.toInstant().isAfter(now)) {
+			previous = candidate.toInstant();
+			candidate = schedule.next(candidate);
+		}
+		return previous;
 	}
 
 	private List<SourceConnector> active() {
@@ -246,14 +341,16 @@ public class CollectService {
 		String source = connector.source();
 		LocalDate today = LocalDate.now(clock);
 		LocalDate from = since != null ? since : startDate(source, today);
-		CollectRun run = runs.save(new CollectRun(source, trigger, from, clock.instant()));
-		log.info("Collecting {} notices published since {}", source, from);
+		// Resuming on its own, a collection asks a limited number of days; the next one goes on.
+		LocalDate until = since != null ? today : min(today, from.plusDays(catchUp.maxDaysPerRun() - 1L));
+		CollectRun run = runs.save(new CollectRun(source, trigger, from, until, clock.instant()));
+		log.info("Collecting {} notices published from {} to {}", source, from, until);
 
 		int received = 0;
 		int created = 0;
 		int rejected = 0;
 		try {
-			for (LocalDate day = from; !day.isAfter(today); day = day.plusDays(1)) {
+			for (LocalDate day = from; !day.isAfter(until); day = day.plusDays(1)) {
 				List<SourceRecord> records = connector.fetchPublishedOn(day);
 				received += records.size();
 				rejected += reject(source, records);
@@ -296,15 +393,30 @@ public class CollectService {
 	}
 
 	/**
-	 * Starts one day before the last successful collection of the source:
-	 * notices published later that day, or made available late, are caught on
-	 * the next run. Notices already stored are skipped anyway.
+	 * Starts one day before the last day asked by the last successful
+	 * collection of the source: notices published later that day, or made
+	 * available late, are caught on the next run. Notices already stored are
+	 * skipped anyway. Never more than {@link #MAX_DAYS_BACK} days ago.
 	 */
 	private LocalDate startDate(String source, LocalDate today) {
-		ZoneId zone = clock.getZone();
-		return runs.findFirstBySourceAndStatusOrderByStartedAtDesc(source, CollectStatus.SUCCESS)
-			.map(last -> LocalDate.ofInstant(last.getStartedAt(), zone).minusDays(1))
+		LocalDate start = runs.findFirstBySourceAndStatusOrderByStartedAtDescIdDesc(source, CollectStatus.SUCCESS)
+			.map(last -> coveredUntil(last).minusDays(1))
 			.orElse(today.minusDays(properties.initialDays()));
+		LocalDate earliest = today.minusDays(MAX_DAYS_BACK);
+		return start.isBefore(earliest) ? earliest : start;
+	}
+
+	/**
+	 * The last publication day a run asked; for a run made before it was
+	 * recorded, the day it started.
+	 */
+	private LocalDate coveredUntil(CollectRun run) {
+		return run.getUntilDate() != null ? run.getUntilDate()
+				: LocalDate.ofInstant(run.getStartedAt(), clock.getZone());
+	}
+
+	private static LocalDate min(LocalDate a, LocalDate b) {
+		return a.isBefore(b) ? a : b;
 	}
 
 	/**

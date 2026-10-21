@@ -3,9 +3,12 @@ import type { MarketType } from "./tender";
 export type CollectRun = {
   id: number;
   source: string;
-  trigger: "SCHEDULED" | "MANUAL";
+  /** CATCH_UP: started after a stop of the application made it miss a scheduled collection. */
+  trigger: "SCHEDULED" | "MANUAL" | "CATCH_UP";
   status: "RUNNING" | "SUCCESS" | "FAILED";
   sinceDate: string;
+  /** Last publication day asked; null for the runs made before it was recorded. */
+  untilDate: string | null;
   startedAt: string;
   finishedAt: string | null;
   noticesReceived: number;
@@ -51,5 +54,15 @@ export type CollectSource = {
   active: boolean;
   running: boolean;
   lastRun: CollectRun | null;
+  /** Its sinceDate and untilDate are the period covered. */
   lastSuccess: CollectRun | null;
+  lastFailure: CollectRun | null;
+  /** Next scheduled collection, null for a source not collected. */
+  nextRun: string | null;
+  /** Working hours (Monday to Friday) since the start of the last successful run. */
+  workingHoursSinceSuccess: number | null;
+  /** Active and without successful collection for more than 24 working hours, or never collected. */
+  overdue: boolean;
+  /** A catch-up of missed collections is running. */
+  catchingUp: boolean;
 };

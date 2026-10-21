@@ -183,6 +183,56 @@ modification eForms (`ChangedNoticeIdentifier`) que le BOAMP publie avec `etat =
 `BoampNoticeParser` lit donc comme des avis initiaux. Ni correction du parseur ni fusion sans
 validation.
 
+### Reprise, rattrapage et surveillance des collectes
+
+**Reprise** : une collecte sans date choisie part du dernier jour demandé par la dernière
+collecte réussie de la source, moins un jour (`collect_run.until_date`, V20 ; pour les collectes
+plus anciennes, le jour de leur début, heure de Paris), jamais plus de 366 jours en arrière. Elle
+demande au plus `collect.catch-up.max-days-per-run` jours de publication (14) ; la suivante
+continue. Une collecte depuis une date choisie (import initial) n'est pas limitée. Une collecte en
+échec ne déplace pas le point de départ : la suivante redemande les mêmes jours, les avis déjà
+stockés étant ignorés (`raw_notice` unique par source et identifiant) et les données de l'équipe
+jamais modifiées.
+
+**Rattrapage** (`CollectCatchUp`) : une source active « a manqué le dernier créneau » quand aucune
+collecte n'a démarré depuis le dernier horaire de `collect.cron` (sur 8 jours), hormis une
+collecte interrompue par un redémarrage. Ce contrôle a lieu `collect.catch-up.delay` (2 min) après
+le démarrage, puis chaque heure à la demie (`collect.catch-up.cron`, utile après une mise en
+veille). Les sources concernées sont collectées l'une après l'autre (`CATCH_UP` dans le journal),
+en tâche de fond sur le pool de l'application, jamais sur le fil du planificateur (qui garde la
+clôture horaire des consultations). Tant que la dernière collecte n'atteint pas aujourd'hui, une
+nouvelle est lancée après `collect.catch-up.pause` (1 min), dans la limite de
+`collect.catch-up.max-runs` (5) ; au-delà, les créneaux suivants continuent. Un échec arrête le
+rattrapage de la source (le créneau suivant réessaie) ; une source déjà en cours de collecte est
+passée ; un seul rattrapage à la fois. Un créneau dont la collecte a échoué n'est pas rattrapé :
+il est retenté au créneau suivant, comme avant. Les horaires normaux ne changent pas.
+`collect.catch-up.enabled=false` désactive le tout.
+
+Charge : 14 jours au plus par collecte (BOAMP : environ 400 avis par jour ouvré, soit une
+soixantaine de pages de 100 ; TED : une requête par 250 avis), une requête à la fois, une
+nouvelle tentative unique après une erreur serveur ou un délai dépassé (`HttpRetry`).
+
+**État et alerte** (`GET /api/collect-runs/sources`, Paramètres → Journal de collecte, et bandeau
+sur toutes les pages) : dernière tentative, dernière réussite et publications couvertes
+(`sinceDate`–`untilDate` de la dernière réussite), prochaine collecte planifiée, dernière erreur,
+heures ouvrées depuis la dernière réussite. **Heures ouvrées** (`WorkingHours`) : toutes les heures
+du lundi au vendredi (heure de Paris, changements d'heure compris), aucune le samedi ni le
+dimanche ; les jours fériés comptent comme ouvrés. Une source active est **en retard** au-delà de
+`collect.catch-up.alert-working-hours` (24) heures ouvrées sans réussite, ou si elle n'a jamais
+été collectée : exemple, une dernière réussite le vendredi à 13 h donne 18 heures le lundi à 7 h,
+24 à 13 h, et l'alerte juste après si cette collecte manque aussi. Le bandeau est relu toutes les
+5 minutes ; le contrôle horaire écrit aussi l'alerte dans les journaux (`no successful collection
+for … working hours`).
+
+Constat du 21/10/2026 (base réelle, lecture seule) : dernière réussite BOAMP et TED le 12/10 à
+16 h 24, publications du 11/10 au 12/10 ; backend arrêté puis redémarré le 21/10 à 13 h 31, après
+le créneau de 13 h ; 14 créneaux manqués, aucune alerte. Avec l'ancien code, la reprise était
+automatique mais seulement au créneau suivant (22/10 à 7 h, jours du 11/10 au 22/10, démontré par
+`ResumeAfterOutageTests`). Avec ce code, elle a lieu 2 minutes après le démarrage.
+
+Retour arrière de V20 : `ALTER TABLE collect_run DROP COLUMN until_date;` (l'ancien code ignore la
+colonne).
+
 ### TED
 
 TED (Tenders Electronic Daily, Office des publications de l'UE) est lu par l'API Search v3
@@ -552,9 +602,10 @@ jamais collectée commence `collect.initial-days` jours en arrière (7).
 
 ## Journaux
 
-- Collectes : Paramètres → Journal de collecte (état de chaque source, dernière collecte
-  réussie ; puis chaque collecte avec son bilan) ; détail : `docker compose logs backend | grep
-  "import"`.
+- Collectes : Paramètres → Journal de collecte (état de chaque source : dernière tentative,
+  dernière réussite, publications couvertes, prochaine collecte, dernière erreur, retard en heures
+  ouvrées ; puis chaque collecte avec son bilan) et bandeau d'alerte de retard sur toutes les pages ;
+  détail : `docker compose logs backend | grep -E "import|catch"`.
 - Analyses : Paramètres → Analyses par IA (statut, modèle, tokens, coût, erreurs) et qualité
   par information à partir des décisions des utilisateurs.
 - Journal technique : `docker compose logs backend`.

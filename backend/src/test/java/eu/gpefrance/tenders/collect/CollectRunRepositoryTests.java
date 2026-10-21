@@ -33,11 +33,11 @@ class CollectRunRepositoryTests {
 		failure.fail(0, 0, "timeout", Instant.parse("2026-10-02T05:01:00Z"));
 		repository.saveAndFlush(failure);
 
-		assertThat(repository.findFirstBySourceAndStatusOrderByStartedAtDesc("BOAMP", CollectStatus.SUCCESS))
+		assertThat(repository.findFirstBySourceAndStatusOrderByStartedAtDescIdDesc("BOAMP", CollectStatus.SUCCESS))
 			.get()
 			.extracting(CollectRun::getSinceDate)
 			.isEqualTo(LocalDate.of(2026, 10, 1));
-		assertThat(repository.findFirstBySourceOrderByStartedAtDesc("BOAMP"))
+		assertThat(repository.findFirstBySourceOrderByStartedAtDescIdDesc("BOAMP"))
 			.get()
 			.extracting(CollectRun::getStatus)
 			.isEqualTo(CollectStatus.FAILED);

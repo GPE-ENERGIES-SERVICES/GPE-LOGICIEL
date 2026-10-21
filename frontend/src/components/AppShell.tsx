@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 
 import { useAuth } from "./AuthProvider";
+import { CollectDelayAlert } from "./CollectDelayAlert";
 
 type Section = { href: string; label: string };
 
@@ -66,7 +67,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SectionNavWithOrigin sections={sections} />
         </Suspense>
       </header>
-      <main className="app-main">{children}</main>
+      <main className="app-main">
+        <CollectDelayAlert />
+        {children}
+      </main>
     </>
   );
 }

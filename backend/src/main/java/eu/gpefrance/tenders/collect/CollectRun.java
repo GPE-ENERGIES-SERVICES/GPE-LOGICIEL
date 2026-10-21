@@ -40,6 +40,10 @@ public class CollectRun {
 	@Column(name = "since_date", nullable = false, updatable = false)
 	private LocalDate sinceDate;
 
+	/** Last publication day asked; null for the runs made before it was recorded. */
+	@Column(name = "until_date", updatable = false)
+	private LocalDate untilDate;
+
 	@Column(name = "started_at", nullable = false, updatable = false)
 	private Instant startedAt;
 
@@ -79,9 +83,18 @@ public class CollectRun {
 	}
 
 	public CollectRun(String source, CollectTrigger trigger, LocalDate sinceDate, Instant startedAt) {
+		this(source, trigger, sinceDate, null, startedAt);
+	}
+
+	/**
+	 * @param untilDate last publication day the run asks for
+	 */
+	public CollectRun(String source, CollectTrigger trigger, LocalDate sinceDate, LocalDate untilDate,
+			Instant startedAt) {
 		this.source = source;
 		this.trigger = trigger;
 		this.sinceDate = sinceDate;
+		this.untilDate = untilDate;
 		this.status = CollectStatus.RUNNING;
 		this.startedAt = startedAt;
 	}
@@ -137,6 +150,10 @@ public class CollectRun {
 
 	public LocalDate getSinceDate() {
 		return sinceDate;
+	}
+
+	public LocalDate getUntilDate() {
+		return untilDate;
 	}
 
 	public Instant getStartedAt() {
