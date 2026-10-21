@@ -263,50 +263,95 @@ Limites : un projet retiré du jeu (publié ou abandonné) n'est pas clos automa
 supprimé, pas de date limite) ; la tranche de montant ne remplit pas le montant estimé ; les
 départements « France entière » font passer le critère géographique.
 
-### AWS / marches-publics.info (préparé, désactivé)
+### AWS / marches-publics.info (prêt, désactivé en attendant le contrôle des conditions)
 
 marches-publics.info (AW Solutions, profil d'acheteur) n'a ni API, ni flux, ni export public. Ses
 CGU (article 2.2) appellent « téléchargement massif » le fait de visualiser plus de 100 avis par
 heure ou 500 par jour, et ses mentions légales interdisent le téléchargement massif « de
-l'ensemble des avis […] notamment par un prestataire de veille » ; un « flux spécifique
-nocturne » payant est proposé aux prestataires. Une lecture en dessous de ces seuils n'est pas
-interdite, mais n'est pas expressément autorisée : **la source reste désactivée**
-(`collect.disabled-sources=APPROCH,AWS`) jusqu'à une confirmation écrite d'AW Solutions.
+l'ensemble des avis […] notamment par un prestataire de veille ». L'entreprise indique avoir
+obtenu le 21/10/2026 une confirmation écrite d'AW Solutions pour la collecte prévue ; son texte
+n'est pas encore versé au projet. **La source reste désactivée** (`collect.disabled-sources`)
+tant que ses conditions n'ont pas été comparées au fonctionnement décrit ici ; toute condition
+plus stricte (volume, horaires, nature des avis, identification) se règle par la configuration
+ci-dessous ou doit être ajoutée au code avant activation.
 
 - **Lecture** (`collect/awsolutions/AwsClient`) : recherche publique `POST /Annonces/lister`
   (avis en cours, nature `aw-solutions.natures`, par défaut `T` = travaux, parus « aujourd'hui »
   ou « hier » : la recherche ne sait pas sélectionner un autre jour), pages suivantes
   `?pager_t=N` avec le cookie de session, puis la page de chaque avis non encore stocké. User-Agent
-  `GPE-LOGICIEL (veille interne)`.
-- **Limites** (`AwsProperties`) : pause de 40 s avant chaque page ; arrêt au-delà de 90 pages lues
-  dans l'heure ou 450 sur 24 heures (liste ou avis, chacune compte) ; les avis restants sont lus à
-  la collecte suivante tant qu'ils sont du jour ou de la veille. Volume mesuré : 54 avis de travaux
-  parus le 20/10/2026, soit environ 60 pages par jour.
+  `GPE-LOGICIEL (veille interne)`. Aucun DCE n'est téléchargé.
+- **Limites** (`AwsProperties`) : pause avant chaque page (40 s, donc 90 pages par heure au plus à
+  elle seule) ; arrêt au-delà de 90 pages lues dans l'heure ou 450 sur 24 heures (liste ou avis,
+  chacune compte) ; les avis restants sont lus à la collecte suivante tant qu'ils sont du jour ou de
+  la veille, et le journal l'indique (`marches-publics.info: … pages read …`). Les compteurs sont en
+  mémoire : un redémarrage les remet à zéro, mais la pause garantit toujours le plafond horaire.
+  Volume mesuré : 54 avis de travaux parus le 20/10/2026. Une collecte lit la veille et le jour
+  (environ 12 pages de liste) plus les avis nouveaux : 30 à 45 minutes à 40 s par page, pendant
+  lesquelles le planificateur (un seul fil) n'exécute pas d'autre tâche ; la clôture horaire des
+  consultations échues est seulement retardée.
+- **Erreurs** : une erreur serveur ou un délai dépassé est retenté une fois après
+  `collect.retry-delay` ; s'il persiste, la collecte AWS échoue seule (journal `collect_run`,
+  message d'erreur), les autres sources ne sont pas touchées, et la collecte suivante relit les
+  mêmes jours. Un refus (4xx, blocage d'adresse) n'est pas retenté.
 - **Identifiants** : avis brut = nom de la page (`MPI-pub-…`, `LDM-pub-…`, `NR-pub-…`) suivi de la
   date limite affichée dans la liste : un report de date fait relire l'avis. Consultation =
   numéro de consultation de la plateforme (`IDM-…`, présent dans le lien du DCE), commun à tous ses
   avis ; une nouvelle version met la consultation à jour comme un rectificatif complet
-  (`republishesChangedNotices`). Le lien DCE (`…fuseaction=dematEnt.login&type=DCE&IDM=…`) est
-  gardé dans `dce_link` pour une récupération future.
+  (`republishesChangedNotices`) sans toucher au statut de suivi, au commentaire ni aux suivis de
+  l'équipe. Conservés pour la récupération future des documents : `IDM` (identifiant de la
+  consultation et `consultationId` de l'avis brut), adresse de l'avis (`notice_url`) et lien DCE
+  (`…fuseaction=dematEnt.login&type=DCE&IDM=…`, dans `dce_link`).
 - **Lecture des pages** (`AwsPages`, jsoup) : liste (date de parution, date limite, acheteur et
   code postal, référence, objet, lots, liens) et page de l'avis (titre, acheteur, SIRET, chaque ligne
   « libellé / valeur » des tableaux). `AwsNoticeParser` : département par la région NUTS du lieu
   d'exécution principal, sinon les codes postaux du lieu, sinon celui de l'acheteur ; procédure par
   le champ « Mode » ; CPV principal et complémentaires ; date limite des offres, sinon des
   candidatures, sinon de la liste (heure de Paris). Une page titrée « annulation » ou « sans suite »
-  annule la consultation (titres non observés à ce jour : règle à vérifier).
+  annule la consultation AWS (titres non observés à ce jour : règle à vérifier).
 - **Rapprochement** : le site ne donne pas d'identifiant de procédure eForms. Une consultation AWS
   et une consultation d'une autre source ayant exactement la même référence d'acheteur **et** la
-  même date limite sont proposées comme identiques (`tender_match`, règle `SAME_REFERENCE`),
-  quel que soit l'ordre d'arrivée (`SourceParser.proposesMatchesByReference`). Aucune fusion,
-  aucune modification de la consultation BOAMP ou TED ; la règle ne joue jamais entre BOAMP et TED.
+  même date limite sont **proposées** comme pouvant être la même (`tender_match`, règle
+  `SAME_REFERENCE`), quel que soit l'ordre d'arrivée (`SourceParser.proposesMatchesByReference`).
+  Aucune fusion, aucune modification de la consultation BOAMP ou TED ; la règle ne joue jamais
+  entre BOAMP et TED (vérifié par test). L'historique des publications (`NoticeHistory`) affiche
+  chaque proposition avec sa règle : « même identifiant de procédure eForms » ou « même référence
+  d'acheteur et même date limite (pas d'identifiant de procédure commun) », sous le titre
+  « proposée comme pouvant être la même, à vérifier (rien n'est fusionné automatiquement) ».
   Estimation du 21/10/2026 : 4 ou 5 des 17 avis de travaux relevés sont aussi au BOAMP.
 
-Tests : 24 tests (lecture des vraies pages relevées à la main le 21/10/2026, client contre un
-serveur simulé : session et pagination, avis déjà stockés non relus, limite horaire, erreur
-serveur ; collecte complète sur PostgreSQL jetable avec le BOAMP). **Aucune collecte automatisée
-réelle n'a été faite** : elle relève de l'autorisation demandée. Reste à faire côté interface :
-`NoticeHistory` et le type `TenderMatch.rule` ne connaissent que `SAME_PROCEDURE`.
+Configuration (docker-compose, variables du fichier `.env`, prises au redémarrage du backend) :
+
+| Variable `.env` | Propriété | Défaut | Rôle |
+|---|---|---|---|
+| `COLLECT_DISABLED_SOURCES` | `collect.disabled-sources` | `APPROCH,AWS` | Retirer `AWS` active la source ; le remettre la désactive |
+| `AW_SOLUTIONS_NATURES` | `aw-solutions.natures` | `T` | Natures cherchées : `T`, `S`, `F` |
+| `AW_SOLUTIONS_PAUSE` | `aw-solutions.pause` | `40s` | Pause avant chaque page |
+| `AW_SOLUTIONS_MAX_PAGES_PER_HOUR` | `aw-solutions.max-pages-per-hour` | `90` | Arrêt dans l'heure |
+| `AW_SOLUTIONS_MAX_PAGES_PER_DAY` | `aw-solutions.max-pages-per-day` | `450` | Arrêt sur 24 heures |
+
+Dans le conteneur, les noms Spring sont `AWSOLUTIONS_MAXPAGESPERHOUR` et
+`AWSOLUTIONS_MAXPAGESPERDAY` (sans tirets) : `AwsPropertiesTests` vérifie la liaison.
+
+Première collecte contrôlée, après contrôle des conditions de la confirmation écrite :
+
+1. Verser la confirmation au projet et ajuster la configuration à ses conditions.
+2. Essai sur une base jetable (jamais la base réelle) : PostgreSQL de test, backend lancé avec
+   `COLLECT_DISABLED_SOURCES=BOAMP,TED,APPROCH`, collecte d'AWS seule par
+   `POST /api/collect-runs?source=AWS` (administrateur), suivi dans le journal ; vérifier le nombre
+   de pages lues dans les journaux, les consultations créées, puis une deuxième collecte (0 avis
+   nouveau attendu).
+3. Mise en service : sauvegarde vérifiée de la base, reconstruction du backend depuis le code
+   commité, `COLLECT_DISABLED_SOURCES=APPROCH` dans `.env`, redémarrage du backend, première
+   collecte manuelle d'AWS en dehors des créneaux de 7 h et 13 h, contrôle du journal et des
+   rapprochements proposés. Désactivation : remettre `APPROCH,AWS` et redémarrer le backend.
+
+Tests : 32 tests AWS, plus un test BOAMP–TED (lecture des vraies pages relevées à la main le 21/10/2026 ; client contre un
+serveur simulé : session et pagination, avis déjà stockés non relus, limites horaire et
+journalière, pause effective, erreur passagère et persistante ; collecte complète sur PostgreSQL
+jetable avec le BOAMP : idempotence, date limite modifiée, données de l'équipe intactes sur les
+consultations AWS et BOAMP, propositions dans les deux sens, échec isolé puis reprise ; désactivation
+par défaut ; liaison des variables d'environnement). **Aucune collecte automatisée réelle n'a encore
+été faite.**
 
 ### Rapprochement entre sources
 

@@ -118,6 +118,11 @@ export type TenderMatch = {
   source: string;
   externalId: string;
   title: string;
-  rule: "SAME_PROCEDURE";
+  /**
+   * SAME_PROCEDURE: same eForms procedure identifier. SAME_REFERENCE: same
+   * buyer reference and same deadline, for a source without procedure
+   * identifier (AWS). Both are proposals, never merged automatically.
+   */
+  rule: "SAME_PROCEDURE" | "SAME_REFERENCE";
   status: "PROPOSED" | "CONFIRMED" | "REJECTED";
 };

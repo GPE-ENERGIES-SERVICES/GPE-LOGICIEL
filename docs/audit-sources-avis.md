@@ -83,19 +83,21 @@ Voir `docs/technique.md`, section « APProch ». `collect/approch/`, `ProcedureT
 25 tests ; collecte réelle sur base jetable : 10 744 projets, 0 erreur, 0 doublon à la deuxième
 collecte. Activation : décision de l'équipe (700 à 850 projets retenus d'un coup).
 
-### AWS / marches-publics.info (préparé, désactivé)
+### AWS / marches-publics.info (prêt, désactivé)
 
 Voir `docs/technique.md`, section « AWS ». `collect/awsolutions/` : lecture de la recherche publique
 (travaux, parus aujourd'hui ou hier), pause de 40 s entre deux pages, arrêt à 90 pages par heure et
 450 par jour (sous les 100 et 500 des CGU), page d'un avis lue une seule fois, identifiant de
 consultation de la plateforme (IDM) et lien DCE conservés, rapprochement avec le BOAMP proposé (jamais
-fusionné) quand la référence d'acheteur et la date limite sont identiques. 24 tests (vraies pages
-relevées à la main, serveur simulé, PostgreSQL jetable) ; suite complète : 304 tests verts.
+fusionné) quand la référence d'acheteur et la date limite sont identiques. 32 tests (vraies pages
+relevées à la main, serveur simulé, PostgreSQL jetable, désactivation, variables d'environnement).
 
-**Ce qui bloque l'activation** : une confirmation écrite d'AW Solutions qu'une lecture automatisée
-interne, limitée aux avis de travaux et sous les seuils de l'article 2.2 des CGU, est acceptée (ou le
-contrat du flux nocturne). Aucune collecte automatisée réelle n'a été lancée pour cette raison ; le
-premier test réel, sur base jetable, se fera après cette confirmation.
+**État de l'autorisation** : l'entreprise indique avoir obtenu, le 21/10/2026, une confirmation
+écrite d'AW Solutions pour la collecte prévue. Son texte n'est pas encore versé au projet : ses
+conditions (volume, horaires, natures d'avis, identification, durée) doivent être comparées au
+fonctionnement ci-dessus avant toute collecte réelle. Configuration d'activation, affichage de la
+règle `SAME_REFERENCE` et procédure de première collecte contrôlée : `docs/technique.md`, section
+« AWS ».
 
 ### Atexo (PLACE et plateformes régionales) : non préparé
 
@@ -116,13 +118,11 @@ des DCE n'est pas couvert par une éventuelle confirmation sur les avis : les CG
 
 ## Prochaines étapes
 
-1. Écrire à AW Solutions (confirmation de la lecture interne sous seuils, ou contrat du flux
-   nocturne), puis tester AWS sur base jetable et décider de son activation.
+1. Verser au projet la confirmation écrite d'AW Solutions, vérifier ses conditions, tester AWS sur
+   base jetable, puis décider de son activation.
 2. Décider de l'activation d'APProch.
 3. Ouvrir un compte entreprise sur PLACE et demander l'accord écrit de la DAE ; relire les CGU des
    plateformes Atexo régionales à leur retour en ligne.
 4. Demandes d'accord écrites : achatpublic (par courrier), Atline (Marchés sécurisés), Dematis.
-5. Interface : afficher la règle `SAME_REFERENCE` dans l'historique des publications
-   (`NoticeHistory`, type `TenderMatch.rule`).
-6. Hors périmètre « avis » mais ouvert (A) : les données essentielles (DECP) pour l'écran des
+5. Hors périmètre « avis » mais ouvert (A) : les données essentielles (DECP) pour l'écran des
    marchés attribués.

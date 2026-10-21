@@ -217,6 +217,28 @@ class CrossSourceMatchTests {
 		assertThat(matches.count()).isZero();
 	}
 
+	@Test
+	void theSameReferenceAndDeadlineProposeNothingBetweenTheBoampAndTed() {
+		given(tedClient.fetchPublishedOn(any()))
+			.willReturn(List.of(ted(tedInitial())));
+		service.collect("TED", CollectTrigger.MANUAL, TODAY);
+		Tender ted = tenders.findBySourceAndExternalId("TED", "698125-2026").orElseThrow();
+		assertThat(ted.getReference()).isNotNull();
+		String boamp = """
+				{"idweb": "26-1", "nature": "APPEL_OFFRE", "etat": "INITIAL", "objet": "Travaux",
+				 "dateparution": "2026-10-05", "contractfolderid": "another-procedure", "code_departement": ["13"],
+				 "datelimitereponse": "%s", "donnees": "{\\"identifiantInterne\\": \\"%s\\"}"}"""
+			.formatted(ted.getDeadline(), ted.getReference());
+		given(boampClient.fetchPublishedOn(any())).willReturn(List.of(new SourceRecord("26-1", TODAY, boamp)));
+
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY);
+
+		Tender boampTender = tenders.findBySourceAndExternalId("BOAMP", "26-1").orElseThrow();
+		assertThat(boampTender.getReference()).isEqualTo(ted.getReference());
+		assertThat(boampTender.getDeadline()).isEqualTo(ted.getDeadline());
+		assertThat(matches.count()).isZero();
+	}
+
 	private Tender onlyTender() {
 		return tenders.findAll().getFirst();
 	}

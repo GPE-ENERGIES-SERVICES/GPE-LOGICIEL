@@ -1,9 +1,11 @@
 package eu.gpefrance.tenders.collect.awsolutions;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.ExpectedCount.manyTimes;
 import static org.springframework.test.web.client.ExpectedCount.never;
 import static org.springframework.test.web.client.ExpectedCount.once;
+import static org.springframework.test.web.client.ExpectedCount.twice;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -17,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.hamcrest.Matchers;
@@ -25,6 +28,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import eu.gpefrance.tenders.ClockConfiguration;
@@ -51,9 +55,14 @@ class AwsClientTests {
 	private MockRestServiceServer server;
 
 	private AwsClient client(int maxPagesPerHour) {
+		return client(maxPagesPerHour, 450, Duration.ZERO);
+	}
+
+	private AwsClient client(int maxPagesPerHour, int maxPagesPerDay, Duration pause) {
 		RestClient.Builder builder = RestClient.builder();
 		server = MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
-		return new AwsClient(builder, new AwsProperties(BASE, List.of("T"), Duration.ZERO, maxPagesPerHour, 450),
+		return new AwsClient(builder,
+				new AwsProperties(BASE, List.of("T"), pause, maxPagesPerHour, maxPagesPerDay),
 				new CollectProperties(7, Set.of(), Duration.ZERO), CLOCK);
 	}
 
@@ -137,6 +146,43 @@ class AwsClientTests {
 	}
 
 	@Test
+	void stopsAtTheLimitOfTheDay() {
+		AwsClient client = client(90, 7, Duration.ZERO);
+		expectSearch(" = 1");
+		expectNextPages(2, 6);
+		server.expect(manyTimes(), requestTo(Matchers.matchesPattern(BASE + "/Annonces/[A-Z]+-pub-.*")))
+			.andRespond(withSuccess(AwsPagesTests.bytes("notice-mpi.html"), HTML));
+
+		// 1 search + 5 next pages + 1 notice = 7 pages.
+		assertThat(client.fetchPublishedOn(YESTERDAY, id -> false)).hasSize(1);
+	}
+
+	@Test
+	void failsWhenTheServerErrorLasts() {
+		AwsClient client = client(90);
+		server.expect(twice(), requestTo(BASE + "/Annonces/lister"))
+			.andRespond(withServerError());
+
+		assertThatThrownBy(() -> client.fetchPublishedOn(YESTERDAY, id -> false))
+			.isInstanceOf(HttpServerErrorException.class);
+		server.verify();
+	}
+
+	@Test
+	void pausesBeforeEachPageButTheFirst() {
+		AwsClient client = client(90, 450, Duration.ofMillis(100));
+		expectSearch(" = 1");
+		expectNextPages(2, 6);
+		long start = System.nanoTime();
+
+		client.fetchPublishedOn(YESTERDAY, id -> true);
+
+		// 6 pages: 5 pauses.
+		assertThat(Duration.ofNanos(System.nanoTime() - start)).isGreaterThanOrEqualTo(Duration.ofMillis(500));
+		server.verify();
+	}
+
+	@Test
 	void readsADeadlineAsAKeyOfItsIdentifier() {
 		assertThat(AwsClient.deadlineKey("09/11/26 à 12h00")).isEqualTo("2611091200");
 		assertThat(AwsClient.deadlineKey("")).isEmpty();
@@ -147,7 +193,7 @@ class AwsClientTests {
 		cookie.add(HttpHeaders.SET_COOKIE, "PHPSESSID=abc123; path=/; HttpOnly");
 		server.expect(once(), requestTo(BASE + "/Annonces/lister"))
 			.andExpect(method(HttpMethod.POST))
-			.andExpect(content().formDataContains(java.util.Map.of("IDE", "EC", "IDN", "T", "dateParution", when)))
+			.andExpect(content().formDataContains(Map.of("IDE", "EC", "IDN", "T", "dateParution", when)))
 			.andRespond(withSuccess(AwsPagesTests.bytes("list-page.html"), HTML).headers(cookie));
 	}
 

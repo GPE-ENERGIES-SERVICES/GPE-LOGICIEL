@@ -36,6 +36,13 @@ services:
       STORAGE_DIR: /data/storage
       ANALYSIS_INPUT_PRICE: ${ANALYSIS_INPUT_PRICE:-0}
       ANALYSIS_OUTPUT_PRICE: ${ANALYSIS_OUTPUT_PRICE:-0}
+      # Sources not collected; remove AWS from the list to collect marches-publics.info
+      COLLECT_DISABLED_SOURCES: ${COLLECT_DISABLED_SOURCES:-APPROCH,AWS}
+      # Limits of the reading of marches-publics.info, below its terms of use
+      AWSOLUTIONS_NATURES: ${AW_SOLUTIONS_NATURES:-T}
+      AWSOLUTIONS_PAUSE: ${AW_SOLUTIONS_PAUSE:-40s}
+      AWSOLUTIONS_MAXPAGESPERHOUR: ${AW_SOLUTIONS_MAX_PAGES_PER_HOUR:-90}
+      AWSOLUTIONS_MAXPAGESPERDAY: ${AW_SOLUTIONS_MAX_PAGES_PER_DAY:-450}
     volumes:
       - storage-data:/data/storage
 

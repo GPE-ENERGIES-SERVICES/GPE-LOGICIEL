@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willReturn;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -17,10 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.HttpServerErrorException;
 
 import eu.gpefrance.tenders.ClockConfiguration;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
@@ -176,8 +179,46 @@ class AwsCollectTests {
 		assertThat(matches()).isEmpty();
 	}
 
+	@Test
+	void aFailingSiteFailsItsRunOnlyAndIsReadAgainNextTime() {
+		given(boampClient.fetchPublishedOn(TODAY)).willReturn(List.of(boamp("26-1", "AUTRE-REF")));
+		given(awsClient.fetchPublishedOn(any(), any()))
+			.willThrow(new HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE));
+
+		List<CollectRun> runs = service.collectActive(CollectTrigger.SCHEDULED);
+
+		assertThat(runs).extracting(CollectRun::getSource, CollectRun::getStatus)
+			.containsExactly(tuple("BOAMP", CollectStatus.SUCCESS), tuple("AWS", CollectStatus.FAILED));
+		assertThat(runs.get(1).getErrorMessage()).contains("503");
+		assertThat(tenders.findAll()).extracting(Tender::getSource).containsExactly("BOAMP");
+
+		CollectRun next = collectAws(cantal("09/11/26 à 12h00"));
+
+		assertThat(next.getStatus()).isEqualTo(CollectStatus.SUCCESS);
+		assertThat(tenders.count()).isEqualTo(2);
+	}
+
+	@Test
+	void aProposedMatchLeavesTheTeamDataOfTheBoampTenderAlone() {
+		given(boampClient.fetchPublishedOn(TODAY)).willReturn(List.of(boamp("26-1", "2026TXSSTA0178")));
+		service.collect("BOAMP", CollectTrigger.MANUAL, TODAY);
+		Long boampId = tenders.findBySourceAndExternalId("BOAMP", "26-1").orElseThrow().getId();
+		jdbc.update("UPDATE tender SET follow_up_status = 'SUBMITTED', follow_up_comment = 'Offre déposée' "
+				+ "WHERE id = ?", boampId);
+		String before = row(boampId);
+
+		collectAws(cantal("09/11/26 à 12h00"));
+		collectAws(cantal("16/11/26 à 12h00"));
+
+		assertThat(row(boampId)).isEqualTo(before);
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM tender_notice WHERE tender_id = ?", Integer.class,
+				boampId))
+			.isEqualTo(1);
+		assertThat(matches()).containsExactly(tuple("AWS", "BOAMP", "SAME_REFERENCE", "PROPOSED"));
+	}
+
 	private CollectRun collectAws(SourceRecord... records) {
-		given(awsClient.fetchPublishedOn(any(), any())).willReturn(Arrays.asList(records));
+		willReturn(Arrays.asList(records)).given(awsClient).fetchPublishedOn(any(), any());
 		return service.collect("AWS", CollectTrigger.MANUAL, TODAY);
 	}
 
@@ -188,6 +229,10 @@ class AwsCollectTests {
 			.stream()
 			.map((Map<String, Object> row) -> tuple(row.get("a"), row.get("b"), row.get("rule"), row.get("status")))
 			.toList();
+	}
+
+	private String row(Long id) {
+		return jdbc.queryForObject("SELECT row_to_json(t)::text FROM tender t WHERE id = ?", String.class, id);
 	}
 
 	private void inTransaction(Runnable assertions) {
