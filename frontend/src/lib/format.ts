@@ -126,6 +126,7 @@ export const PROCEDURE_LABELS: Record<ProcedureType, string> = {
   CONCESSION: "Concession / DSP",
   QUALIFICATION_SYSTEM: "Système de qualification",
   PRIOR_INFORMATION_CALL: "Préinformation valant mise en concurrence",
+  PURCHASE_PROJECT: "Projet d'achat (prévisionnel)",
   OTHER: "Autre procédure",
 };
 

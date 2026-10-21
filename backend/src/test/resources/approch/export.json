@@ -1,0 +1,34 @@
+[
+  {
+    "code": 66108,
+    "libelle": "Fourniture composants électroniques, électriques et diverses pièces de rechange destinés au maintien en condition opérationnelle des matériels de télécommunication de la gendarmerie nationale",
+    "statut": "Ouvert",
+    "description": "Fourniture de composants électroniques, électriques et diverses pièces de rechange destinés au maintien en condition opérationnelle des matériels de télécommunication de la gendarmerie nationale - 3 lots (antennes courantes, éléments d'antenne, câbles coaxiaux)",
+    "siren_de_l_entite_acheteuse": 110014016,
+    "categorie_d_achat": "Fournitures",
+    "code_s_cpv": "31681400|31711100",
+    "date_previsionnelle_de_publication": "2026-04-08",
+    "date_cible_de_remise_des_offres": "2026-11-30",
+    "type_de_procedure": "Appel d'offres ouvert",
+    "lien_vers_la_consultation": "https://www.marches-publics.gouv.fr/entreprise/consultation/3032509?orgAcronyme=g6l",
+    "montant_estime_du_marche": "100k - 500k€",
+    "duree_previsionnelle_du_marche": 48,
+    "departement_s_d_execution_du_marche": "72"
+  },
+  {
+    "code": 66852,
+    "libelle": "Saint-Malo (35) – Travaux de mise à niveau du système de sécurité incendie de l’ENP",
+    "statut": "Ouvert",
+    "description": "Système de sécurité incendie, courants faibles",
+    "siren_de_l_entite_acheteuse": 110014016,
+    "categorie_d_achat": "Travaux",
+    "code_s_cpv": "45259900",
+    "date_previsionnelle_de_publication": "2026-10-19",
+    "date_cible_de_remise_des_offres": null,
+    "type_de_procedure": null,
+    "lien_vers_la_consultation": null,
+    "montant_estime_du_marche": "100k - 500k€",
+    "duree_previsionnelle_du_marche": 5,
+    "departement_s_d_execution_du_marche": "02|01|04|03|06|05|07|08|09|10|11|12|14|16|15|13|17|19|18|22|23|24|21|25|26|27|28|2A|2B|29|30|31|33|34|32|35|36|37|38|39|40|41|42|43|44|45|46|47|49|48|50|53|52|51|55|57|58|54|56|59|60|61|62|66|63|68|69|70|71|72|73|65|75|74|77|76|78|79|64|67|82|80|83|81|85|86|84|87|88|90|91|89|92|94|95|93"
+  }
+]

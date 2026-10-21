@@ -272,6 +272,16 @@ public class NormalizationService {
 			return Applied.updated(tender);
 		}
 		Optional<Tender> known = tenders.findBySourceAndExternalId(raw.getSource(), notice.externalId());
+		if (known.isPresent() && parser.republishesChangedNotices() && !isAttached(known.get(), raw)) {
+			// A new version of the whole notice: applied as a complete rectification.
+			Tender tender = known.get();
+			if (isLatest(tender, raw.getSource(), notice.details().publishedAt())) {
+				tender.update(notice.details(), now);
+				tender.reopenIfDeadlineToCome(now);
+			}
+			attach(tender, raw, notice, NoticeKind.RECTIFICATION);
+			return Applied.updated(tender);
+		}
 		if (known.isEmpty() && parser.defersToOtherSources()) {
 			Optional<Applied> deferred = deferToOtherSource(raw, notice);
 			if (deferred.isPresent()) {
@@ -407,13 +417,14 @@ public class NormalizationService {
 			log.warn("{} notice {} gives the procedure {} to a tender of the procedure {}: the first one is kept",
 					raw.getSource(), notice.externalId(), notice.procedureId(), tender.getProcedureId());
 		}
-		boolean alreadyAttached = tender.getNotices()
-			.stream()
-			.anyMatch(existing -> existing.getRawNoticeId().equals(raw.getId()));
-		if (!alreadyAttached) {
+		if (!isAttached(tender, raw)) {
 			tender.addNotice(raw.getSource(), raw.getId(), notice.externalId(), kind, notice.details().publishedAt(),
 					notice.details().deadline(), notice.changeDescription());
 		}
+	}
+
+	private static boolean isAttached(Tender tender, RawNotice raw) {
+		return tender.getNotices().stream().anyMatch(existing -> existing.getRawNoticeId().equals(raw.getId()));
 	}
 
 	/**

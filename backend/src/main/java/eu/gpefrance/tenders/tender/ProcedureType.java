@@ -16,5 +16,11 @@ public enum ProcedureType {
 	 */
 	PRIOR_INFORMATION_CALL,
 
+	/**
+	 * Purchase project announced by a buyer before any call for tenders
+	 * (APProch): a forecast, neither a notice nor a call for competition.
+	 */
+	PURCHASE_PROJECT,
+
 	OTHER
 }

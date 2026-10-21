@@ -9,6 +9,7 @@ export type ProcedureType =
   | "CONCESSION"
   | "QUALIFICATION_SYSTEM"
   | "PRIOR_INFORMATION_CALL"
+  | "PURCHASE_PROJECT"
   | "OTHER";
 
 export type TenderStatus = "ACTIVE" | "CLOSED" | "CANCELLED" | "UNSUCCESSFUL";

@@ -42,4 +42,15 @@ public interface SourceParser {
 		return false;
 	}
 
+	/**
+	 * Whether the source publishes no rectification but republishes its whole
+	 * notice, under the same identifier, each time it changes: a new version
+	 * of a notice whose tender is known then updates it like a complete
+	 * rectification, when no later version was applied, and is kept in its
+	 * history as such. Only for a source without rectification notices.
+	 */
+	default boolean republishesChangedNotices() {
+		return false;
+	}
+
 }

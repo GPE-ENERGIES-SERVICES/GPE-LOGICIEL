@@ -156,7 +156,7 @@ même nom de source (par exemple `TED`), sur le modèle de `collect/boamp` :
 Rien d'autre à modifier : `CollectService`, `NormalizationService` et `CollectScheduler`
 trouvent les connecteurs et les parseurs par injection. Chaque source a son verrou, son point
 de départ, son journal (`collect_run.source`) et son bilan ; l'échec d'une source n'arrête pas les
-autres. `collect.disabled-sources=TED` met une source de côté.
+autres. `collect.disabled-sources=TED` met une source de côté (par défaut : `APPROCH`, voir plus bas).
 
 Modes d'accès : `AUTOMATED` (API ou open data publics) et `AUTHENTICATED` (compte ou clé de
 l'entreprise, fournis par l'environnement) sont collectés ; `MANUAL` (export déposé par une
@@ -216,6 +216,52 @@ Vérification réelle du 12/10/2026 (base jetable) : 5 jours, 1 198 avis, 0 erre
 limite (absente de l'avis). Limite : une attribution dont l'appel d'offres n'a pas été collecté
 reste en attente (424 sur ces 5 jours, consultations plus anciennes) et ne sera appliquée que
 si cet appel d'offres est importé et cité par son numéro de publication.
+
+### APProch (projets d'achats, désactivé par défaut)
+
+APProch (`projets-achats.marches-publics.gouv.fr`, Direction des achats de l'État) publie les
+**projets d'achats** des acheteurs publics avant tout appel d'offres. Ce ne sont pas des avis :
+APProch précise lui-même qu'une publication « ne constitue pas un avis de pré-information ». Les
+projets sont en open data (Licence Ouverte 2.0) sur `data.economie.gouv.fr`, jeu
+`projets-dachats-publics` (`approch.base-url`, API Opendatasoft comme le BOAMP), sans compte ni clé.
+
+- **Désactivé par défaut** : `collect.disabled-sources=APPROCH` dans `application.properties`.
+  L'activer (`collect.disabled-sources=` ou la liste des autres sources à exclure) fait entrer les
+  projets dans les consultations au prochain créneau.
+- **Lecture** (`ApprochClient`) : le jeu ne liste que les projets ouverts du jour, sans date de
+  publication, et dépasse la limite de 10 000 résultats de la lecture par pages : tout est lu en une
+  requête d'export (`/exports/json`, environ 8,6 Mo, 4 s), une seule fois par collecte (dernier jour
+  de la période, `ApprochConnector`).
+- **Acheteur** : le jeu ne donne que le SIREN. Le nom vient de l'API publique Recherche
+  d'entreprises (`approch.companies-url`), demandé une fois par SIREN (77 au 21/10/2026) pendant la
+  vie de l'application, à 200 ms d'intervalle (limite de l'API : 7 requêtes par seconde). Un échec
+  fait échouer la collecte (retentée au créneau suivant) ; un SIREN inconnu donne « Entité
+  acheteuse SIREN … ».
+- **Versions** : l'identifiant d'un avis brut est le code du projet suivi d'une empreinte (SHA-256,
+  12 caractères) des champs lus et du nom de l'acheteur. Un projet inchangé est ignoré ; un projet
+  modifié est stocké comme nouvelle version et met à jour sa consultation comme un rectificatif
+  complet, si aucune version plus récente n'a été appliquée (`SourceParser.republishesChangedNotices`,
+  APProch seulement). L'historique montre « Rectificatif » pour chaque nouvelle version.
+- **Consultation** (`ApprochNoticeParser`) : type de procédure `PURCHASE_PROJECT` (« Projet d'achat
+  (prévisionnel) ») ; aucune date limite ni montant (le jeu donne une tranche) ; la date de
+  publication est le jour de première lecture ; publication prévisionnelle, date cible de remise des
+  offres, procédure envisagée, tranche de montant et durée sont écrites après la description ; lien
+  vers la fiche `…/project/{code}` ; le lien vers la consultation publiée (PLACE le plus souvent),
+  quand l'acheteur l'a donné, est gardé comme lien DCE. Aucun identifiant de procédure : jamais de
+  rattachement ni de proposition de rapprochement avec le BOAMP ou TED. Un projet dont le statut
+  n'est plus « Ouvert » est ignoré.
+
+Vérification réelle du 21/10/2026 (base jetable Testcontainers, deux collectes successives) :
+10 744 projets reçus, 10 744 consultations, 0 erreur, 0 rejet ; deuxième collecte : 0 nouvel avis,
+0 doublon ; 309 liens vers une consultation publiée ; 8 projets sans SIREN ; 929 sans département ;
+3 713 (35 %) listent 90 départements ou plus (projets nationaux, saisis tels quels par l'acheteur) ;
+1 274 sans CPV. Première collecte : 5 min (normalisation et filtrage de 10 744 consultations) ;
+suivantes : 14 s. Avec les critères actuels de l'entreprise, environ 700 à 850 projets seraient
+retenus.
+
+Limites : un projet retiré du jeu (publié ou abandonné) n'est pas clos automatiquement (rien n'est
+supprimé, pas de date limite) ; la tranche de montant ne remplit pas le montant estimé ; les
+départements « France entière » font passer le critère géographique.
 
 ### Rapprochement entre sources
 
