@@ -331,18 +331,34 @@ public class NormalizationService {
 	 * tenders are left as they are.
 	 */
 	private void proposeMatches(Tender tender, Instant now) {
-		if (tender.getProcedureId() == null) {
-			return;
-		}
-		for (Tender other : tenders
-			.findByProcedureIdAndSourceNotAndMergedIntoIdIsNullOrderByIdAsc(tender.getProcedureId(),
-				tender.getSource())) {
-			if (!matches.existsByTenderIdAndMatchedTenderId(tender.getId(), other.getId())) {
-				matches.save(new TenderMatch(tender.getId(), other.getId(), TenderMatch.SAME_PROCEDURE, now));
-				log.info("{} tender {} and {} tender {} share the procedure {}: match proposed", tender.getSource(),
-						tender.getId(), other.getSource(), other.getId(), tender.getProcedureId());
+		if (tender.getProcedureId() != null) {
+			for (Tender other : tenders
+				.findByProcedureIdAndSourceNotAndMergedIntoIdIsNullOrderByIdAsc(tender.getProcedureId(),
+					tender.getSource())) {
+				propose(tender, other, TenderMatch.SAME_PROCEDURE, now);
 			}
 		}
+		if (tender.getReference() != null && tender.getDeadline() != null) {
+			for (Tender other : tenders.findByReferenceAndDeadlineAndSourceNotAndMergedIntoIdIsNullOrderByIdAsc(
+					tender.getReference(), tender.getDeadline(), tender.getSource())) {
+				if (proposesMatchesByReference(tender.getSource()) || proposesMatchesByReference(other.getSource())) {
+					propose(tender, other, TenderMatch.SAME_REFERENCE, now);
+				}
+			}
+		}
+	}
+
+	private void propose(Tender tender, Tender other, String rule, Instant now) {
+		if (!matches.existsByTenderIdAndMatchedTenderId(tender.getId(), other.getId())) {
+			matches.save(new TenderMatch(tender.getId(), other.getId(), rule, now));
+			log.info("{} tender {} and {} tender {} match by the rule {}: match proposed", tender.getSource(),
+					tender.getId(), other.getSource(), other.getId(), rule);
+		}
+	}
+
+	private boolean proposesMatchesByReference(String source) {
+		SourceParser parser = parsers.get(source);
+		return parser != null && parser.proposesMatchesByReference();
 	}
 
 	private static NoticeKind kindOf(NoticeType type) {

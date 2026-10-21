@@ -263,6 +263,51 @@ Limites : un projet retiré du jeu (publié ou abandonné) n'est pas clos automa
 supprimé, pas de date limite) ; la tranche de montant ne remplit pas le montant estimé ; les
 départements « France entière » font passer le critère géographique.
 
+### AWS / marches-publics.info (préparé, désactivé)
+
+marches-publics.info (AW Solutions, profil d'acheteur) n'a ni API, ni flux, ni export public. Ses
+CGU (article 2.2) appellent « téléchargement massif » le fait de visualiser plus de 100 avis par
+heure ou 500 par jour, et ses mentions légales interdisent le téléchargement massif « de
+l'ensemble des avis […] notamment par un prestataire de veille » ; un « flux spécifique
+nocturne » payant est proposé aux prestataires. Une lecture en dessous de ces seuils n'est pas
+interdite, mais n'est pas expressément autorisée : **la source reste désactivée**
+(`collect.disabled-sources=APPROCH,AWS`) jusqu'à une confirmation écrite d'AW Solutions.
+
+- **Lecture** (`collect/awsolutions/AwsClient`) : recherche publique `POST /Annonces/lister`
+  (avis en cours, nature `aw-solutions.natures`, par défaut `T` = travaux, parus « aujourd'hui »
+  ou « hier » : la recherche ne sait pas sélectionner un autre jour), pages suivantes
+  `?pager_t=N` avec le cookie de session, puis la page de chaque avis non encore stocké. User-Agent
+  `GPE-LOGICIEL (veille interne)`.
+- **Limites** (`AwsProperties`) : pause de 40 s avant chaque page ; arrêt au-delà de 90 pages lues
+  dans l'heure ou 450 sur 24 heures (liste ou avis, chacune compte) ; les avis restants sont lus à
+  la collecte suivante tant qu'ils sont du jour ou de la veille. Volume mesuré : 54 avis de travaux
+  parus le 20/10/2026, soit environ 60 pages par jour.
+- **Identifiants** : avis brut = nom de la page (`MPI-pub-…`, `LDM-pub-…`, `NR-pub-…`) suivi de la
+  date limite affichée dans la liste : un report de date fait relire l'avis. Consultation =
+  numéro de consultation de la plateforme (`IDM-…`, présent dans le lien du DCE), commun à tous ses
+  avis ; une nouvelle version met la consultation à jour comme un rectificatif complet
+  (`republishesChangedNotices`). Le lien DCE (`…fuseaction=dematEnt.login&type=DCE&IDM=…`) est
+  gardé dans `dce_link` pour une récupération future.
+- **Lecture des pages** (`AwsPages`, jsoup) : liste (date de parution, date limite, acheteur et
+  code postal, référence, objet, lots, liens) et page de l'avis (titre, acheteur, SIRET, chaque ligne
+  « libellé / valeur » des tableaux). `AwsNoticeParser` : département par la région NUTS du lieu
+  d'exécution principal, sinon les codes postaux du lieu, sinon celui de l'acheteur ; procédure par
+  le champ « Mode » ; CPV principal et complémentaires ; date limite des offres, sinon des
+  candidatures, sinon de la liste (heure de Paris). Une page titrée « annulation » ou « sans suite »
+  annule la consultation (titres non observés à ce jour : règle à vérifier).
+- **Rapprochement** : le site ne donne pas d'identifiant de procédure eForms. Une consultation AWS
+  et une consultation d'une autre source ayant exactement la même référence d'acheteur **et** la
+  même date limite sont proposées comme identiques (`tender_match`, règle `SAME_REFERENCE`),
+  quel que soit l'ordre d'arrivée (`SourceParser.proposesMatchesByReference`). Aucune fusion,
+  aucune modification de la consultation BOAMP ou TED ; la règle ne joue jamais entre BOAMP et TED.
+  Estimation du 21/10/2026 : 4 ou 5 des 17 avis de travaux relevés sont aussi au BOAMP.
+
+Tests : 24 tests (lecture des vraies pages relevées à la main le 21/10/2026, client contre un
+serveur simulé : session et pagination, avis déjà stockés non relus, limite horaire, erreur
+serveur ; collecte complète sur PostgreSQL jetable avec le BOAMP). **Aucune collecte automatisée
+réelle n'a été faite** : elle relève de l'autorisation demandée. Reste à faire côté interface :
+`NoticeHistory` et le type `TenderMatch.rule` ne connaissent que `SAME_PROCEDURE`.
+
 ### Rapprochement entre sources
 
 80 % des procédures françaises de TED sont aussi au BOAMP, avec le même identifiant de procédure

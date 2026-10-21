@@ -23,6 +23,12 @@ public class TenderMatch {
 	/** Same eForms procedure identifier in both sources. */
 	public static final String SAME_PROCEDURE = "SAME_PROCEDURE";
 
+	/**
+	 * Same buyer reference and same deadline, for a source without procedure
+	 * identifier.
+	 */
+	public static final String SAME_REFERENCE = "SAME_REFERENCE";
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;

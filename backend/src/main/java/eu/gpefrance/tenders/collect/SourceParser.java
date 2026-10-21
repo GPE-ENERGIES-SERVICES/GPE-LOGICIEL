@@ -53,4 +53,14 @@ public interface SourceParser {
 		return false;
 	}
 
+	/**
+	 * Whether a tender of the source, which gives no procedure identifier,
+	 * is proposed as the same consultation as a tender of another source with
+	 * exactly the same buyer reference and deadline, whichever is created
+	 * second. Only a proposal to a person: no tender is changed or merged.
+	 */
+	default boolean proposesMatchesByReference() {
+		return false;
+	}
+
 }

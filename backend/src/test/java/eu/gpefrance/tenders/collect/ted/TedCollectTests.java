@@ -39,7 +39,7 @@ import eu.gpefrance.tenders.tender.TenderStatus;
  * which they are collected; the real fixtures are varied by their
  * publication number, their changed notice and their deadline.
  */
-@SpringBootTest(properties = "collect.disabled-sources=APPROCH")
+@SpringBootTest(properties = "collect.disabled-sources=APPROCH,AWS")
 @Import(TestcontainersConfiguration.class)
 class TedCollectTests {
 

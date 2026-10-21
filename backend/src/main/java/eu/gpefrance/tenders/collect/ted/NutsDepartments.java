@@ -9,7 +9,7 @@ import java.util.Map;
  * department; the table was made by matching the Eurostat names with the
  * official geographic code of INSEE (101 regions, 101 departments).
  */
-final class NutsDepartments {
+public final class NutsDepartments {
 
 	private static final Map<String, String> DEPARTMENTS = Map.ofEntries(
 			Map.entry("FR101", "75"),
@@ -120,7 +120,7 @@ final class NutsDepartments {
 	/**
 	 * @return the department of a French NUTS 3 code, null for any other code
 	 */
-	static String departmentOf(String nuts) {
+	public static String departmentOf(String nuts) {
 		return nuts == null ? null : DEPARTMENTS.get(nuts.strip().toUpperCase(Locale.ROOT));
 	}
 

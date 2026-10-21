@@ -25,6 +25,8 @@ public interface RawNoticeRepository extends JpaRepository<RawNotice, Long> {
 			""")
 	int insertIfAbsent(String source, String externalId, String payload, LocalDate publishedAt);
 
+	boolean existsBySourceAndExternalId(String source, String externalId);
+
 	List<RawNotice> findTop100BySourceAndNormalizedAtIsNullOrderByPublishedAtAscIdAsc(String source);
 
 	List<RawNotice> findBySourceAndNormalizationNoteStartingWithOrderByPublishedAtAscIdAsc(String source,

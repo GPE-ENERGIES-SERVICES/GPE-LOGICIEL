@@ -47,7 +47,7 @@ import tools.jackson.databind.node.ObjectNode;
  * collection: one tender per project whatever the number of collections, a
  * changed project updating its tender, the data of the team left alone.
  */
-@SpringBootTest(properties = "collect.disabled-sources=TED")
+@SpringBootTest(properties = "collect.disabled-sources=TED,AWS")
 @Import(TestcontainersConfiguration.class)
 class ApprochCollectTests {
 
@@ -206,7 +206,7 @@ class ApprochCollectTests {
 	void theProjectsAreNotCollectedByDefault() throws IOException {
 		String properties = new ClassPathResource("application.properties").getContentAsString(StandardCharsets.UTF_8);
 
-		assertThat(properties).containsPattern("(?m)^collect\\.disabled-sources=APPROCH$");
+		assertThat(properties).containsPattern("(?m)^collect\\.disabled-sources=APPROCH,AWS$");
 	}
 
 	private CollectRun collect(SourceRecord... records) {

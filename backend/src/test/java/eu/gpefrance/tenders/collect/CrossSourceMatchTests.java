@@ -46,7 +46,7 @@ import eu.gpefrance.tenders.tender.TenderStatus;
  * consultation and never changes it; the other way round, or when the
  * procedure is ambiguous, a person decides.
  */
-@SpringBootTest(properties = "collect.disabled-sources=APPROCH")
+@SpringBootTest(properties = "collect.disabled-sources=APPROCH,AWS")
 @Import(TestcontainersConfiguration.class)
 class CrossSourceMatchTests {
 

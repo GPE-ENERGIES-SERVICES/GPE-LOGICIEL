@@ -31,6 +31,10 @@ public interface TenderRepository extends JpaRepository<Tender, Long>, JpaSpecif
 	/** The tenders of the other sources with the procedure, merged duplicates left out. */
 	List<Tender> findByProcedureIdAndSourceNotAndMergedIntoIdIsNullOrderByIdAsc(String procedureId, String source);
 
+	/** The tenders of the other sources with the reference and deadline, merged duplicates left out. */
+	List<Tender> findByReferenceAndDeadlineAndSourceNotAndMergedIntoIdIsNullOrderByIdAsc(String reference,
+			Instant deadline, String source);
+
 	/**
 	 * Tenders of the source made by a complete rectification received before
 	 * its initial notice, whose rectification cites the given notice

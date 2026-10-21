@@ -1,7 +1,10 @@
 # Sources d'avis de marchés publics : audit et intégration
 
-État au 21/10/2026. Faits vérifiés le jour même (pages officielles, CGU, robots.txt, appels réels) ;
-les hypothèses sont signalées comme telles.
+État au 21/10/2026, révisé le même jour pour un **usage interne et non commercial** : GPE est
+réservé à l'équipe de l'entreprise, n'est ni vendu ni proposé à des tiers, et ne redistribue
+aucune donnée. Faits vérifiés le jour même (pages officielles, CGU, mentions légales, robots.txt,
+requêtes manuelles) ; les hypothèses sont signalées comme telles. Le simple fait qu'une page soit
+publique n'est jamais pris pour une autorisation de collecte automatisée.
 
 ## Classement
 
@@ -16,74 +19,110 @@ Relevé sur `accueil.nukema.com` (`www.nukema.com` redirige) : 14 plateformes, d
 la liste de départ (Arnia, Megalis, AMPA, SafeTender). Modula, EU-Supply et APProch n'y figurent
 pas. Nukema est un service de veille (agrégateur), pas une source.
 
-## Tableau
+## Ce que change l'usage interne non commercial
 
-| Source | URL vérifiée | Nature | Méthode étudiée | Classe | Intégration | Avis récupérés au test | Couverture complémentaire BOAMP/TED | Limites, autorisation nécessaire |
-|---|---|---|---|---|---|---|---|---|
-| BOAMP | boamp-datadila.opendatasoft.com (API DILA) | Journal officiel | API open data | A | En service (existant) | — (aucune collecte depuis le 12/10 : machine éteinte, rattrapage automatique au prochain créneau) | Référence | — |
-| TED | api.ted.europa.eu | Journal officiel UE | API Search v3 | A | En service (existant) | — | 295 consultations TED seules (base réelle) ; 1 203 avis TED rattachés au BOAMP | — |
-| APProch | projets-achats.marches-publics.gouv.fr ; open data data.economie.gouv.fr | Projets d'achats prévisionnels (État, collectivités, hôpitaux) | Export open data Opendatasoft, Licence Ouverte 2.0 ; noms d'acheteurs par l'API Recherche d'entreprises | A | **Connecteur fait, testé, désactivé par défaut** | 10 744 projets réels, 0 erreur, 2e collecte 0 doublon (base jetable) | Nouvelle information (avant l'avis), pas des avis ; aucun identifiant commun avec BOAMP/TED | Pas de date limite, acheteur par SIREN, 35 % « France entière », 700 à 850 projets retenus avec les critères actuels |
-| PLACE | www.marches-publics.gouv.fr | Profil d'acheteur de l'État (Atexo) | Flux RSS Atexo, pages publiques | C | Non | 0 | DCE de 12,3 % des consultations retenues | CGU : « toute reprise totale ou partielle est interdite sans l'autorisation expresse et écrite du directeur » ; la page de flux RSS exige une connexion entreprise. Autorisation écrite de la DAE à demander |
-| Maximilien | marches.maximilien.fr | Profil d'acheteur mutualisé IDF (Atexo) | Comme PLACE | C (D aujourd'hui) | Non | 0 | 2,2 % | En maintenance le 21/10 (page Atexo) ; flux RSS Atexo sur compte ; CGU à relire au retour en ligne |
-| Megalis | marches.megalis.bretagne.bzh | Profil mutualisé Bretagne (Atexo) | Comme PLACE | C (D aujourd'hui) | Non | 0 | 3,6 % | En maintenance le 21/10 |
-| Arnia | marches.ternum-bfc.fr | Profil mutualisé Bourgogne-Franche-Comté (Atexo) | Comme PLACE | C (D aujourd'hui) | Non | 0 | 0,1 % | En maintenance le 21/10 |
-| AMPA | demat-ampa.fr | Profil mutualisé (Atexo) | Comme PLACE | D | Non | 0 | 0,5 % | Connexion refusée / maintenance le 21/10 |
-| AWS (marches-publics.info) | www.marches-publics.info (AW Solutions) | Profil d'acheteur | Pages publiques ; service payant de transfert | C | Non | 0 | 9,3 % | CGU 2.2 : plus de 100 avis par heure ou 500 par jour = téléchargement massif interdit, blocage IP ; « service payant de transfert du contenu de la plateforme en heures creuses » : à contractualiser |
-| achatpublic.com | www.achatpublic.com (Infopro Digital) | Profil d'acheteur | Pages publiques | C | Non | 0 | 10,7 % | robots.txt : `Disallow: /` ; mentions légales : toute reproduction interdite sans autorisation écrite. Partenariat à demander |
-| Dematis (e-marchespublics) | www.e-marchespublics.com | Profil d'acheteur | Pages publiques | C | Non | 0 | 6,3 % | CGU Dematis : « L'utilisation de tout système ou logiciel automatisés visant à extraire et exploiter tout ou partie du Contenu […] est interdite » |
-| Marchés sécurisés | www.marches-securises.fr (Atline Services) | Profil d'acheteur | Application Angular, pages publiques | C | Non | 0 | 7,0 % | CGU : usage personnel non commercial ; tout usage automatisé ou au-delà des seuils « suppose l'accord préalable de la société ATLINE SERVICES […] soumis à licence » |
-| Klekoon | www.klekoon.com | Profil d'acheteur **et** service de veille (agrège BOAMP, JOUE, presse) | Pages HTML ; aucune API ni flux trouvé | C | Non | 0 | 0,5 % | Aucune CGU publiée trouvée ; base d'un concurrent de veille (droit du producteur de base de données) : accord à demander, pas de collecte |
-| AJI | aji-france.com (mapa.aji-france.com) | Profil d'acheteur des EPLE (MAPA) | Pages publiques | C | Non | 0 | non mesurée (aucun lien AJI dans les consultations retenues) | CGU : interdiction d'accéder « en utilisant une méthode autre que l'interface et les instructions que nous mettons à votre disposition » ; TLS non joignable depuis ce poste le 21/10 |
-| xmarches | www.xmarches.fr | Profil d'acheteur | — | D | Non | 0 | 1,8 % | Plateforme suspendue le 21/10 (avis de sécurité affiché) ; robots.txt `Allow: /` mais aucune CGU lisible |
-| SafeTender | marchespublics-smica.safetender.com (Omnikles) | Profil d'acheteur | Application web | C | Non | 0 | 1,1 % | Aucune API publique ni flux trouvé ; CGU entreprises non trouvées (seules des conditions de service clients Omnikles sont publiées, non lues) : autorisation à demander |
-| Modula | modula-demat.com (instances `publisher_portail`, ex. marchespublics.pro) | Profil d'acheteur | Pages publiques | C | Non | 0 | non mesurée | `modula.fr` est un domaine à vendre ; infos légales : toute reproduction « par quelque procédé que ce soit » interdite |
-| EU-Supply | eu.eu-supply.com (Mercell) | Plateforme européenne | — | D | Non | 0 | 0 consultation retenue avec un lien EU-Supply | Non affichée par Nukema ; usage français marginal ; pas d'API publique trouvée (non approfondi) |
+Trois types de restrictions sont à distinguer :
 
-Pourcentages : part des 729 consultations retenues (base réelle, non fusionnées) ayant un lien DCE
-sur la plateforme ; 267 n'ont aucun lien. Ces consultations arrivent déjà par le BOAMP ou TED : la
-plateforme héberge leur DCE, pas un avis supplémentaire.
+1. **Commercialisation** (revente, service à des clients, prestataire de veille) : ne concerne pas
+   GPE.
+2. **Redistribution** (republication, diffusion à des tiers) : ne concerne pas GPE, qui ne montre les
+   avis qu'à son équipe.
+3. **Collecte automatisée ou reproduction** (robots, extraction, copie dans une base) : concerne
+   GPE, qui copie les avis dans sa base interne par un programme.
 
-## Ce que cela veut dire
+Résultat : la plupart des clauses ne visent pas seulement la commercialisation, mais toute
+reproduction ou toute extraction automatisée, « à des fins commerciales ou non ». L'usage interne
+ne lève donc l'obstacle que pour **AWS**, dont les règles sont des seuils de volume, et seulement
+partiellement (voir plus bas). Une utilisation professionnelle pour répondre à des marchés n'est
+pas non plus une « utilisation personnelle non commerciale » au sens de Marchés sécurisés.
 
-- Aucune plateforme de profil d'acheteur n'offre aujourd'hui une méthode ouverte et autorisée de
-  reprise de ses avis. Les avis de plus de 90 000 € HT (et tous les avis formalisés) sont de toute
-  façon publiés au BOAMP et/ou au JOUE, déjà collectés. La couverture complémentaire possible porte
-  sur les MAPA de moins de 90 000 € publiés seulement sur le profil d'acheteur (environ 40 % des
-  marchés de GPE selon les données essentielles, mesure du 12/10/2026).
-- Les gains réalistes passent par des **accords** : priorité aux plateformes qui portent le plus de
-  DCE des consultations de GPE (PLACE, achatpublic, AWS, Marchés sécurisés, Dematis). Pour chaque
-  accord, un connecteur `AUTHENTICATED` (identifiants dans l'environnement) s'ajoute sans changer la
-  collecte.
-- APProch est la seule source ouverte supplémentaire : elle annonce des projets avant l'avis.
+| Plateforme | Commercialisation | Redistribution | Collecte automatisée ou reproduction | Accès officiel trouvé | Conclusion pour GPE |
+|---|---|---|---|---|---|
+| PLACE | — | — | « toute reprise totale ou partielle est interdite sans l'autorisation expresse et écrite du directeur » (pas de distinction d'usage) | Flux RSS Atexo depuis « mon compte » (guide Local Trust MPE du 26/01/2026) : compte entreprise requis | **C** : autorisation écrite, ou au minimum compte entreprise + accord sur l'usage du flux RSS. Site en 503 l'après-midi du 21/10 |
+| Maximilien, Megalis, Arnia, AMPA (et toutes les instances Atexo testées) | non lu | non lu | non lu (sites hors ligne) | Même flux RSS Atexo sur compte | **D** aujourd'hui (maintenance Atexo sur toutes les instances testées le 21/10), puis **C** |
+| AWS (marches-publics.info) | Le téléchargement massif est interdit « notamment par un prestataire de veille » ; flux nocturne payant pour les prestataires | — | Massif = plus de 100 avis vus par heure ou 500 par jour (CGU 2.2) ; rien n'interdit une lecture automatisée en dessous ; rien ne l'autorise expressément | Aucun (ni API, ni RSS, ni export). Recherche publique stable (formulaire, pagination, pages d'avis) | **C, connecteur prêt et désactivé** : seuils respectés par construction ; confirmation écrite d'AW Solutions à obtenir avant activation |
+| achatpublic.com | — | — | « Toute utilisation ou reproduction […] par quelque procédé que ce soit, est strictement interdite […] sauf accord préalable et écrit », demande par courrier : 20 rue des Aqueducs, 94250 Gentilly ; robots.txt `Disallow: /` pour tous | Aucun trouvé | **C** : accord écrit par courrier |
+| Dematis (e-marchespublics) | — | — | « tout système ou logiciel automatisés visant à extraire et exploiter tout ou partie du Contenu, à des fins commerciales ou non, est interdite » | Aucun | **C** : l'usage interne est explicitement couvert par l'interdiction |
+| Marchés sécurisés (Atline) | Usage « personnel non commercial » seulement, « en aucun cas dans un but lucratif ou commercial » | Ni vente, ni distribution, ni copie | Mode automatisé au-delà des seuils (5 téléchargements par jour et par utilisateur) : accord préalable d'Atline, éventuellement sous licence | Aucun ; l'application appelle une API interne non documentée, non utilisée | **C** : usage professionnel, pas personnel ; accord d'Atline |
+| AJI | « Vous ne devez utiliser aucun contenu […] sans l'autorisation du propriétaire » | Ni copie ni distribution | Accès seulement par « l'interface et les instructions que nous mettons à votre disposition » | Aucun | **C** (site injoignable le 21/10) |
+| Modula | — | — | « Toute reproduction ou représentation […] par quelque procédé que ce soit, est interdite » | Aucun | **C** |
+| Klekoon | Aucune CGU publiée trouvée | — | — | Aucun ; c'est aussi un service de veille concurrent (droit du producteur de base de données) | **C** : pas de collecte sans accord |
+| SafeTender (Omnikles) | CGU entreprises non trouvées | — | Le portail charge un reCAPTCHA Google | Aucun | **D** : protection anti-robot, jamais interrogé |
+| xmarches | Aucune CGU lisible | — | — | — | **D** : service suspendu le 21/10 (avis de sécurité) |
+| EU-Supply | non approfondi | — | — | — | **D** : absent de Nukema, usage français marginal |
 
-## Intégration réalisée : APProch
+## Tableau de synthèse
 
-Voir `docs/technique.md`, section « APProch ». Code : `collect/approch/` (client, connecteur,
-parseur), `SourceParser.republishesChangedNotices`, `ProcedureType.PURCHASE_PROJECT`, libellé
-frontend. Désactivé par défaut (`collect.disabled-sources=APPROCH`).
+| Source | URL vérifiée | Méthode | Classe | Intégration | Avis récupérés au test | Part des DCE des 729 consultations retenues | Couverture complémentaire BOAMP/TED |
+|---|---|---|---|---|---|---|---|
+| BOAMP | API DILA | API open data | A | En service (existant) | — (aucune collecte du 12/10 au 21/10 : machine éteinte, rattrapage automatique) | — | Référence |
+| TED | api.ted.europa.eu | API Search v3 | A | En service (existant) | — | — | 295 consultations TED seules |
+| APProch | projets-achats.marches-publics.gouv.fr ; data.economie.gouv.fr | Export open data, Licence Ouverte 2.0 | A | **Fait, testé, désactivé** | 10 744 projets réels (base jetable), 0 erreur, 0 doublon | — | Projets avant l'avis (pas des avis) |
+| AWS | www.marches-publics.info | Recherche publique limitée (travaux) | C | **Prêt, testé hors ligne, désactivé** | 0 en automatique (non autorisé à ce stade) ; 17 avis relevés à la main | 9,3 % | Environ 70 % des avis de travaux relevés absents du BOAMP (4 ou 5 sur 17, estimation) |
+| PLACE | www.marches-publics.gouv.fr | Flux RSS sur compte | C | Non | 0 | 12,3 % | Non mesurable sans accès |
+| achatpublic | www.achatpublic.com | — | C | Non | 0 | 10,7 % | Non mesurable |
+| Marchés sécurisés | www.marches-securises.fr | — | C | Non | 0 | 7,0 % | Non mesurable |
+| Dematis | www.e-marchespublics.com | — | C | Non | 0 | 6,3 % | Non mesurable |
+| Megalis / Maximilien / Arnia / AMPA | instances Atexo | Flux RSS sur compte | D puis C | Non | 0 | 3,6 / 2,2 / 0,1 / 0,5 % | Non mesurable |
+| xmarches | www.xmarches.fr | — | D | Non | 0 | 1,8 % | — |
+| SafeTender | marchespublics-smica.safetender.com | — | D | Non | 0 | 1,1 % | — |
+| Klekoon | www.klekoon.com | — | C | Non | 0 | 0,5 % | — |
+| AJI | aji-france.com | — | C | Non | 0 | 0 % | — |
+| Modula | modula-demat.com (`modula.fr` : domaine à vendre) | — | C | Non | 0 | non mesurée | — |
+| EU-Supply | eu.eu-supply.com | — | D | Non | 0 | 0 % | — |
 
-Tests : 25 tests ajoutés (parseur sur projets réels, client HTTP avec erreurs serveur, réponse
-inattendue et reprise, collecte complète sur PostgreSQL jetable : création, deux collectes sans
-doublon, version modifiée appliquée, version ancienne lue après une récente, projet clos ignoré,
-données de l'équipe préservées, coexistence avec le BOAMP sans rapprochement, désactivation par
-défaut) ; suite complète du backend : 280 tests verts. Collecte réelle sur base jetable : voir
-`docs/technique.md`.
+Pourcentages : part des 729 consultations retenues (base réelle, lecture seule, non fusionnées)
+ayant un lien DCE sur la plateforme ; 267 n'ont aucun lien. Ces consultations arrivent déjà par le
+BOAMP ou TED : la plateforme héberge leur DCE.
+
+## Intégrations
+
+### APProch (fait, désactivé)
+
+Voir `docs/technique.md`, section « APProch ». `collect/approch/`, `ProcedureType.PURCHASE_PROJECT`.
+25 tests ; collecte réelle sur base jetable : 10 744 projets, 0 erreur, 0 doublon à la deuxième
+collecte. Activation : décision de l'équipe (700 à 850 projets retenus d'un coup).
+
+### AWS / marches-publics.info (préparé, désactivé)
+
+Voir `docs/technique.md`, section « AWS ». `collect/awsolutions/` : lecture de la recherche publique
+(travaux, parus aujourd'hui ou hier), pause de 40 s entre deux pages, arrêt à 90 pages par heure et
+450 par jour (sous les 100 et 500 des CGU), page d'un avis lue une seule fois, identifiant de
+consultation de la plateforme (IDM) et lien DCE conservés, rapprochement avec le BOAMP proposé (jamais
+fusionné) quand la référence d'acheteur et la date limite sont identiques. 24 tests (vraies pages
+relevées à la main, serveur simulé, PostgreSQL jetable) ; suite complète : 304 tests verts.
+
+**Ce qui bloque l'activation** : une confirmation écrite d'AW Solutions qu'une lecture automatisée
+interne, limitée aux avis de travaux et sous les seuils de l'article 2.2 des CGU, est acceptée (ou le
+contrat du flux nocturne). Aucune collecte automatisée réelle n'a été lancée pour cette raison ; le
+premier test réel, sur base jetable, se fera après cette confirmation.
+
+### Atexo (PLACE et plateformes régionales) : non préparé
+
+Le flux RSS Atexo est un accès officiel, mais réservé aux comptes entreprise, et son format n'a pas
+pu être vu (aucun exemple public ; toutes les instances étaient hors ligne le 21/10). Écrire un
+parseur sans exemple réel serait une supposition. **Ce qu'il faut** : un compte entreprise GPE sur
+PLACE (et les plateformes régionales utiles), l'adresse d'un flux RSS créé depuis « mon compte », et
+pour PLACE l'accord écrit de la DAE sur cet usage, compte tenu de la clause de reprise. Avec ces
+éléments, un connecteur `AUTHENTICATED` s'ajoute sans changer la collecte.
 
 ## Préparation de la récupération des DCE
 
-Déjà en place : `dce_link` (adresse, plateforme, source de l'avis, statut), `dossier.origin`,
-contrat `document/DceRetriever`. APProch y ajoute le lien vers la consultation publiée quand
-l'acheteur l'a donné (309 projets, PLACE le plus souvent). Une récupération automatique par
-plateforme ne pourra être écrite qu'avec l'accord de la plateforme ; sans accord, le lien reste
-`AVAILABLE` (téléchargement manuel).
+En place : `dce_link` (adresse, plateforme, source de l'avis, statut), `dossier.origin`, contrat
+`document/DceRetriever`. APProch ajoute le lien vers la consultation publiée (309 projets) ; AWS garde
+le lien DCE avec l'identifiant de consultation de la plateforme (IDM). Le téléchargement automatique
+des DCE n'est pas couvert par une éventuelle confirmation sur les avis : les CGU d'AWS le limitent à
+10 DCE par heure ou 20 par jour, et celles d'Atline exigent un accord pour tout robot.
 
 ## Prochaines étapes
 
-1. Décider de l'activation d'APProch (volume : 700 à 850 projets retenus d'un coup), après
-   sauvegarde ; aucun changement de schéma n'est nécessaire (pas de migration).
-2. Demander les autorisations écrites, dans l'ordre : PLACE (DAE), achatpublic, AWS (service de
-   transfert payant), Atline (Marchés sécurisés), Dematis.
-3. Relire les CGU de Maximilien, Megalis, Arnia et AMPA à leur retour en ligne ; vérifier si un
-   compte entreprise donne droit au flux RSS Atexo pour un usage automatisé.
-4. Hors périmètre « avis » mais ouvert (A) : les données essentielles (DECP) pour l'écran des
+1. Écrire à AW Solutions (confirmation de la lecture interne sous seuils, ou contrat du flux
+   nocturne), puis tester AWS sur base jetable et décider de son activation.
+2. Décider de l'activation d'APProch.
+3. Ouvrir un compte entreprise sur PLACE et demander l'accord écrit de la DAE ; relire les CGU des
+   plateformes Atexo régionales à leur retour en ligne.
+4. Demandes d'accord écrites : achatpublic (par courrier), Atline (Marchés sécurisés), Dematis.
+5. Interface : afficher la règle `SAME_REFERENCE` dans l'historique des publications
+   (`NoticeHistory`, type `TenderMatch.rule`).
+6. Hors périmètre « avis » mais ouvert (A) : les données essentielles (DECP) pour l'écran des
    marchés attribués.
