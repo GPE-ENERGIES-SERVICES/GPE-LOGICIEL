@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import eu.gpefrance.tenders.alert.AlertCriteria;
 import eu.gpefrance.tenders.tender.MarketType;
+import eu.gpefrance.tenders.tender.Regions;
 import eu.gpefrance.tenders.tender.Tender;
 
 /**
@@ -61,6 +63,113 @@ final class TenderFilter {
 		}
 		return new FilterResult(true,
 				reasons.isEmpty() ? "Retenu : aucun critère défini" : "Retenu : " + String.join(" ; ", reasons));
+	}
+
+	/**
+	 * Evaluates a saved search on a tender: every criterion set must hold.
+	 * Unlike the criteria of the company, information missing from the
+	 * tender does not let it pass: the result is then indeterminate, unless
+	 * another criterion already fails. Keywords are looked for as for the
+	 * company; the types of works (activities) are not known for a tender yet,
+	 * so a saved search using them is indeterminate at best.
+	 */
+	static AlertMatch matchAlert(Tender tender, AlertCriteria criteria) {
+		List<String> reasons = new ArrayList<>();
+		List<String> unknown = new ArrayList<>();
+		List<String> failures = new ArrayList<>();
+
+		List<String> zone = new ArrayList<>(criteria.departments());
+		if (criteria.region() != null) {
+			List<String> regionDepartments = Regions.departmentsOf(criteria.region());
+			checkDepartments(tender, regionDepartments, "région " + criteria.region(), reasons, unknown, failures);
+		}
+		if (!zone.isEmpty()) {
+			checkDepartments(tender, zone, "département", reasons, unknown, failures);
+		}
+
+		if (!criteria.marketTypes().isEmpty()) {
+			if (tender.getMarketTypes().isEmpty()) {
+				unknown.add("type de marché non indiqué");
+			}
+			else if (tender.getMarketTypes().stream().noneMatch(criteria.marketTypes()::contains)) {
+				failures.add("type de marché " + labels(tender.getMarketTypes()));
+			}
+			else {
+				reasons.add("type de marché");
+			}
+		}
+
+		if (!criteria.activities().isEmpty()) {
+			unknown.add("types de travaux non évalués");
+		}
+
+		if (criteria.minAmount() != null || criteria.maxAmount() != null) {
+			BigDecimal amount = tender.getEstimatedAmount();
+			if (amount == null) {
+				unknown.add("montant non indiqué");
+			}
+			else if (criteria.minAmount() != null && amount.compareTo(criteria.minAmount()) < 0) {
+				failures.add("montant inférieur au minimum");
+			}
+			else if (criteria.maxAmount() != null && amount.compareTo(criteria.maxAmount()) > 0) {
+				failures.add("montant supérieur au maximum");
+			}
+			else {
+				reasons.add("montant");
+			}
+		}
+
+		if (!criteria.keywords().isEmpty()) {
+			TextMatcher text = new TextMatcher(searchableText(tender));
+			List<String> keywords = criteria.keywords().stream().filter(text::contains).toList();
+			if (keywords.isEmpty()) {
+				failures.add("aucun mot-clé");
+			}
+			else {
+				reasons.add("mot-clé " + quoted(keywords));
+			}
+		}
+
+		if (!criteria.cpvPrefixes().isEmpty()) {
+			if (tender.getCpvCodes().isEmpty()) {
+				unknown.add("code CPV non indiqué");
+			}
+			else {
+				List<String> cpvCodes = tender.getCpvCodes()
+					.stream()
+					.filter(code -> criteria.cpvPrefixes().stream().anyMatch(code::startsWith))
+					.toList();
+				if (cpvCodes.isEmpty()) {
+					failures.add("aucun code CPV suivi");
+				}
+				else {
+					reasons.add("CPV " + String.join(", ", cpvCodes));
+				}
+			}
+		}
+
+		if (!failures.isEmpty()) {
+			return new AlertMatch(AlertMatch.Outcome.NO_MATCH, String.join(" ; ", failures));
+		}
+		if (!unknown.isEmpty()) {
+			return new AlertMatch(AlertMatch.Outcome.INDETERMINATE, String.join(" ; ", unknown));
+		}
+		return new AlertMatch(AlertMatch.Outcome.MATCH, String.join(" ; ", reasons));
+	}
+
+	private static void checkDepartments(Tender tender, List<String> wanted, String label, List<String> reasons,
+			List<String> unknown, List<String> failures) {
+		if (tender.getDepartments().isEmpty()) {
+			unknown.add("département non indiqué");
+			return;
+		}
+		List<String> inZone = tender.getDepartments().stream().filter(wanted::contains).toList();
+		if (inZone.isEmpty()) {
+			failures.add("hors " + label + " (" + String.join(", ", tender.getDepartments()) + ")");
+		}
+		else {
+			reasons.add(label + " " + String.join(", ", inZone));
+		}
 	}
 
 	private static void checkZone(Tender tender, FilterCriteria criteria, List<String> reasons, List<String> failures) {

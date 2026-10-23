@@ -13,6 +13,7 @@ import {
   PROCEDURE_LABELS,
   STATUS_LABELS,
 } from "@/lib/format";
+import { available } from "@/services/http";
 import type { FollowUpStatus, TenderSummary } from "@/types/tender";
 
 import { DeadlineBadge } from "./DeadlineBadge";
@@ -63,8 +64,8 @@ export function TenderRow({ tender, href, onFollowUp, onFollowChanged, busy }: P
         {tender.distanceKm != null && <div className="small muted">à {tender.distanceKm} km</div>}
       </td>
       <td>
-        {activities || NOT_INDICATED}
-        <div className="small muted">
+        {available("activity") && (activities || NOT_INDICATED)}
+        <div className={available("activity") ? "small muted" : undefined}>
           {[
             tender.marketTypes.map((type) => MARKET_TYPE_LABELS[type]).join(", "),
             lotCount > 0 ? `${lotCount} lot${lotCount > 1 ? "s" : ""}` : "Sans lots",
@@ -83,7 +84,7 @@ export function TenderRow({ tender, href, onFollowUp, onFollowChanged, busy }: P
         </div>
       </td>
       <td className="nowrap">
-        {tender.relevanceScore != null ? `${tender.relevanceScore} %` : "–"}
+        {available("relevance") && (tender.relevanceScore != null ? `${tender.relevanceScore} %` : "–")}
         <div className="small muted" title={tender.filterReason ?? undefined}>
           {tender.retained === false ? "Hors critères" : "Retenu"}
         </div>

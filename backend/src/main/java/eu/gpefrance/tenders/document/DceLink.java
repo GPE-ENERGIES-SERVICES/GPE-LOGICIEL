@@ -1,6 +1,7 @@
 package eu.gpefrance.tenders.document;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -55,7 +56,78 @@ public class DceLink {
 	@Column(name = "checked_at")
 	private Instant checkedAt;
 
+	/** Attempts of retrieval since the link was last queued. */
+	@Column(nullable = false)
+	private int attempts;
+
+	/** When a pending or temporarily failed retrieval may be tried. */
+	@Column(name = "next_attempt_at")
+	private Instant nextAttemptAt;
+
+	/** When a worker took the link; a lease older than the configured one is released. */
+	@Column(name = "locked_at")
+	private Instant lockedAt;
+
+	@Column(name = "locked_by")
+	private String lockedBy;
+
+	@Column(name = "fetched_at")
+	private Instant fetchedAt;
+
+	/** Files kept by the last retrieval. */
+	@Column(name = "file_count")
+	private Integer fileCount;
+
 	protected DceLink() {
+	}
+
+	/**
+	 * Changes the status and its detail, and returns the change to record, or
+	 * null when nothing changes.
+	 */
+	DceLinkEvent changeStatus(DceLinkStatus newStatus, String detail, Instant now) {
+		if (newStatus == status && Objects.equals(detail, statusDetail)) {
+			return null;
+		}
+		DceLinkEvent event = new DceLinkEvent(id, now, status, newStatus, detail);
+		this.status = newStatus;
+		this.statusDetail = detail;
+		return event;
+	}
+
+	/** A new wording of the same status, without a change to record. */
+	void describe(String detail) {
+		this.statusDetail = detail;
+	}
+
+	/** Queued again from scratch: attempts start over. */
+	void queue(Instant now) {
+		this.attempts = 0;
+		this.nextAttemptAt = now;
+	}
+
+	void retryAt(Instant when) {
+		this.nextAttemptAt = when;
+	}
+
+	void attempted(Instant now) {
+		this.attempts++;
+		this.checkedAt = now;
+	}
+
+	void fetched(int files, Instant now) {
+		this.fetchedAt = now;
+		this.fileCount = files;
+	}
+
+	void lock(String worker, Instant now) {
+		this.lockedBy = worker;
+		this.lockedAt = now;
+	}
+
+	void unlock() {
+		this.lockedAt = null;
+		this.lockedBy = null;
 	}
 
 	DceLink(Long tenderId, String source, String url, String platform, Instant now) {
@@ -115,6 +187,26 @@ public class DceLink {
 
 	public Instant getCheckedAt() {
 		return checkedAt;
+	}
+
+	public int getAttempts() {
+		return attempts;
+	}
+
+	public Instant getNextAttemptAt() {
+		return nextAttemptAt;
+	}
+
+	public Instant getLockedAt() {
+		return lockedAt;
+	}
+
+	public Instant getFetchedAt() {
+		return fetchedAt;
+	}
+
+	public Integer getFileCount() {
+		return fileCount;
 	}
 
 }

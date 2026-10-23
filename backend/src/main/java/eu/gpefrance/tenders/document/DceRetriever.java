@@ -20,8 +20,10 @@ import java.util.List;
  * never bypassed: the link becomes {@link DceLinkStatus#ACCESS_REQUIRED};
  * company credentials, if a platform allows their use by a program, come
  * from the environment;</li>
- * <li>a failure makes the link {@link DceLinkStatus#FAILED} with its reason,
- * tried again later a limited number of times;</li>
+ * <li>a failure that may pass throws {@link TemporaryRetrievalException}: the
+ * link is tried again later a limited number of times; a file that no longer
+ * exists throws {@link LinkUnavailableException};</li>
+ * <li>an HTTP retriever uses {@link SafeHttpFetcher};</li>
  * <li>a file identical to one of the previous version (same SHA-256) does not
  * make a new version.</li>
  * </ul>
@@ -48,6 +50,24 @@ public interface DceRetriever {
 
 		public AccessRequiredException(String reason) {
 			super(reason);
+		}
+
+	}
+
+	/** The address answers that the file does not exist, or no longer: not tried again. */
+	class LinkUnavailableException extends RuntimeException {
+
+		public LinkUnavailableException(String reason) {
+			super(reason);
+		}
+
+	}
+
+	/** A failure that may pass (server error, timeout, connection lost): tried again later. */
+	class TemporaryRetrievalException extends RuntimeException {
+
+		public TemporaryRetrievalException(String reason, Throwable cause) {
+			super(reason, cause);
 		}
 
 	}

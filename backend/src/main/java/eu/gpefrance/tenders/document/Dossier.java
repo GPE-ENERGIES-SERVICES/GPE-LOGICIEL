@@ -51,6 +51,10 @@ public class Dossier {
 	@Column(name = "dce_link_id", updatable = false)
 	private Long dceLinkId;
 
+	/** Bytes written to the storage directory, for a retrieved dossier only. */
+	@Column(name = "stored_bytes", updatable = false)
+	private Long storedBytes;
+
 	@Column(name = "uploaded_by", updatable = false)
 	private String uploadedBy;
 
@@ -73,6 +77,19 @@ public class Dossier {
 		this.uploadedBy = uploadedBy;
 		this.uploadedAt = now;
 		this.status = DossierStatus.PENDING;
+	}
+
+	/**
+	 * A version retrieved from a link by a {@link DceRetriever}.
+	 * @param storedBytes bytes written to the storage directory, counted in the
+	 * quota of the retrieved files
+	 */
+	static Dossier retrieved(Long tenderId, int version, Long dceLinkId, long storedBytes, Instant now) {
+		Dossier dossier = new Dossier(tenderId, version, "Récupération automatique", now);
+		dossier.origin = DossierOrigin.RETRIEVED;
+		dossier.dceLinkId = dceLinkId;
+		dossier.storedBytes = storedBytes;
+		return dossier;
 	}
 
 	public Document addDocument(String fileName, String storagePath, long sizeBytes, String sha256,
@@ -125,6 +142,10 @@ public class Dossier {
 
 	public Long getDceLinkId() {
 		return dceLinkId;
+	}
+
+	public Long getStoredBytes() {
+		return storedBytes;
 	}
 
 	public String getUploadedBy() {

@@ -111,6 +111,24 @@ export function orNotIndicated(value: string | null | undefined): string {
   return value && value.trim() ? value : NOT_INDICATED;
 }
 
+/**
+ * Title of a lot as read: simplified BOAMP notices write "2 : Bardage. Bardage"
+ * (number, title, then a description repeating it), shown "Bardage". Any
+ * other wording is kept as published.
+ */
+export function lotTitle(number: string, title: string | null): string | null {
+  if (!title) {
+    return title;
+  }
+  const prefix = `${number} : `;
+  if (!title.startsWith(prefix)) {
+    return title;
+  }
+  const text = title.slice(prefix.length).trim();
+  const repeated = text.match(/^([\s\S]+?)\.\s+([\s\S]+?)\.?$/);
+  return repeated && repeated[1].trim() === repeated[2].trim() ? repeated[1].trim() : text;
+}
+
 export const MARKET_TYPE_LABELS: Record<MarketType, string> = {
   WORKS: "Travaux",
   SERVICES: "Services",

@@ -41,7 +41,7 @@ class AuthApiTests {
 
 	@BeforeEach
 	void createUser() {
-		jdbc.execute("TRUNCATE tender_follow, app_user RESTART IDENTITY");
+		jdbc.execute("TRUNCATE tender_follow, alert, app_user RESTART IDENTITY");
 		users.save(new AppUser("Marie@GPE.test", "Marie Durand", passwordEncoder.encode("un-mot-de-passe-solide"),
 				Role.USER, Instant.now()));
 	}

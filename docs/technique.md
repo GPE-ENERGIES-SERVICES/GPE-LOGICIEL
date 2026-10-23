@@ -481,9 +481,13 @@ Un lien vers une plateforme n'est pas un fichier : les deux sont séparés.
   consultation BOAMP (souvent l'adresse exacte du DCE, plus précise que le profil d'acheteur du
   BOAMP), sans modifier la consultation. V18 a repris l'adresse connue des consultations déjà
   collectées (6 100 au 12/10/2026).
-- **Statuts** (`DceLinkStatus`) : `AVAILABLE` (lien connu, DCE à télécharger à la main sur la
-  plateforme), `TO_FETCH`, `FETCHED`, `FAILED`, `ACCESS_REQUIRED` (compte, identification ou
-  CAPTCHA : action manuelle). Aujourd'hui tous les liens sont `AVAILABLE`.
+- **Statuts** (`DceLinkStatus`, V23) : `AVAILABLE` (lien connu, rien de décidé : DCE à télécharger
+  à la main), `NOT_ELIGIBLE`, `ELIGIBLE_PENDING`, `IN_PROGRESS`, `FETCHED`, `TEMPORARY_ERROR`,
+  `PERMANENT_ERROR`, `LINK_UNAVAILABLE`, `ACCESS_REQUIRED` (compte, identification ou CAPTCHA :
+  action manuelle), `AUTOMATED_ACCESS_NOT_AUTHORIZED` (consultation éligible, plateforme non
+  autorisée), `STORAGE_LIMIT_REACHED`. V23 a converti `TO_FETCH` en `ELIGIBLE_PENDING` et `FAILED`
+  en `PERMANENT_ERROR` (aucun lien ne les portait). L'éligibilité de la consultation est tenue à
+  part (`tender_eligibility`) : le statut d'un lien dit ce qui a été fait, ou non, de ce lien.
 - **Fichiers** : un DCE obtenu est une version de dossier (`dossier`, `document`), stockée dans
   `STORAGE_DIR` ; la base ne garde que les métadonnées (nom, type de pièce, taille, SHA-256,
   chemin, état de lecture, nombre de pages, texte page par page). `dossier.origin` (V18) dit
@@ -499,10 +503,203 @@ Un lien vers une plateforme n'est pas un fichier : les deux sont séparés.
   (`components/NoticeHistory`) indique la source de chaque avis et les consultations d'autres
   sources proposées comme identiques ; le badge « Modifiée par un rectificatif » ne compare que
   les avis de la source de la consultation.
-- **Récupération automatique** : `document/DceRetriever` fixe le contrat d'une future
-  implémentation, une par plateforme dont les conditions d'utilisation le permettent ; aucune
-  n'existe. Rien n'est téléchargé automatiquement. Une plateforme qui demande un compte, une
-  identification ou un CAPTCHA n'est jamais contournée : le lien passe en `ACCESS_REQUIRED`.
+- **Récupération automatique** : voir la section suivante. Aucune plateforme n'est autorisée et
+  aucun connecteur réel n'existe : rien n'est téléchargé automatiquement.
+
+## Veilles, éligibilité et récupération contrôlée des DCE
+
+Six étapes séparées : collecte des avis (inchangée) ; conservation des liens (`dce_link`) ;
+éligibilité de la consultation ; autorisation de la plateforme ; récupération éventuelle ; stockage
+et lecture du dossier.
+
+### Veilles (`alert`, V21, `/api/alerts`)
+
+Une veille est une recherche enregistrée **personnelle** : son propriétaire est l'utilisateur
+connecté (jamais un identifiant envoyé par l'interface) ; un autre utilisateur, administrateur
+compris, reçoit 404 sur ses veilles. GPE n'a pas d'équipes : l'éligibilité des DCE est commune à
+l'entreprise (voir plus bas). Critères (type `Alert` du frontend) : mots-clés, région, départements,
+types de marché, types de travaux, préfixes CPV, montants minimum et maximum, active. Validation
+serveur : nom de 1 à 100 caractères, au moins un critère, départements `01`–`95`, `2A`, `2B`,
+`971`–`976`, région connue (`tender/Regions`), types de travaux de `ACTIVITY_LABELS`, CPV de 2 à 8
+chiffres, montants positifs et minimum ≤ maximum. `GET` (avec `matchCount`, `newCount`,
+`indeterminateCount`, `evaluating`), `POST`, `PUT` (critères et activation), `DELETE` (204),
+`POST /{id}/viewed`. La liste des consultations accepte `alert=<id>` : les consultations qui
+correspondent à une veille **de l'utilisateur**, selon la dernière évaluation. Supprimer une veille
+ne supprime ni consultation, ni lien, ni fichier. Chaque changement incrémente `alert_revision`.
+
+Sémantique (celle du contrat d'API) : tous les critères renseignés doivent être vrais ; dans un
+critère, une valeur suffit (un mot-clé, un département…). Mots-clés cherchés comme pour les
+critères de l'entreprise (`TextMatcher`, sans accents ni casse, début de mot), **sans les synonymes
+métier** prévus par le contrat (non implémentés). La région et les départements se cumulent.
+
+### Éligibilité (`tender_eligibility`, V22, `eligibility/EligibilityService`)
+
+Une consultation est **éligible** si elle est ouverte (statut `ACTIVE`) et correspond à au moins
+une veille **active** dont le propriétaire a un **compte actif** (`app_user.enabled`), de
+n'importe quel utilisateur : GPE n'a qu'une équipe, l'entreprise (le statut des consultations est
+partagé, les veilles sont personnelles), et les DCE sont gardés une fois pour toute l'entreprise.
+Désactiver un compte ne change pas le champ `active` de ses veilles et ne supprime rien : elles
+cessent seulement de compter, et comptent de nouveau à sa réactivation. Les critères de l'entreprise
+(`tender.retained`) ne sont ni une condition ni modifiés. Évaluation par veille
+(`filter/AlertMatcher`, qui réutilise `TenderFilter` sans en changer le comportement historique) :
+un critère faux → ne correspond pas ; sinon une information absente de la consultation
+(département, type de marché, CPV, montant) ou un critère non évaluable (**types de travaux** :
+les consultations ne les portent pas encore) → indéterminé ; sinon → correspond. Résultat de la
+consultation : `ELIGIBLE` si une veille correspond ; sinon `INDETERMINATE` si une veille est
+indéterminée ; sinon `NOT_ELIGIBLE` (aucune veille active, aucune correspondance, consultation
+close). Une seule ligne par consultation : plusieurs veilles donnent une seule éligibilité et une
+seule récupération par lien. Le motif enregistré ne nomme pas les veilles (privées) ; la fiche
+nomme seulement celles de l'utilisateur connecté.
+
+Réévaluation : une éligibilité est périmée si la consultation a changé depuis (`tender.updated_at`)
+ou si une veille a changé (`alert_revision`), ou si un nouveau lien est apparu. Les consultations
+périmées sont évaluées par lots de `dce.eligibility.batch-size` (200), dans l'ordre des
+identifiants, une transaction par lot, en tâche de fond, une évaluation à la fois : après chaque
+collecte, après chaque changement de veille, et toutes les `dce.eligibility.sweep-interval` (10 min),
+ce qui reprend aussi une évaluation arrêtée par un redémarrage. Réévaluer ne change rien
+(idempotent). Charge : environ 9 000 consultations × nombre de veilles actives, en mémoire et sans
+réseau ; aucune plateforme n'est contactée. Effet sur les liens (`DceQueueService`) : non éligible →
+`NOT_ELIGIBLE` ; indéterminé → `AVAILABLE` avec le motif ; éligible → `ELIGIBLE_PENDING` si la
+plateforme est autorisée, sinon `AUTOMATED_ACCESS_NOT_AUTHORIZED`. Un lien `IN_PROGRESS`,
+`FETCHED`, `PERMANENT_ERROR`, `LINK_UNAVAILABLE` ou `ACCESS_REQUIRED` n'est jamais changé par une
+évaluation : les fichiers récupérés restent quoi qu'il arrive aux veilles. Chaque **changement de
+statut** est tracé (`dce_link_event`) ; une réévaluation qui garde le statut et n'en change que le
+libellé met le libellé à jour sans nouvelle entrée, et une réévaluation sans changement n'écrit
+rien dans l'historique. Premier calcul en production : environ une entrée par lien (7 400 liens
+`AVAILABLE` → `NOT_ELIGIBLE` sans veille), puis seulement les changements.
+
+Changement de compte (`UserService.update` publie `UserStatusChangedEvent`, traité après la
+validation) : à la désactivation, seules les consultations dont l'éligibilité cite une veille active
+du compte (correspondance ou indétermination) sont marquées périmées ; à la réactivation, les
+consultations ouvertes (seules à pouvoir devenir éligibles) ; rien pour un compte sans veille active.
+L'évaluation suit en tâche de fond, sans réseau.
+
+### Autorisation des plateformes (`DcePlatformPolicy`)
+
+`dce.retrieval.allowed-platforms` : plateformes (hôte sans `www.`, exactement comme
+`dce_link.platform`, un sous-domaine se déclare à part) autorisées après accord écrit. **Vide par
+défaut.** Une plateforme n'est utilisée que si elle est listée **et** qu'un `DceRetriever` la prend
+en charge ; aucun connecteur réel n'existe, aucun repli : une adresse qui ressemble à un fichier
+n'est pas une autorisation. Vérifié côté serveur à la mise en file et à nouveau juste avant chaque
+récupération. `marches-publics.info`, `aws-achat.info`, `dl.aws-achat.info` (refus d'AW Solutions)
+et `projets-achats.marches-publics.gouv.fr` (APProch, sans DCE) ne peuvent pas être listées : le
+démarrage échoue.
+
+Un connecteur HTTP utilise `SafeHttpFetcher` (Apache HttpClient 5, utilisé par lui seul : les
+collecteurs gardent le client HTTP du JDK, `spring.http.clients.imperative.factory=jdk`) :
+
+- avant chaque requête et chaque redirection (jamais suivie automatiquement, au plus
+  `max-redirects`) : http(s) seulement, pas d'informations d'utilisateur, ports 80 et 443
+  seulement, aucune adresse numérique ambiguë (`2130706433`, `0177.0.0.1`, `0x7f.1`, `127.1`…),
+  et une adresse littérale IPv4 ou IPv6 vérifiée aussitôt ;
+- **une seule résolution par connexion**, faite par le résolveur validant donné à HttpClient, qui
+  se connecte exactement aux adresses qu'il a renvoyées : pas de seconde résolution indépendante
+  entre le contrôle et la connexion (DNS rebinding) ; une adresse interdite dans la réponse refuse
+  toute la réponse ; chaque nouvelle connexion (redirection, nouvelle requête) est revalidée ;
+- adresses refusées : la machine, les réseaux privés et partagés (10/8, 172.16/12, 192.168/16,
+  100.64/10), link-local (169.254/16, fe80::/10), multicast, documentation, tests de performance,
+  réservées (0/8, 240/4…), IPv6 uniques locales (fc00::/7) et site-local, `::`, et toute adresse
+  IPv4 portée par une IPv6 (`::ffff:`, compatible, NAT64 `64:ff9b::/96`, 6to4 `2002::/16`) selon
+  l'IPv4 portée ; Teredo refusé ; en IPv6, seul l'unicast global (2000::/3) est accepté ;
+- jamais de proxy, même configuré pour le système ; pas de cookies, pas de nouvelle tentative
+  automatique ; délais de connexion et de lecture.
+
+Limites restantes : la sécurité dépend de la résolution du système au moment de la connexion
+(un serveur DNS qui ment de façon cohérente vers une adresse publique n'est pas détecté, ce qui
+ne mène pas au réseau interne) ; une adresse publique d'un autre client du même hébergeur reste
+joignable ; HTTPS vérifie le certificat du nom demandé (comportement de HttpClient) ; les
+connecteurs futurs doivent utiliser ce client et aucun autre. Vérifié par des tests avec un DNS
+simulé et un serveur local uniquement, aucun scénario réseau réel.
+
+### File de récupération (`DceRetrievalWorker`)
+
+Désactivée par défaut (`dce.retrieval.worker-enabled=false`). Regarde la file toutes les
+`poll-interval` ; prend un lien `ELIGIBLE_PENDING` ou `TEMPORARY_ERROR` dont l'heure est venue
+(verrou de ligne `FOR UPDATE SKIP LOCKED` puis `IN_PROGRESS` : jamais deux travailleurs sur le même
+lien ; jamais une adresse déjà en cours pour une autre consultation), les consultations publiées le
+plus récemment d'abord, au plus `concurrency` à la fois, sur ses propres fils (`dce-retrieval-*`),
+jamais ceux des collectes. Juste avant : éligibilité et plateforme vérifiées de nouveau, espace
+réservé dans le quota. Fichiers copiés dans `STORAGE_DIR/dce-tmp` en arrêtant le transfert au-delà
+de `max-file-size` (500 Mo, total d'une récupération), validés par leur contenu, puis gardés comme
+nouvelle version du dossier (`dossier.origin = RETRIEVED`, `dce_link_id`), lue comme un dépôt
+(archives extraites avec les mêmes limites : 2 000 entrées, 2 Go décompressés, profondeur 3, chemins
+hors du dossier refusés). Pas de nouvelle version si les documents sont exactement ceux de la
+dernière (mêmes SHA-256, quel que soit le lien) ; un rectificatif qui change les documents en fait
+une. Le dossier temporaire est toujours supprimé et la réservation libérée.
+
+Erreurs : `AccessRequiredException` → `ACCESS_REQUIRED` ; `LinkUnavailableException` (404, 410) →
+`LINK_UNAVAILABLE` ; fichier refusé, adresse refusée → `PERMANENT_ERROR` ; quota → `STORAGE_LIMIT_REACHED`
+— aucun n'est retenté automatiquement. Erreur passagère → `TEMPORARY_ERROR`, nouvelle tentative
+après `retry-delay` (10 min) doublé à chaque fois jusqu'à `max-retry-delay` (6 h), au plus
+`max-attempts` (5) tentatives, puis `PERMANENT_ERROR`. Au démarrage : les liens laissés
+`IN_PROGRESS` par un arrêt repassent en attente (la tentative compte), les réservations sans
+récupération en cours sont libérées, `dce-tmp` est vidé ; **aucune récupération n'est lancée au
+démarrage**. Un lien pris depuis plus de `lease` (30 min) est libéré de même. Nouvelle tentative
+manuelle (`POST /api/dce-links/{id}/retry`, administrateurs) : seulement après une erreur, un lien
+indisponible ou le quota, pour une consultation éligible et une plateforme autorisée.
+
+### Quota de 3 Go (`DceStorageQuota`)
+
+`dce.retrieval.quota=3000000000B` : 3 000 000 000 octets pour **les seuls DCE récupérés** (fichiers
+reçus, archives et fichiers extraits : `dossier.stored_bytes`, V23) et les récupérations en cours
+(`dce_storage_reservation`). Ce n'est ni une limite du disque ni des dossiers déposés à la main. Une
+récupération réserve `max-file-size` avant de commencer ; la vérification et la réservation se font
+sous un verrou consultatif PostgreSQL, donc plusieurs travailleurs, même dans plusieurs processus,
+ne dépassent jamais ensemble le quota. Après extraction, l'espace réellement écrit est vérifié de
+nouveau ; s'il dépasse, rien n'est gardé et le lien attend (`STORAGE_LIMIT_REACHED`) une place
+libérée à la main ou un quota plus grand. Rien de déjà gardé n'est supprimé pour faire de la place.
+
+### Type réel des fichiers (`FileTypeValidator`)
+
+Par la signature binaire, jamais par le nom ni par le `Content-Type` : PDF (terminé par `%%EOF`),
+ZIP et formats Office ouverts, OLE (Office 97), RTF, 7z, RAR, PNG, JPEG, TIFF, DWG. Refusés : page
+web (connexion, formulaire de retrait), fichier vide, format inconnu, PDF tronqué, ZIP illisible,
+ZIP au-delà des limites de l'extraction ou contenant un chemin interdit, extension contraire au
+contenu (un nom sans extension connue prend celle du contenu). Le SHA-256 est calculé sur le contenu
+validé.
+
+### Interface
+
+Fiche consultation (`DceLinks`) : éligibilité et motif, veilles de l'utilisateur concernées, pour
+chaque lien la plateforme (autorisée ou non), le statut et son motif, la dernière tentative, le
+nombre de fichiers récupérés, l'action manuelle à faire, l'historique ; toujours « Ouvrir la
+plateforme », jamais de bouton de téléchargement automatique. Paramètres → Récupération des DCE
+(`DcePanel`, `/api/dce/summary`, `/api/dce/events`, administrateurs) : consultations éligibles,
+non éligibles, indéterminées ; DCE en attente, récupérés, action humaine, accès non autorisé,
+erreurs ; espace utilisé, réservé et quota ; derniers changements d'état avec « Relancer ». Mes
+veilles : branché sur le backend (`alerts` retiré de `NOT_IN_BACKEND`), avec les consultations
+indéterminées et le recalcul en cours.
+
+### Configuration
+
+| Propriété | Défaut | Rôle |
+|---|---|---|
+| `dce.eligibility.batch-size` | 200 | Consultations par transaction |
+| `dce.eligibility.sweep-interval` | 10m | Recherche des éligibilités périmées |
+| `dce.eligibility.auto-evaluation` | true | Évaluations automatiques (désactivées dans les tests seulement) |
+| `dce.retrieval.allowed-platforms` | (vide) | Plateformes autorisées après accord écrit |
+| `dce.retrieval.worker-enabled` | false | Travailleur de la file |
+| `dce.retrieval.concurrency` | 2 | Récupérations simultanées |
+| `dce.retrieval.poll-interval` | 30s | Regard sur la file |
+| `dce.retrieval.max-attempts` | 5 | Tentatives avant échec définitif |
+| `dce.retrieval.retry-delay` / `max-retry-delay` | 10m / 6h | Attente entre tentatives |
+| `dce.retrieval.lease` | 30m | Libération d'un lien abandonné |
+| `dce.retrieval.max-file-size` | 500MB | Taille maximale d'une récupération |
+| `dce.retrieval.quota` | 3000000000B | Quota des DCE récupérés, en octets |
+| `dce.retrieval.connect-timeout` / `read-timeout` / `max-redirects` | 10s / 60s / 5 | Connecteurs HTTP |
+
+Migrations : V21 (`alert`, `alert_revision`), V22 (`tender_eligibility`), V23 (statuts sur 40
+caractères et conversion, colonnes de file de `dce_link`, `dce_link_event`, `dossier.stored_bytes`,
+`dce_storage_reservation`), toutes additives sauf la conversion des deux anciens statuts ; retour
+arrière écrit en tête de chaque fichier. Testées sur base jetable (Testcontainers) et, pour V23, sur
+un schéma isolé à partir de V22 avec liens, dossiers et documents (`DceMigrationTests`).
+
+Mise en service (avec accord) : sauvegarde vérifiée ; reconstruction du backend (V20 à V23
+appliquées au démarrage) ; au premier passage, l'éligibilité de toutes les consultations est
+calculée (environ 9 000, sans réseau) : sans veille, toutes sont `NOT_ELIGIBLE` et chaque lien
+reçoit un événement. Aucun téléchargement tant que `allowed-platforms` est vide. Ajouter une
+plateforme exige : accord écrit précisant le périmètre, un `DceRetriever` dédié et testé, son ajout
+à la liste, puis `worker-enabled=true`.
 
 ## Sauvegarde et restauration
 

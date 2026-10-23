@@ -4,6 +4,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { AnalysisJournal } from "@/components/settings/AnalysisJournal";
 import { CollectJournal } from "@/components/settings/CollectJournal";
 import { CriteriaForm } from "@/components/settings/CriteriaForm";
+import { DcePanel } from "@/components/settings/DcePanel";
 import { DuplicatesPanel } from "@/components/settings/DuplicatesPanel";
 import { UsersPanel } from "@/components/settings/UsersPanel";
 
@@ -24,6 +25,10 @@ export default function SettingsPage() {
       <section className="card">
         <h2>Journal de collecte</h2>
         <CollectJournal />
+      </section>
+      <section className="card">
+        <h2>Récupération des DCE</h2>
+        <DcePanel />
       </section>
       <section className="card">
         <h2>Doublons à vérifier</h2>

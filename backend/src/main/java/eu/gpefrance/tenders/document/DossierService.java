@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.function.LongPredicate;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -72,7 +73,9 @@ public class DossierService {
 		String directory = "tenders/" + tenderId + "/v" + version;
 		Path dossierDirectory = storage.resolve(directory);
 		try {
-			List<StoredFile> stored = store(nonEmpty, dossierDirectory);
+			List<StoredFile> stored = store(nonEmpty.stream()
+				.map(file -> new Source(file.getOriginalFilename(), file::getInputStream))
+				.toList(), dossierDirectory, new ArrayList<>());
 			return transaction.execute(status -> {
 				Dossier dossier = new Dossier(tenderId, version, uploadedBy, clock.instant());
 				for (StoredFile file : stored) {
@@ -92,15 +95,19 @@ public class DossierService {
 		}
 	}
 
-	private List<StoredFile> store(List<MultipartFile> files, Path dossierDirectory) {
+	/**
+	 * @param archives receives the archives kept beside their extracted files
+	 */
+	private List<StoredFile> store(List<Source> files, Path dossierDirectory, List<Path> archives) {
 		Path filesDirectory = dossierDirectory.resolve("files");
 		Path archivesDirectory = dossierDirectory.resolve("archives");
 		List<StoredFile> stored = new ArrayList<>();
-		for (MultipartFile file : files) {
-			String name = FileStorage.safeName(file.getOriginalFilename());
-			try (InputStream in = file.getInputStream()) {
+		for (Source file : files) {
+			String name = FileStorage.safeName(file.name());
+			try (InputStream in = file.content().open()) {
 				if (ArchiveExtractor.isZip(name)) {
 					Path archive = storage.store(in, archivesDirectory, name);
+					archives.add(archive);
 					Path target = FileStorage.uniquePath(filesDirectory, name.substring(0, name.length() - 4));
 					for (ExtractedFile extracted : archiveExtractor.extract(archive, name, target)) {
 						stored.add(describe(extracted.displayName(), extracted.path()));
@@ -148,6 +155,103 @@ public class DossierService {
 		catch (IOException ex) {
 			// leftover files of a refused upload are harmless
 		}
+	}
+
+	/**
+	 * Keeps the files retrieved from a link, already validated, as a new
+	 * version of the dossier of the tender, read like an upload (archives
+	 * extracted within the same limits). No new version when the documents are
+	 * exactly those of the last version (same SHA-256): a rectification that
+	 * changed them makes one. The bytes written must fit in the quota of the
+	 * retrieved files; otherwise nothing is kept.
+	 * @param fitsQuota whether the bytes written fit in the quota
+	 * @throws StorageLimitException when they do not
+	 */
+	public synchronized RetrievedDossier storeRetrieved(Long tenderId, Long dceLinkId, List<ReceivedFile> files,
+			LongPredicate fitsQuota) {
+		if (!tenders.existsById(tenderId)) {
+			throw new TenderNotFoundException(tenderId);
+		}
+		int version = dossiers.findLastVersion(tenderId) + 1;
+		Path dossierDirectory = storage.resolve("tenders/" + tenderId + "/v" + version);
+		try {
+			List<Path> archives = new ArrayList<>();
+			List<StoredFile> stored = store(files.stream()
+				.map(file -> new Source(file.fileName(), () -> Files.newInputStream(file.path())))
+				.toList(), dossierDirectory, archives);
+			Previous previous = transaction.execute(status -> dossiers.findByTenderIdOrderByVersionDesc(tenderId)
+				.stream()
+				.findFirst()
+				.map(last -> new Previous(last.getVersion(),
+						last.getDocuments().stream().map(Document::getSha256).sorted().toList()))
+				.orElse(null));
+			if (previous != null && previous.sha256().equals(stored.stream().map(StoredFile::sha256).sorted().toList())) {
+				deleteQuietly(dossierDirectory);
+				return new RetrievedDossier(null, previous.version(), stored.size(), 0);
+			}
+			// Only what this retrieval wrote: the extracted or received files and the archives.
+			long bytes = stored.stream().mapToLong(StoredFile::size).sum() + sizeOf(archives);
+			if (!fitsQuota.test(bytes)) {
+				deleteQuietly(dossierDirectory);
+				throw new StorageLimitException(bytes);
+			}
+			Long dossierId = transaction.execute(status -> {
+				Dossier dossier = Dossier.retrieved(tenderId, version, dceLinkId, bytes, clock.instant());
+				for (StoredFile file : stored) {
+					dossier.addDocument(file.displayName(), storage.relativize(file.path()), file.size(), file.sha256(),
+							PieceClassifier.classify(file.displayName()));
+				}
+				return dossiers.save(dossier).getId();
+			});
+			return new RetrievedDossier(dossierId, version, stored.size(), bytes);
+		}
+		catch (ArchiveRejectedException ex) {
+			deleteQuietly(dossierDirectory);
+			throw new FileTypeValidator.FileRejectedException(ex.getMessage());
+		}
+		catch (RuntimeException ex) {
+			deleteQuietly(dossierDirectory);
+			throw ex;
+		}
+	}
+
+	private static long sizeOf(List<Path> files) {
+		return files.stream().mapToLong(path -> path.toFile().length()).sum();
+	}
+
+	/** The last version, with the SHA-256 of its documents: the same documents make no new version. */
+	private record Previous(int version, List<String> sha256) {
+	}
+
+	/** A file to keep: its name and how to read it. */
+	private record Source(String name, Opener content) {
+	}
+
+	@FunctionalInterface
+	private interface Opener {
+
+		InputStream open() throws IOException;
+
+	}
+
+	/** A retrieved file, validated, waiting in a temporary folder. */
+	public record ReceivedFile(String fileName, Path path) {
+	}
+
+	/**
+	 * @param dossierId the new version, null when the documents are those of
+	 * the last version
+	 * @param version the new version, or the identical last one
+	 */
+	public record RetrievedDossier(Long dossierId, int version, int fileCount, long storedBytes) {
+	}
+
+	public static class StorageLimitException extends RuntimeException {
+
+		StorageLimitException(long bytes) {
+			super("Quota des DCE récupérés atteint (" + bytes + " octets à écrire)");
+		}
+
 	}
 
 	private record StoredFile(String displayName, Path path, long size, String sha256) {

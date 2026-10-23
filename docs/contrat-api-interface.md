@@ -21,7 +21,7 @@ seul endroit qui aiguille les appels vers le backend ou vers l'API simulée.
 
 Avec le backend réel, ce que le backend ne fournit pas encore est masqué plutôt que de produire
 une erreur : la liste `NOT_IN_BACKEND` de `services/http.ts`, lue par `available()`, en décide.
-Elle contient aujourd'hui les veilles (Mes veilles affiche « pas encore reliée au serveur »), les
+Elle contient aujourd'hui les
 marchés attribués (même message ; la fiche ne les demande pas), la recherche dans le DCE, le
 filtre par type de travaux, la distance (filtre et tri), le tri par pertinence, la colonne
 Attributaire des Archives, et les sections Critères d'attribution et Informations importantes de
@@ -42,7 +42,7 @@ le backend prêt. Avec les données de démonstration, tout reste affiché.
 | `PUT /api/tenders/{id}/follow-up` | existe, accepte `SUBMITTED` | — |
 | `PUT /api/tenders/{id}/follow` | existe : suivre (étoile), par utilisateur | — |
 | `DELETE /api/tenders/{id}/follow` | existe : ne plus suivre | — |
-| `/api/alerts` | absent | **nouveau** : veilles de l'utilisateur (voir plus bas) |
+| `/api/alerts` | **fait** (V21) : veilles de l'utilisateur | synonymes métier ; alertes par courriel |
 | Autres appels (connexion, DCE, analyse, paramètres) | existent | aucun changement |
 
 ## Écrans, services et appels
@@ -205,18 +205,24 @@ l'OCR.
 
 Une veille est une recherche enregistrée par un utilisateur (type `Alert` de
 `frontend/src/types/alert.ts`). Ses critères se combinent ; ses mots-clés sont des alternatives
-(un seul suffit), avec les synonymes métier.
+(un seul suffit). **Backend** : sans les synonymes métier (à faire) ; les types de travaux ne sont pas
+encore évalués (résultat indéterminé). Seul le propriétaire lit ou modifie sa veille (404 sinon).
 
 | Appel | Réponse |
 |-------|---------|
-| `GET /api/alerts` | les veilles de l'utilisateur, chacune avec `matchCount` (consultations de l'onglet `ALL` qui correspondent) et `newCount` (celles publiées après le jour de `lastViewedAt`) |
+| `GET /api/alerts` | les veilles de l'utilisateur, chacune avec `matchCount` (consultations ouvertes qui correspondent, selon la dernière évaluation), `newCount` (celles publiées après le jour de `lastViewedAt`), `indeterminateCount` et `evaluating` |
+| `GET /api/alerts/{id}` | une veille de l'utilisateur |
 | `POST /api/alerts` | crée une veille (`AlertInput`) ; `lastViewedAt` vaut `null` |
 | `PUT /api/alerts/{id}` | modifie une veille, dont `active` |
 | `DELETE /api/alerts/{id}` | supprime une veille ; `204` |
 | `POST /api/alerts/{id}/viewed` | l'utilisateur ouvre les résultats : `lastViewedAt` passe à maintenant |
 
-Table à créer : `alert` (utilisateur, nom, critères, active, dates). Plus tard, le backend pourra
-exécuter les veilles actives après chaque collecte et prévenir l'utilisateur.
+Table `alert` (V21). Une veille active rend éligible la récupération du DCE des consultations
+qu'elle trouve : voir `docs/technique.md`, « Veilles, éligibilité et récupération contrôlée des
+DCE », qui décrit aussi `GET /api/tenders/{id}/dce-links` (éligibilité et état de chaque lien),
+`GET /api/dce-links/{id}/events`, et pour les administrateurs `GET /api/dce/summary`,
+`GET /api/dce/events` et `POST /api/dce-links/{id}/retry`. Reste à faire : prévenir l'utilisateur
+(courriel) des nouveaux résultats.
 
 ## `GET /api/tenders/counts`
 

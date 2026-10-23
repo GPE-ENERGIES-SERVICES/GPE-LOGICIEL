@@ -16,6 +16,7 @@ import {
   formatDate,
   formatDateTime,
   formatLongDateTime,
+  lotTitle,
   FOLLOW_UP_LABELS,
   MARKET_TYPE_LABELS,
   PROCEDURE_LABELS,
@@ -221,7 +222,7 @@ function TenderDetails() {
                 return (
                   <tr key={lot.number}>
                     <td>{lot.number}</td>
-                    <td>{lot.title ?? "Sans intitulé"}</td>
+                    <td>{lotTitle(lot.number, lot.title) ?? "Sans intitulé"}</td>
                     <td className="nowrap">{formatAmount(lot.estimatedAmount)}</td>
                     {awardsByLot.size > 0 && <td>{award ? awardText(award) : "Non attribué"}</td>}
                   </tr>

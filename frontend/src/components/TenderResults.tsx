@@ -89,7 +89,8 @@ export function TenderResults({ data, loading, params, onNavigate, caption, empt
                 <th>Montant estimé</th>
                 <th>Publication</th>
                 <th>Date limite</th>
-                <th>Pertinence</th>
+                {/* Without relevance score, the column shows the outcome of the criteria. */}
+                <th>{available("relevance") ? "Pertinence" : "Critères"}</th>
                 <th>Statut</th>
               </tr>
             </thead>

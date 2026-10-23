@@ -28,13 +28,15 @@ export function CollectStatus() {
       </p>
     );
   }
+  const received = `${last.noticesReceived.toLocaleString("fr-FR")} avis reçus`;
   const newNotices =
     last.noticesNew === 0
-      ? "aucun nouvel avis"
-      : `${last.noticesNew} ${last.noticesNew > 1 ? "nouveaux" : "nouvel"} avis`;
+      ? "aucun nouveau"
+      : `dont ${last.noticesNew.toLocaleString("fr-FR")} ${last.noticesNew > 1 ? "nouveaux" : "nouveau"}`;
   return (
     <p className="banner muted">
-      Dernière collecte le {formatDateTime(last.finishedAt ?? last.startedAt)} : {newNotices}.
+      Dernière collecte {last.source} le {formatDateTime(last.finishedAt ?? last.startedAt)} : {received},{" "}
+      {newNotices}.
     </p>
   );
 }

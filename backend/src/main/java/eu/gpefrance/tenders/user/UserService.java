@@ -6,6 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,8 +25,11 @@ public class UserService {
 
 	private final Clock clock;
 
+	private final ApplicationEventPublisher events;
+
 	public UserService(AppUserRepository users, PasswordEncoder passwordEncoder,
-			BootstrapAdminProperties bootstrapAdmin, Clock clock) {
+			BootstrapAdminProperties bootstrapAdmin, Clock clock, ApplicationEventPublisher events) {
+		this.events = events;
 		this.users = users;
 		this.passwordEncoder = passwordEncoder;
 		this.bootstrapAdmin = bootstrapAdmin;
@@ -72,7 +76,12 @@ public class UserService {
 		if (losesAdmin && users.countByRoleAndEnabledTrue(Role.ADMIN) <= 1) {
 			throw new UserRuleException("Il doit rester au moins un administrateur actif");
 		}
+		boolean wasEnabled = user.isEnabled();
 		user.update(request.displayName(), request.role(), request.enabled());
+		if (wasEnabled != user.isEnabled()) {
+			log.info("Account {} {}", id, user.isEnabled() ? "enabled" : "disabled");
+			events.publishEvent(new UserStatusChangedEvent(id, user.isEnabled()));
+		}
 		if (!isBlank(request.password())) {
 			user.changePassword(passwordEncoder.encode(request.password()));
 		}

@@ -28,4 +28,8 @@ export type AlertSummary = Alert & {
   matchCount: number;
   /** Those published since the user last opened the results. */
   newCount: number;
+  /** Open consultations for which the saved search cannot decide (missing information, types of works not evaluated). */
+  indeterminateCount?: number;
+  /** The results are being evaluated again after a change: the counts may still change. */
+  evaluating?: boolean;
 };

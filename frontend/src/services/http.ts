@@ -33,7 +33,6 @@ export type Feature =
   | "noticeDetails";
 
 const NOT_IN_BACKEND = new Set<Feature>([
-  "alerts",
   "awards",
   "documentSearch",
   "activity",

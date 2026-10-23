@@ -66,6 +66,7 @@ un administrateur est créé à partir de `BOOTSTRAP_ADMIN_EMAIL` et `BOOTSTRAP_
 
 ```bash
 docker compose up -d --build
+
 ```
 
 L'interface est disponible sur http://localhost:3000 (port `APP_PORT`). Le backend n'est pas

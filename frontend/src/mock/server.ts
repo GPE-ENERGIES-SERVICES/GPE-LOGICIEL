@@ -12,7 +12,7 @@ import type { Alert, AlertInput, AlertSummary } from "@/types/alert";
 import type { AwardedContract, AwardSearch } from "@/types/award";
 import type { TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
-import type { DceLink, DocumentHit, DocumentInfo, PieceType } from "@/types/document";
+import type { DceLink, DceSummary, DocumentHit, DocumentInfo, PieceType } from "@/types/document";
 import type { CollectJournal, CollectRun, CollectSource } from "@/types/settings";
 import type {
   FollowUpStatus,
@@ -657,19 +657,59 @@ function dceLinks(tender: TenderDetail): DceLink[] {
     return [];
   }
   const seen = `${tender.publishedAt ?? new Date().toISOString().slice(0, 10)}T07:00:00Z`;
+  // No platform is allowed in the demo either: an eligible file is to be obtained by hand.
+  const matching = alerts.filter((alert) => alert.active && matchesAlert(tender, alert));
+  const eligible = matching.length > 0 && inTab(tender, "ALL");
   return [
     {
       id: tender.id,
       source: tender.source,
       url: tender.platformUrl,
-      platform: new URL(tender.platformUrl).hostname.replace(/^www\./, ""),
-      status: "AVAILABLE",
-      statusDetail: null,
+      platform: new URL(tender.platformUrl).hostname.replace(/^www./, ""),
+      status: eligible ? "AUTOMATED_ACCESS_NOT_AUTHORIZED" : "NOT_ELIGIBLE",
+      statusDetail: eligible
+        ? "Accès automatisé non autorisé : aucune plateforme n'est autorisée. Le lien reste disponible pour une action manuelle autorisée."
+        : "Ne correspond à aucune veille active",
       firstSeenAt: seen,
       lastSeenAt: seen,
       checkedAt: null,
+      attempts: 0,
+      nextAttemptAt: null,
+      fetchedAt: null,
+      fileCount: null,
+      eligibility: eligible ? "ELIGIBLE" : "NOT_ELIGIBLE",
+      eligibilityReason: eligible
+        ? `Correspond à ${matching.length} ${matching.length > 1 ? "veilles actives" : "veille active"}`
+        : "Ne correspond à aucune veille active",
+      yourAlerts: matching.map((alert) => alert.name),
+      platformAllowed: false,
+      actionRequired: eligible,
     },
   ];
+}
+
+/** No file is retrieved in the demo: no platform is allowed. */
+function dceSummary(): DceSummary {
+  const links = tenders.flatMap((tender) => dceLinks(tender));
+  const eligible = links.filter((link) => link.eligibility === "ELIGIBLE").length;
+  return {
+    eligibility: { ELIGIBLE: eligible, NOT_ELIGIBLE: links.length - eligible, INDETERMINATE: 0 },
+    links: { AUTOMATED_ACCESS_NOT_AUTHORIZED: eligible, NOT_ELIGIBLE: links.length - eligible },
+    outOfDate: 0,
+    evaluating: false,
+    usedBytes: 0,
+    reservedBytes: 0,
+    quotaBytes: 3_000_000_000,
+    allowedPlatforms: [],
+    workerEnabled: false,
+    concurrency: 2,
+    maxAttempts: 5,
+    maxFileSizeBytes: 524_288_000,
+  };
+}
+
+function refuseRetry(): never {
+  throw new ApiError(409, "Accès automatisé non autorisé : aucune plateforme n'est autorisée.");
 }
 
 function collectJournal(): CollectJournal {
@@ -722,6 +762,10 @@ const ROUTES: Route[] = [
   ["DELETE", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, false)],
   ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id] ?? []],
   ["GET", /^\/api\/tenders\/(\d+)\/dce-links$/, (id) => dceLinks(find(id))],
+  ["GET", /^\/api\/dce-links\/(\d+)\/events$/, () => []],
+  ["GET", /^\/api\/dce\/summary$/, () => dceSummary()],
+  ["GET", /^\/api\/dce\/events$/, () => []],
+  ["POST", /^\/api\/dce-links\/(\d+)\/retry$/, () => refuseRetry()],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
   ["GET", /^\/api\/tenders\/(\d+)\/documents\/search$/, (id, url) => searchDocuments(id, url)],
   ["GET", /^\/api\/tenders\/(\d+)\/awards$/, (id) => MOCK_AWARDS.filter((award) => award.tenderId === find(id).id)],

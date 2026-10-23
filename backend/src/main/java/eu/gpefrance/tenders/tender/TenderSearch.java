@@ -12,6 +12,8 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.springframework.data.jpa.domain.Specification;
 
 import eu.gpefrance.tenders.ClockConfiguration;
+import eu.gpefrance.tenders.alert.Alert;
+import eu.gpefrance.tenders.eligibility.TenderEligibility;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -19,6 +21,7 @@ import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -44,7 +47,7 @@ public record TenderSearch(String q, List<String> department, String region, Str
 		@PositiveOrZero Integer minDaysLeft, @PositiveOrZero Integer maxDaysLeft,
 		@PositiveOrZero Integer publishedWithinDays, @PositiveOrZero BigDecimal minAmount,
 		@PositiveOrZero BigDecimal maxAmount, Boolean hasLots, String buyer, @Positive Integer year,
-		List<Result> result) {
+		List<Result> result, @Positive Long alert) {
 
 	/**
 	 * Outcome of a consultation, read as in the detail: AWARDED once an award
@@ -60,12 +63,12 @@ public record TenderSearch(String q, List<String> department, String region, Str
 
 	static TenderSearch none() {
 		return new TenderSearch(null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-				null, null);
+				null, null, null);
 	}
 
 	TenderSearch withStatus(List<FollowUpStatus> statuses) {
 		return new TenderSearch(q, department, region, city, marketType, procedure, statuses, minDaysLeft,
-				maxDaysLeft, publishedWithinDays, minAmount, maxAmount, hasLots, buyer, year, result);
+				maxDaysLeft, publishedWithinDays, minAmount, maxAmount, hasLots, buyer, year, result, alert);
 	}
 
 	/**
@@ -132,8 +135,30 @@ public record TenderSearch(String q, List<String> department, String region, Str
 			if (result != null && !result.isEmpty()) {
 				predicates.add(resultPredicate(result, root, query, cb));
 			}
+			if (alert != null) {
+				predicates.add(alertPredicate(alert, userId, root, query, hcb));
+			}
 			return cb.and(predicates.toArray(Predicate[]::new));
 		};
+	}
+
+	/**
+	 * The tenders matching a saved search of the user, as last evaluated (see
+	 * the eligibility of the consultation files); none for the saved search of
+	 * another user.
+	 */
+	private static Predicate alertPredicate(Long alertId, Long userId, Root<Tender> root, CriteriaQuery<?> query,
+			HibernateCriteriaBuilder cb) {
+		Subquery<Long> matched = query.subquery(Long.class);
+		Root<TenderEligibility> eligibility = matched.from(TenderEligibility.class);
+		matched.select(eligibility.get("tenderId"))
+			.where(cb.equal(eligibility.get("tenderId"), root.get("id")),
+					cb.collectionContains(eligibility.<List<Long>>get("matchedAlertIds"), alertId));
+		Subquery<Long> owned = query.subquery(Long.class);
+		Root<Alert> alert = owned.from(Alert.class);
+		owned.select(alert.get("id"))
+			.where(cb.equal(alert.get("id"), alertId), cb.equal(alert.get("userId"), userId));
+		return cb.and(cb.exists(matched), cb.exists(owned));
 	}
 
 	private static Predicate tabPredicate(TenderTab tab, Long userId, Root<Tender> root,

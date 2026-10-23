@@ -134,7 +134,9 @@ export default function DashboardPage() {
                       <TenderLink tender={tender} />
                     </td>
                     <td className="nowrap">{formatDate(tender.publishedAt)}</td>
-                    <td className="nowrap">{tender.relevanceScore != null ? `${tender.relevanceScore} %` : "–"}</td>
+                    {available("relevance") && (
+                      <td className="nowrap">{tender.relevanceScore != null ? `${tender.relevanceScore} %` : "–"}</td>
+                    )}
                   </tr>
                 ))}
               </tbody>

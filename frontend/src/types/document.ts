@@ -42,8 +42,22 @@ export type DocumentHit = {
   readable: boolean;
 };
 
-/** Where the retrieval of the consultation file from a link stands. */
-export type DceLinkStatus = "AVAILABLE" | "TO_FETCH" | "FETCHED" | "FAILED" | "ACCESS_REQUIRED";
+/** Where the retrieval of the consultation file from a link stands (see DceLinkStatus of the backend). */
+export type DceLinkStatus =
+  | "AVAILABLE"
+  | "NOT_ELIGIBLE"
+  | "ELIGIBLE_PENDING"
+  | "IN_PROGRESS"
+  | "FETCHED"
+  | "TEMPORARY_ERROR"
+  | "PERMANENT_ERROR"
+  | "LINK_UNAVAILABLE"
+  | "ACCESS_REQUIRED"
+  | "AUTOMATED_ACCESS_NOT_AUTHORIZED"
+  | "STORAGE_LIMIT_REACHED";
+
+/** Whether the consultation file of a tender may be retrieved: it matches an active saved search. */
+export type EligibilityState = "ELIGIBLE" | "NOT_ELIGIBLE" | "INDETERMINATE";
 
 /** An address where the consultation file can be obtained, as a notice gives it. A link, not a file. */
 export type DceLink = {
@@ -58,4 +72,49 @@ export type DceLink = {
   firstSeenAt: string;
   lastSeenAt: string;
   checkedAt: string | null;
+  attempts: number;
+  nextAttemptAt: string | null;
+  fetchedAt: string | null;
+  /** Files kept by the last retrieval. */
+  fileCount: number | null;
+  /** Null before the first evaluation. */
+  eligibility: EligibilityState | null;
+  /** Why, without the names of the saved searches of other users. */
+  eligibilityReason: string;
+  /** The saved searches of the logged-in user that match the tender. */
+  yourAlerts: string[];
+  /** Whether the automated retrieval is allowed for the platform. */
+  platformAllowed: boolean;
+  /** A person has to obtain the file by hand, or to decide. */
+  actionRequired: boolean;
+};
+
+/** A change of status of a link. */
+export type DceEvent = {
+  id: number;
+  dceLinkId: number;
+  tenderId: number | null;
+  platform: string | null;
+  occurredAt: string;
+  fromStatus: DceLinkStatus | null;
+  toStatus: DceLinkStatus;
+  detail: string | null;
+};
+
+/** The retrieval of the consultation files for the whole application (administrators). */
+export type DceSummary = {
+  eligibility: Partial<Record<EligibilityState, number>>;
+  links: Partial<Record<DceLinkStatus, number>>;
+  /** Tenders whose eligibility is missing or out of date. */
+  outOfDate: number;
+  evaluating: boolean;
+  usedBytes: number;
+  reservedBytes: number;
+  /** In bytes (3 GB = 3,000,000,000). */
+  quotaBytes: number;
+  allowedPlatforms: string[];
+  workerEnabled: boolean;
+  concurrency: number;
+  maxAttempts: number;
+  maxFileSizeBytes: number;
 };

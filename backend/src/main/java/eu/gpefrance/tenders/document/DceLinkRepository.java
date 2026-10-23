@@ -11,4 +11,8 @@ public interface DceLinkRepository extends JpaRepository<DceLink, Long> {
 
 	List<DceLink> findByTenderIdOrderByFirstSeenAtAscIdAsc(Long tenderId);
 
+	List<DceLink> findByStatus(DceLinkStatus status);
+
+	long countByStatus(DceLinkStatus status);
+
 }

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import { ACTIVITY_LABELS, MARKET_TYPE_LABELS } from "@/lib/format";
 import { REGIONS } from "@/lib/regions";
+import { available } from "@/services/http";
 import type { AlertInput } from "@/types/alert";
 import type { MarketType } from "@/types/tender";
 
@@ -119,6 +120,12 @@ export function AlertForm({ title, initial, submitLabel, onSubmit, onCancel }: P
       </fieldset>
       <fieldset>
         <legend>Types de travaux</legend>
+        {!available("activity") && (
+          <p className="hint">
+            Les types de travaux ne sont pas encore connus pour les consultations : une veille qui en utilise donne des
+            résultats indéterminés, sans récupération de DCE.
+          </p>
+        )}
         <div className="checkboxes">
           {Object.entries(ACTIVITY_LABELS).map(([code, label]) => (
             <label key={code} className="inline">

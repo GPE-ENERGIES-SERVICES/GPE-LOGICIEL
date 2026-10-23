@@ -7,7 +7,7 @@ import java.util.Map;
  * Departments of each region of France, by the region's name as the
  * interface sends it.
  */
-final class Regions {
+public final class Regions {
 
 	private static final Map<String, List<String>> DEPARTMENTS = Map.ofEntries(
 			Map.entry("Auvergne-Rhône-Alpes",
@@ -34,8 +34,12 @@ final class Regions {
 	/**
 	 * @return the departments of the region, empty for an unknown region
 	 */
-	static List<String> departmentsOf(String region) {
+	public static List<String> departmentsOf(String region) {
 		return DEPARTMENTS.getOrDefault(region, List.of());
+	}
+
+	public static boolean isKnown(String region) {
+		return DEPARTMENTS.containsKey(region);
 	}
 
 }

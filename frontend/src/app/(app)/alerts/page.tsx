@@ -142,6 +142,13 @@ function AlertItem({ alert, onEdit, onChanged }: { alert: AlertSummary; onEdit: 
         {alert.lastViewedAt ? ` depuis votre dernière visite le ${formatDateTime(alert.lastViewedAt)}` : ""}
         <span className="muted"> · {plural(alert.matchCount, "consultation en cours", "consultations en cours")}</span>
       </p>
+      {(alert.indeterminateCount ?? 0) > 0 && (
+        <p className="hint">
+          {plural(alert.indeterminateCount ?? 0, "consultation indéterminée", "consultations indéterminées")} :
+          information manquante dans l&apos;avis ou types de travaux non évalués. Elles ne sont pas comptées.
+        </p>
+      )}
+      {alert.evaluating && <p className="hint">Résultats en cours de recalcul après une modification.</p>}
       <Criteria alert={alert} />
       {error && <p className="error">{error}</p>}
       <div className="form-actions">

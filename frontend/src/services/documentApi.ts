@@ -1,4 +1,4 @@
-import type { DceLink, DocumentHit, DocumentInfo, Dossier, PieceType } from "@/types/document";
+import type { DceEvent, DceLink, DceSummary, DocumentHit, DocumentInfo, Dossier, PieceType } from "@/types/document";
 
 import { api, upload } from "./http";
 
@@ -35,4 +35,24 @@ export function changePieceType(documentId: number, pieceType: PieceType): Promi
  */
 export function searchDocuments(tenderId: number, text: string): Promise<DocumentHit[]> {
   return api(`/api/tenders/${tenderId}/documents/search?q=${encodeURIComponent(text)}`);
+}
+
+/** The changes of status of a link, the latest first. */
+export function getDceLinkEvents(linkId: number): Promise<DceEvent[]> {
+  return api(`/api/dce-links/${linkId}/events`);
+}
+
+/** The retrieval of the consultation files for the whole application (administrators). */
+export function getDceSummary(): Promise<DceSummary> {
+  return api("/api/dce/summary");
+}
+
+/** The last changes of status of every link (administrators). */
+export function getDceEvents(limit: number): Promise<DceEvent[]> {
+  return api(`/api/dce/events?limit=${limit}`);
+}
+
+/** A new attempt after a failure, refused unless the tender is eligible and the platform allowed (administrators). */
+export function retryDceLink(linkId: number): Promise<DceLink> {
+  return api(`/api/dce-links/${linkId}/retry`, { method: "POST" });
 }

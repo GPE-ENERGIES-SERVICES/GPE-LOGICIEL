@@ -24,6 +24,7 @@ import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import eu.gpefrance.tenders.eligibility.EligibilityService;
 import eu.gpefrance.tenders.filter.FilterService;
 import eu.gpefrance.tenders.tender.TenderLifecycleService;
 
@@ -72,6 +73,8 @@ public class CollectService {
 
 	private final TenderLifecycleService lifecycle;
 
+	private final EligibilityService eligibility;
+
 	private final CollectCatchUpProperties catchUp;
 
 	/** The scheduled collections, null when there are none. */
@@ -83,7 +86,8 @@ public class CollectService {
 	public CollectService(List<SourceConnector> connectors, CollectProperties properties,
 			RawNoticeRepository rawNotices, CollectRunRepository runs, TransactionTemplate transaction, Clock clock,
 			@Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor, NormalizationService normalization,
-			FilterService filter, TenderLifecycleService lifecycle, CollectCatchUpProperties catchUp,
+			FilterService filter, TenderLifecycleService lifecycle, EligibilityService eligibility,
+			CollectCatchUpProperties catchUp,
 			@Value("${collect.cron}") String cron) {
 		this.catchUp = catchUp;
 		this.schedule = Scheduled.CRON_DISABLED.equals(cron) ? null : CronExpression.parse(cron);
@@ -101,6 +105,7 @@ public class CollectService {
 		this.normalization = normalization;
 		this.filter = filter;
 		this.lifecycle = lifecycle;
+		this.eligibility = eligibility;
 	}
 
 	/**
@@ -385,6 +390,8 @@ public class CollectService {
 			report = normalization.normalizePending(source);
 			filter.filterPending();
 			lifecycle.closeExpired();
+			// In the background: the eligibility of the consultation files never delays a collection.
+			eligibility.requestEvaluation();
 		}
 		catch (RuntimeException ex) {
 			log.error("Processing of the collected {} notices failed", source, ex);

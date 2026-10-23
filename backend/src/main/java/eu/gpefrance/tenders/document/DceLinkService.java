@@ -9,6 +9,8 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import eu.gpefrance.tenders.eligibility.TenderEligibilityRepository;
+
 /**
  * Keeps the addresses where the consultation file of each tender can be
  * obtained, as the notices of every source give them. Recording a link
@@ -19,8 +21,11 @@ public class DceLinkService {
 
 	private final DceLinkRepository links;
 
-	public DceLinkService(DceLinkRepository links) {
+	private final TenderEligibilityRepository eligibilities;
+
+	public DceLinkService(DceLinkRepository links, TenderEligibilityRepository eligibilities) {
 		this.links = links;
+		this.eligibilities = eligibilities;
 	}
 
 	/**
@@ -35,9 +40,11 @@ public class DceLinkService {
 		if (platform == null) {
 			return;
 		}
-		links.findByTenderIdAndUrl(tenderId, address)
-			.ifPresentOrElse(link -> link.seenAgain(now),
-					() -> links.save(new DceLink(tenderId, source, address, platform, now)));
+		links.findByTenderIdAndUrl(tenderId, address).ifPresentOrElse(link -> link.seenAgain(now), () -> {
+			links.save(new DceLink(tenderId, source, address, platform, now));
+			// The new address follows the eligibility of its tender at the next evaluation.
+			eligibilities.markOutOfDate(tenderId);
+		});
 	}
 
 	@Transactional(readOnly = true)

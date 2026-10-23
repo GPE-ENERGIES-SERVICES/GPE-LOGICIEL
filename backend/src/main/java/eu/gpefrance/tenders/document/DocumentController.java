@@ -35,23 +35,24 @@ public class DocumentController {
 
 	private final DocumentProcessor processor;
 
-	private final DceLinkService dceLinks;
+	private final DceStatusService dceStatus;
 
 	public DocumentController(DossierService dossierService, DocumentService documentService,
-			DocumentProcessor processor, DceLinkService dceLinks) {
+			DocumentProcessor processor, DceStatusService dceStatus) {
 		this.dossierService = dossierService;
 		this.documentService = documentService;
 		this.processor = processor;
-		this.dceLinks = dceLinks;
+		this.dceStatus = dceStatus;
 	}
 
 	/**
 	 * Where the consultation file can be obtained, as the notices of each
-	 * source give it: links only, the files obtained are the dossiers.
+	 * source give it: links only, the files obtained are the dossiers. With the
+	 * eligibility of the tender and where the retrieval of each link stands.
 	 */
 	@GetMapping("/api/tenders/{tenderId}/dce-links")
-	public List<DceLinkResponse> dceLinks(@PathVariable Long tenderId) {
-		return dceLinks.linksOf(tenderId).stream().map(DceLinkResponse::from).toList();
+	public List<DceLinkResponse> dceLinks(@PathVariable Long tenderId, @AuthenticationPrincipal AppUserPrincipal user) {
+		return dceStatus.linksOf(tenderId, user.id());
 	}
 
 	@GetMapping("/api/tenders/{tenderId}/dossiers")
