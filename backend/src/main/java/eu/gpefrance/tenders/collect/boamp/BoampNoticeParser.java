@@ -368,8 +368,9 @@ public class BoampNoticeParser implements SourceParser {
 	}
 
 	/**
-	 * Where the consultation documents can be downloaded, or failing that
-	 * the buyer's platform.
+	 * Where the consultation documents can be downloaded (eForms document
+	 * reference, or urlDocConsul of the older formats), or failing that the
+	 * buyer's platform.
 	 */
 	private static String platformUrl(JsonNode donnees) {
 		JsonNode documents = findFirst(donnees, "cac:CallForTendersDocumentReference"::equals);
@@ -378,6 +379,10 @@ public class BoampNoticeParser implements SourceParser {
 			if (url != null) {
 				return url;
 			}
+		}
+		String url = url(text(findFirst(donnees, "urlDocConsul"::equals)));
+		if (url != null) {
+			return url;
 		}
 		return url(text(findFirst(donnees, PLATFORM_KEYS::contains)));
 	}

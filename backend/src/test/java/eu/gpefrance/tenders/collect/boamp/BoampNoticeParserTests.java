@@ -156,6 +156,15 @@ class BoampNoticeParserTests {
 	}
 
 	@Test
+	void prefersTheAddressOfTheConsultationDocumentsToTheBuyerProfile() {
+		String consultation = "https://marches.maximilien.fr/entreprise/consultation/949031?orgAcronyme=d7s";
+		String withDocuments = fixture("mapa").replace("\\\"urlProfilAcheteur\\\"",
+				"\\\"communication\\\": {\\\"urlDocConsul\\\": \\\"" + consultation + "\\\"}, \\\"urlProfilAcheteur\\\"");
+
+		assertThat(parser.parse(withDocuments).details().platformUrl()).isEqualTo(consultation);
+	}
+
+	@Test
 	void parsesARectificationWithItsChangeAndLink() {
 		SourceNotice notice = parse("fns-rectification");
 

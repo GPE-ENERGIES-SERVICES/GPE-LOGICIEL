@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { consultationUrl } from "@/lib/dceUrl";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { getDceLinkEvents, getDceLinks } from "@/services/documentApi";
@@ -148,7 +149,7 @@ export function DceLinks({ tenderId }: { tenderId: number }) {
               </td>
               <td>{formatDate(link.lastSeenAt)}</td>
               <td className="actions">
-                <a href={link.url} target="_blank" rel="noopener noreferrer">
+                <a href={consultationUrl(link.url)} target="_blank" rel="noopener noreferrer">
                   Ouvrir la plateforme
                 </a>
                 <button

@@ -22,6 +22,7 @@ import {
   PROCEDURE_LABELS,
   STATUS_LABELS,
 } from "@/lib/format";
+import { consultationUrl } from "@/lib/dceUrl";
 import { backLink } from "@/lib/navigation";
 import { useLoader } from "@/lib/useLoader";
 import { getTenderAwards } from "@/services/awardApi";
@@ -318,7 +319,7 @@ function TenderDetails() {
         </dl>
         <div className="links">
           {tender.platformUrl && (
-            <a href={tender.platformUrl} target="_blank" rel="noopener noreferrer" className="button primary">
+            <a href={consultationUrl(tender.platformUrl)} target="_blank" rel="noopener noreferrer" className="button primary">
               Accéder à la consultation
             </a>
           )}

@@ -42,6 +42,8 @@ Documentation :
 - [Guide utilisateur](docs/guide-utilisateur.md) : parcours, signification des états, limites.
 - [Contrat d'API attendu par l'interface](docs/contrat-api-interface.md) : ce que le backend doit
   fournir pour remplacer les données de démonstration.
+- [Audit de la récupération des DCE](docs/audit-recuperation-dce.md) : liens vers les DCE et
+  téléchargement automatique, plateforme par plateforme (CAPTCHA, CGU, accords à obtenir).
 
 ## Interface
 
