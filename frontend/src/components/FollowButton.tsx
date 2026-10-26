@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { setFollowed } from "@/services/tenderApi";
 
+import { Icon } from "./Icon";
+
 type Props = {
   tenderId: number;
   followed: boolean;
@@ -42,10 +44,11 @@ export function FollowButton({ tenderId, followed: initial, onChanged }: Props) 
         className="star"
         aria-pressed={followed}
         title={followed ? "Ne plus suivre" : "Suivre"}
+        aria-label={followed ? "Ne plus suivre" : "Suivre"}
         disabled={busy}
         onClick={toggle}
       >
-        {followed ? "★" : "☆"}
+        <Icon name="star" size={18} filled={followed} />
       </button>
       {error && <span className="error small">{error}</span>}
     </>

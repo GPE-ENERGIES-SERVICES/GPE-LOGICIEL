@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { login } from "@/services/authApi";
 import { ApiError } from "@/services/http";
 
@@ -37,7 +38,10 @@ function LoginForm() {
 
   return (
     <form className="login-card" onSubmit={submit}>
-      <h1>Veille appels d&apos;offres</h1>
+      <div className="login-brand">
+        <h1>Logiciel GPE</h1>
+        <p className="muted">Connectez-vous avec votre compte de l&apos;entreprise.</p>
+      </div>
       <label>
         Adresse e-mail
         <input
@@ -69,6 +73,9 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="login-page">
+      <div className="login-theme">
+        <ThemeToggle />
+      </div>
       <Suspense>
         <LoginForm />
       </Suspense>
