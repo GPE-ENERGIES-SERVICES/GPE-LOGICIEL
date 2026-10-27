@@ -35,7 +35,7 @@ export default function SettingsPage() {
         <DuplicatesPanel />
       </section>
       <section className="card">
-        <h2>Analyses par IA : journal et qualité</h2>
+        <h2>Analyses par IA : configuration, journal et qualité</h2>
         <AnalysisJournal />
       </section>
       <section className="card">

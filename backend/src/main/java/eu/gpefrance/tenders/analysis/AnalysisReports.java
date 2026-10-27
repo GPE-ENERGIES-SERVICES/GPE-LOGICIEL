@@ -3,6 +3,7 @@ package eu.gpefrance.tenders.analysis;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collection;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -13,8 +14,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import eu.gpefrance.tenders.analysis.AnalysisReport.Configuration;
+import eu.gpefrance.tenders.analysis.AnalysisReport.Consumption;
 import eu.gpefrance.tenders.analysis.AnalysisReport.FieldQuality;
 import eu.gpefrance.tenders.analysis.AnalysisReport.JournalEntry;
+import eu.gpefrance.tenders.analysis.AnalysisReport.Limits;
 import eu.gpefrance.tenders.analysis.AnalysisReport.Quality;
 import eu.gpefrance.tenders.analysis.AnalysisRepository.TokenTotals;
 import eu.gpefrance.tenders.analysis.ExtractedFieldRepository.FieldCount;
@@ -40,13 +44,16 @@ public class AnalysisReports {
 
 	private final AnalysisProperties properties;
 
+	private final AnalysisGate gate;
+
 	public AnalysisReports(AnalysisRepository analyses, ExtractedFieldRepository fields, DossierRepository dossiers,
-			TenderRepository tenders, AnalysisProperties properties) {
+			TenderRepository tenders, AnalysisProperties properties, AnalysisGate gate) {
 		this.analyses = analyses;
 		this.fields = fields;
 		this.dossiers = dossiers;
 		this.tenders = tenders;
 		this.properties = properties;
+		this.gate = gate;
 	}
 
 	@Transactional(readOnly = true)
@@ -61,11 +68,34 @@ public class AnalysisReports {
 							: null,
 					dossiersById.containsKey(analysis.getDossierId())
 							? dossiersById.get(analysis.getDossierId()).getVersion() : 0,
-					analysis.getStatus(), analysis.getModel(), analysis.getPromptVersion(), analysis.getCreatedAt(),
-					analysis.getFinishedAt(), analysis.getErrorMessage(), analysis.getInputTokens(),
+					analysis.getStatus(), analysis.getProvider(), analysis.getModel(), analysis.getPromptVersion(),
+					analysis.getErrorKind(), analysis.getAttempts(), analysis.getCreatedAt(), analysis.getFinishedAt(),
+					analysis.getErrorMessage(), analysis.getInputTokens(),
 					analysis.getOutputTokens(), analysis.getInputTokens() == null ? null
 							: properties.cost(analysis.getInputTokens(), analysis.getOutputTokens())))
 			.toList();
+	}
+
+	/**
+	 * The configuration as applied, the queue and the consumption of the
+	 * month; no secret.
+	 */
+	@Transactional(readOnly = true)
+	public Configuration configuration() {
+		AnalysisGate.Status status = gate.status();
+		TokenTotals month = gate.monthToDate();
+		Map<AnalysisStatus, Long> queue = new EnumMap<>(AnalysisStatus.class);
+		for (AnalysisStatus analysisStatus : AnalysisStatus.values()) {
+			queue.put(analysisStatus, analyses.countByStatus(analysisStatus));
+		}
+		return new Configuration(status.state(), status.message(), properties.enabled(), properties.provider(),
+				status.client() == null ? null : status.client().model(), properties.externalTransmissionAllowed(),
+				gate.availableProviders(), status.problems(),
+				new Limits(properties.maxCharacters(), properties.maxDocumentsPerTender(), properties.maxOutputTokens(),
+						properties.maxConcurrentRequests(), properties.maxAttempts(),
+						properties.requestTimeout().toSeconds(), properties.monthlyBudget(), properties.pricesSet()),
+				queue, new Consumption(month.getInput(), month.getOutput(),
+						properties.cost(month.getInput(), month.getOutput())));
 	}
 
 	@Transactional(readOnly = true)

@@ -8,7 +8,10 @@ public enum DocumentState {
 	/** Text extracted from every page. */
 	READ,
 
-	/** Text extracted, but some pages have none: probably scanned. */
+	/**
+	 * Some or all pages have no text: probably scanned, optical character
+	 * recognition (OCR) needed for them. Not done by the application.
+	 */
 	SCANNED,
 
 	/** The file could not be read. */

@@ -23,8 +23,11 @@ import eu.gpefrance.tenders.document.OfficeConverter.ConversionException;
 
 /**
  * Reads the documents of a dossier in the background: text of each PDF page,
- * Word documents converted to PDF first. Other formats are kept but marked
- * as not analysed. A document that fails never stops the others.
+ * Word documents converted to PDF first, plain text and HTML files by
+ * sections. Other formats (spreadsheets, plans, images, other archives) are
+ * kept but marked as not analysed, with the reason: never read as an empty
+ * text. A document that fails never stops the others. This is the only
+ * reading of the files: the AI analysis only uses the text stored here.
  */
 @Service
 public class DocumentProcessor {
@@ -32,6 +35,10 @@ public class DocumentProcessor {
 	private static final Logger log = LoggerFactory.getLogger(DocumentProcessor.class);
 
 	private static final Set<String> WORD = Set.of("doc", "docx", "odt", "rtf");
+
+	private static final Set<String> TEXT = Set.of("txt");
+
+	private static final Set<String> HTML = Set.of("html", "htm");
 
 	private static final Set<String> SPREADSHEET = Set.of("xls", "xlsx", "xlsm", "ods", "csv");
 
@@ -52,6 +59,8 @@ public class DocumentProcessor {
 
 	private final OfficeConverter officeConverter;
 
+	private final TextFileExtractor textExtractor;
+
 	private final TransactionTemplate transaction;
 
 	private final TaskExecutor taskExecutor;
@@ -62,14 +71,15 @@ public class DocumentProcessor {
 
 	public DocumentProcessor(DossierRepository dossiers, DocumentRepository documents, DocumentPageRepository pages,
 			FileStorage storage, PdfTextExtractor pdfExtractor, OfficeConverter officeConverter,
-			TransactionTemplate transaction, @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
-			ApplicationEventPublisher events, Clock clock) {
+			TextFileExtractor textExtractor, TransactionTemplate transaction,
+			@Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor, ApplicationEventPublisher events, Clock clock) {
 		this.dossiers = dossiers;
 		this.documents = documents;
 		this.pages = pages;
 		this.storage = storage;
 		this.pdfExtractor = pdfExtractor;
 		this.officeConverter = officeConverter;
+		this.textExtractor = textExtractor;
 		this.transaction = transaction;
 		this.taskExecutor = taskExecutor;
 		this.events = events;
@@ -132,12 +142,21 @@ public class DocumentProcessor {
 				Path outputDirectory = file.resolveSibling(".pdf").resolve(String.valueOf(documentId));
 				saveText(documentId, officeConverter.toPdf(file, outputDirectory));
 			}
+			else if (TEXT.contains(extension)) {
+				saveSections(documentId, textExtractor.extractText(file), PageMethod.TEXT);
+			}
+			else if (HTML.contains(extension)) {
+				saveSections(documentId, textExtractor.extractHtml(file), PageMethod.HTML);
+			}
 			else {
 				update(documentId, doc -> doc.markNotAnalyzed(notAnalyzedReason(extension)));
 			}
 		}
 		catch (InvalidPasswordException ex) {
 			update(documentId, doc -> doc.markFailed("PDF protégé par un mot de passe : non analysé"));
+		}
+		catch (TextFileExtractor.TooLargeException ex) {
+			update(documentId, doc -> doc.markNotAnalyzed("Fichier texte trop volumineux (plus de 20 Mo) : non analysé"));
 		}
 		catch (IOException ex) {
 			log.warn("Document {} could not be read", documentId, ex);
@@ -162,6 +181,26 @@ public class DocumentProcessor {
 				pages.save(new DocumentPage(documentId, i + 1, texts.get(i), PageMethod.NATIVE));
 			}
 			documents.findById(documentId).orElseThrow().markRead(texts.size(), pagesWithoutText, pdfPath);
+		});
+	}
+
+	/**
+	 * Text and HTML files: each section is stored as a page, so that answers
+	 * can cite it. There is no PDF to open at a page.
+	 */
+	private void saveSections(Long documentId, List<String> sections, PageMethod method) {
+		transaction.executeWithoutResult(status -> {
+			pages.deleteByDocumentId(documentId);
+			for (int i = 0; i < sections.size(); i++) {
+				pages.save(new DocumentPage(documentId, i + 1, sections.get(i), method));
+			}
+			Document document = documents.findById(documentId).orElseThrow();
+			if (sections.isEmpty()) {
+				document.markNotAnalyzed("Fichier sans texte : non analysé");
+			}
+			else {
+				document.markRead(sections.size(), 0, null);
+			}
 		});
 	}
 

@@ -38,11 +38,16 @@ final class AnswerReader {
 		Set<String> answered = new HashSet<>();
 		for (JsonNode entry : entries) {
 			GridField field = ExtractionGrid.find(entry.path("key").asString("")).orElse(null);
-			if (field == null || (!field.multiple() && answered.contains(field.key()))) {
+			if (field == null || !entry.isObject()) {
+				continue;
+			}
+			Proposal proposal = proposal(field, entry, documentIds);
+			if (!field.multiple() && answered.contains(field.key())) {
+				markContradictory(proposals, proposal);
 				continue;
 			}
 			answered.add(field.key());
-			proposals.add(proposal(field, entry, documentIds));
+			proposals.add(proposal);
 		}
 		for (GridField field : ExtractionGrid.FIELDS) {
 			if (!answered.contains(field.key())) {
@@ -50,6 +55,20 @@ final class AnswerReader {
 			}
 		}
 		return proposals;
+	}
+
+	/**
+	 * A single field answered twice with two different values: the first
+	 * answer is kept, as contradictory, never silently preferred.
+	 */
+	private static void markContradictory(List<Proposal> proposals, Proposal other) {
+		for (int i = 0; i < proposals.size(); i++) {
+			Proposal first = proposals.get(i);
+			if (first.key().equals(other.key()) && other.value() != null && first.value() != null
+					&& !first.value().equalsIgnoreCase(other.value())) {
+				proposals.set(i, first.withCheck(FieldState.CONTRADICTORY, first.page()));
+			}
+		}
 	}
 
 	private static JsonNode parse(String answer) {

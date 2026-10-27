@@ -3,7 +3,9 @@
 ## Architecture
 
 Une application web, un serveur applicatif, une base PostgreSQL, un dossier de stockage des
-fichiers et un appel à un service d'IA externe. Pas de microservices ni de file de messages :
+fichiers et, plus tard, un appel à un service d'IA externe (préparé, désactivé : aucun
+fournisseur n'est intégré ni configuré, aucun document n'est envoyé à une IA). Pas de
+microservices ni de file de messages :
 les traitements longs (collecte, lecture des documents, analyse) tournent en tâche de fond
 dans le backend, avec un état visible dans l'interface.
 
@@ -30,16 +32,25 @@ conservent la valeur de l'IA et leur auteur.
 
 ### Déroulement d'une analyse
 
-1. La lecture d'un dossier se termine (`DocumentProcessor`) et publie `DossierReadEvent`.
-2. Si l'appel d'offres est retenu par le filtre et qu'un fournisseur d'IA est configuré,
-   `AnalysisService` choisit les pièces à envoyer : RC, avis, acte d'engagement puis autres
-   pièces, dans la limite de `analysis.max-characters`. Une pièce qui ne tient pas est
-   laissée de côté entière (jamais coupée) et signalée « non analysée ».
-3. L'empreinte des pièces, du modèle et de la version des instructions est calculée. Si une
-   analyse terminée a la même empreinte, elle est réutilisée (règle RM9) ; le bouton
-   « Relancer l'analyse » force une nouvelle analyse.
-4. `ExtractionPrompt` construit les instructions (à partir de `ExtractionGrid`) et le texte des
-   pages, chaque page portant l'identifiant du document et son numéro.
+Le même chemin pour tout dossier, quelle que soit son origine (dépôt manuel, récupération
+automatique) : seule compte la pièce, son empreinte et son texte. L'origine reste dans
+`dossier.origin` sans changer l'analyse.
+
+1. La lecture d'un dossier se termine (`DocumentProcessor`) et publie `DossierReadEvent`. Le
+   texte est extrait ici et nulle part ailleurs : l'IA ne lit jamais les fichiers.
+2. Si l'analyse est autorisée (`AnalysisGate`, voir « Analyse par IA ») et que l'appel d'offres
+   est retenu par le filtre (RM8), ou sur demande d'un utilisateur, `AnalysisService` choisit
+   les pièces : RC, avis, acte d'engagement, CCAP, CCTP puis autres pièces, dans la limite de
+   `analysis.max-characters` et de `analysis.max-documents-per-tender`. Une pièce qui ne tient
+   pas est laissée de côté entière (jamais coupée) et signalée « non analysée ».
+3. L'empreinte des pièces (SHA-256 et type), du fournisseur, du modèle et de la version de la
+   grille et des instructions est calculée. Si une analyse terminée a la même empreinte, elle
+   est réutilisée (règle RM9) ; le bouton « Relancer l'analyse » force une nouvelle analyse. Une
+   nouvelle version d'un document, de la grille ou des instructions donne une autre empreinte.
+4. L'analyse est mise en file (`PENDING`) ; la requête HTTP rend la main aussitôt.
+   `AnalysisWorker` la prend sur ses propres threads, redemande `AnalysisGate`, puis
+   `ExtractionPrompt` construit les instructions (à partir de `ExtractionGrid`), le schéma JSON
+   attendu et le texte des pages, chaque page portant l'identifiant du document et son numéro.
 5. `AnswerReader` lit la réponse JSON sans lui faire confiance : clés inconnues ignorées,
    sources hors des documents envoyés supprimées, champs sans réponse gardés « à vérifier ».
 6. `AnswerChecker` et `CitationVerifier` retrouvent chaque extrait dans la page citée (ou
@@ -84,6 +95,9 @@ Toutes les valeurs sont lues dans `.env`, jamais commité.
 | `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`, `BOOTSTRAP_ADMIN_NAME` | Premier administrateur, créé si aucun compte n'existe |
 | `SESSION_COOKIE_SECURE` | `true` derrière HTTPS |
 | `APP_PORT` | Port de l'interface |
+| `ANALYSIS_ENABLED`, `ANALYSIS_PROVIDER`, `ANALYSIS_EXTERNAL_TRANSMISSION` | Analyse par IA : `false`, `none`, `false` par défaut, rien n'est envoyé (voir « Analyse par IA ») |
+| `ANALYSIS_API_KEY` | Clé du fournisseur d'IA, lue par son seul client ; vide (aucun fournisseur intégré) |
+| `ANALYSIS_MONTHLY_BUDGET` | Plafond mensuel estimé en euros (vide = aucun) |
 | `ANALYSIS_INPUT_PRICE`, `ANALYSIS_OUTPUT_PRICE` | Prix du modèle en euros par million de tokens, pour afficher le coût des analyses (0 = non affiché) |
 | `BACKUP_DIR`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS` | Sauvegarde quotidienne |
 
@@ -93,42 +107,225 @@ texte envoyé à l'IA (`analysis.max-characters`).
 
 Les critères de filtrage se règlent dans l'interface (Paramètres, administrateur).
 
-## Brancher un fournisseur d'IA
+## Analyse par IA : socle préparé, désactivé
 
-Le choix du fournisseur revient à l'entreprise : traitement en France ou dans l'Union
-européenne, engagement contractuel de non-réutilisation des données pour l'entraînement,
-plafond de dépense mensuel configuré chez le fournisseur.
+**État actuel : aucun fournisseur d'IA n'est intégré à l'application ni configuré. Aucun
+document n'est envoyé à une IA, aucune dépense n'est possible.** L'interface l'indique
+(« préparée mais désactivée ») et les documents restent consultables normalement. Tout le reste
+de la chaîne (extraction, file, contrôles, fiche, validation) est prêt et testé avec un
+fournisseur simulé.
 
-Tout l'appel à l'IA passe par l'interface `analysis.ExtractionClient`, seul point à écrire :
+### Composants (`backend/.../analysis`)
 
-```java
-@Component
-class MonFournisseurClient implements ExtractionClient {
+| Classe | Rôle |
+|--------|------|
+| `ExtractionClient` | Contrat d'un fournisseur : `provider()`, `model()`, `complete(ExtractionRequest)`. Seul endroit où un SDK ou une API de fournisseur peut apparaître |
+| `ExtractionRequest` | Ce qui est envoyé : type d'analyse, version, instructions, texte page par page, schéma JSON attendu, longueur maximale de la réponse, température 0, délai maximal |
+| `ProviderException`, `FailureKind` | Erreurs typées : `NOT_CONFIGURED`, `AUTHENTICATION`, `RATE_LIMITED`, `QUOTA_EXCEEDED`, `BUDGET_REACHED`, `TIMEOUT`, `TEMPORARY`, `INVALID_RESPONSE`, `UNUSABLE_DOCUMENT`, `REFUSED`, `CONTEXT_TOO_LARGE`, `INTERRUPTED`, `UNEXPECTED` ; seules `RATE_LIMITED`, `TIMEOUT` et `TEMPORARY` sont retentées |
+| `AnalysisGate` | Seul point qui décide qu'un document peut partir, à la demande et juste avant chaque appel |
+| `AnalysisService` | Choix des pièces, empreinte, mise en file, annulation ; aucun appel |
+| `AnalysisWorker` | File persistante : prise d'une analyse, appel, lecture, vérification, enregistrement, reprises |
+| `ExtractionPrompt`, `ExtractionGrid` | Instructions et grille versionnées (`grid-2/prompt-2`), schéma JSON de la réponse |
+| `AnswerReader`, `AnswerChecker`, `CitationVerifier` | Lecture stricte de la réponse et vérification des citations, sans IA |
+| `SecretRedactor` | Masque clés et en-têtes dans les messages d'erreur avant enregistrement et journal |
 
-	@Override
-	public String model() {
-		return "nom-du-modèle";       // enregistré avec chaque analyse
-	}
+Aucun SDK de fournisseur n'est une dépendance du projet ; `ProviderIsolationTests` vérifie
+qu'aucun n'est importé, que seul le package `analysis` connaît le contrat, et qu'aucune
+implémentation réelle n'est livrée (donc qu'aucun test ne peut appeler une IA).
 
-	@Override
-	public ModelAnswer complete(String instructions, String documents) {
-		// Envoyer les instructions (consignes système) et les documents (message
-		// utilisateur), demander une réponse JSON, renvoyer le texte de la réponse
-		// et les tokens consommés (entrée, sortie).
-	}
+### Conditions avant tout envoi (`AnalysisGate`)
 
-}
-```
+Vérifiées dans l'ordre ; la première qui manque garde l'analyse éteinte, avec la raison
+affichée à l'administrateur (Paramètres) et dans la fiche :
 
-- La clé d'API se lit dans une variable d'environnement (à ajouter dans `.env.example` et
-  `docker-compose.yml`), jamais dans le code.
-- Dès qu'un tel composant existe, il remplace le client « non configuré » déclaré dans
-  `AnalysisConfiguration`, et l'interface propose l'analyse.
-- `model()` peut renvoyer `null` pour désactiver l'analyse (par exemple si la clé est absente).
-- Les tests de `AnalysisApiTests` montrent le comportement attendu avec un faux client.
+| État | Cause |
+|------|-------|
+| `DISABLED` | `analysis.enabled=false` (défaut) |
+| `MISCONFIGURED` | fournisseur non choisi, inconnu ou en double, plafond sans prix du modèle |
+| `NOT_CONFIGURED` | le fournisseur choisi n'a pas de clé ou de modèle (`model()` renvoie `null`) |
+| `TRANSMISSION_NOT_ALLOWED` | `analysis.external-transmission-allowed=false` (défaut) : une clé seule n'autorise jamais l'envoi |
+| `BUDGET_REACHED` | plafond mensuel atteint (estimation locale) |
+| `READY` | une analyse peut être lancée |
 
-Changer de modèle ne demande aucune autre modification : les analyses gardent le nom du
-modèle et la version des instructions, ce qui permet de comparer.
+Les valeurs hors limites (zéro, négatives, `lease` ≤ `request-timeout`) empêchent le
+démarrage ; une combinaison incohérente laisse démarrer l'application, IA éteinte, avec un
+avertissement au démarrage (`AI analysis: MISCONFIGURED, kept off: …`).
+
+### File (`analysis`, V24)
+
+Chaque ligne d'`analysis` est à la fois la demande et son historique (jamais remplacée).
+
+| Statut | Sens |
+|--------|------|
+| `PENDING` | en file |
+| `PROCESSING` | envoyée au fournisseur (verrou `locked_by`, `locked_at`) |
+| `DONE` | réponse lue, vérifiée, enregistrée ; les pièces non lues sont listées « non analysées » (résultat partiel) |
+| `RETRY_WAITING` | erreur temporaire, nouvelle tentative après `next_attempt_at` |
+| `FAILED` | échec définitif, avec `error_kind` et message |
+| `CANCELLED` | annulée par un utilisateur avant l'envoi |
+
+L'état des pièces reste celui des documents : `PENDING` (à lire), `READ`, `SCANNED` (pages sans
+texte : OCR nécessaire, non fait), `NOT_ANALYZED` (format non pris en charge, raison donnée),
+`FAILED` (illisible, protégé, conversion impossible).
+
+- **Idempotence** : une seule analyse non terminée par appel d'offres (index unique partiel
+  `uk_analysis_unfinished_tender`) ; même empreinte terminée → réutilisée.
+- **Verrouillage** : `SELECT … FOR UPDATE SKIP LOCKED`, demandes d'un utilisateur avant les
+  demandes automatiques, puis les plus anciennes.
+- **Concurrence** : `analysis.max-concurrent-requests` (1) threads `analysis-*`, distincts des
+  collectes, de la récupération des DCE et des requêtes web.
+- **Reprises** : `retry-delay` (2 min) doublé à chaque tentative, au plus `max-retry-delay`
+  (1 h), ±25 % au hasard ; au plus `max-attempts` (3). Une clé refusée, une configuration
+  absente ou un plafond atteint ne sont jamais retentés.
+- **Délais** : `request-timeout` (5 min) est transmis au fournisseur ; une analyse restée
+  `PROCESSING` au-delà de `lease` (15 min) est remise en file, ou close après `max-attempts`.
+- **Démarrage** : rien n'est analysé. Les analyses interrompues par un arrêt sont remises en
+  file ; si l'IA n'est pas autorisée, les analyses en attente sont closes (`NOT_CONFIGURED`)
+  au lieu d'attendre indéfiniment. Aucune analyse historique n'est lancée en masse.
+- **Annulation** : `POST /api/analyses/{id}/cancel`, seulement avant l'envoi.
+
+### Résultats
+
+Grille `grid-2` (33 informations, sections de la fiche) : identification (objet, acheteur,
+référence, type de marché, procédure, lots, lieu, date limite, visite, date limite des
+questions), données financières (montant estimé, minimum, maximum, durée, reconductions,
+tranches et options, variantes), exigences administratives (pièces de candidature et de
+l'offre, qualifications, capacité financière, références, assurances, garanties,
+sous-traitance, groupement), exigences techniques (prestations, normes), points d'attention et
+clauses environnementales et sociales. Ajouter une information ne demande aucune migration.
+
+Chaque information garde la valeur proposée, l'extrait exact, le document, la page et un état :
+`VERIFIED` (extrait retrouvé dans la page et valeur lisible dedans), `UNVERIFIED`,
+`NOT_INDICATED` (absente : ni valeur ni extrait), `AMBIGUOUS`, `CONTRADICTORY`. Les textes
+libres et les choix sont des interprétations : seul leur extrait est vérifié. Une même
+information unique donnée deux fois avec deux valeurs, ou une date limite différente de celle
+de l'avis, passe `CONTRADICTORY` ; la valeur de l'avis n'est jamais écrasée, les deux sont
+montrées. Le modèle n'agit sur rien : il ne crée, ne modifie ni ne supprime aucune
+consultation, veille, dossier ou lien. Une décision humaine (validée, corrigée, rejetée)
+conserve la valeur de l'IA, son auteur et sa date (RM10). Aucun score de confiance n'est
+utilisé : seules comptent la preuve textuelle et les règles de cohérence.
+
+Une analyse porte sur toutes les pièces retenues d'un dossier en un seul appel : c'est la
+synthèse de la consultation, chaque information renvoyant à la pièce qui la justifie. Deux
+consultations ne partagent jamais une analyse, même pour des fichiers identiques.
+
+### Configuration
+
+| Propriété (variable) | Défaut | Rôle |
+|----------------------|--------|------|
+| `analysis.enabled` (`ANALYSIS_ENABLED`) | `false` | Interrupteur général |
+| `analysis.provider` (`ANALYSIS_PROVIDER`) | `none` | Identifiant du fournisseur (`ExtractionClient.provider()`) |
+| `analysis.external-transmission-allowed` (`ANALYSIS_EXTERNAL_TRANSMISSION`) | `false` | Autorise l'envoi des documents à un fournisseur externe |
+| `analysis.monthly-budget` (`ANALYSIS_MONTHLY_BUDGET`) | vide | Plafond en euros des analyses créées dans le mois civil (Paris) |
+| `analysis.input-price-per-million`, `analysis.output-price-per-million` (`ANALYSIS_INPUT_PRICE`, `ANALYSIS_OUTPUT_PRICE`) | `0` | Prix du modèle, pour le coût et le plafond |
+| `analysis.max-characters` | 400 000 | Texte envoyé au plus par analyse |
+| `analysis.max-documents-per-tender` | 10 | Pièces envoyées au plus par analyse |
+| `analysis.max-output-tokens` | 8 000 | Longueur maximale de la réponse |
+| `analysis.request-timeout` | 5 min | Attente maximale d'une réponse |
+| `analysis.max-concurrent-requests` | 1 | Appels simultanés |
+| `analysis.max-attempts`, `retry-delay`, `max-retry-delay` | 3, 2 min, 1 h | Reprises |
+| `analysis.lease`, `analysis.poll-interval` | 15 min, 30 s | Libération d'une analyse bloquée, examen de la file |
+
+**Coûts.** Le coût est une estimation de GPE : tokens renvoyés par le fournisseur × prix
+configurés. Ce n'est pas la facture. Avant un appel, GPE estime la demande (1 token pour 3
+caractères, plus la réponse maximale) et refuse si elle dépasse ce qui reste du plafond ; le
+plafond peut être dépassé d'au plus un appel en cours. Les analyses échouées comptent (elles
+sont payées). GPE ne peut pas imposer un plafond de facturation au fournisseur : en fixer un
+chez lui. Le dépassement n'entraîne jamais un changement automatique de fournisseur.
+
+**Secrets.** La clé n'est lue que par le client du fournisseur, dans l'environnement du
+serveur (`ANALYSIS_API_KEY` transmise par `docker-compose.yml`, vide par défaut). Elle n'est
+ni dans le code, ni dans `application.properties`, ni dans PostgreSQL, ni envoyée à
+l'interface ; `GET /api/analyses/configuration` n'en contient aucune trace. Les messages
+d'erreur du fournisseur sont nettoyés (`SecretRedactor`) et coupés à 500 caractères ; le texte
+des documents n'est jamais journalisé.
+
+### API
+
+| Méthode et chemin | Droits | Rôle |
+|-------------------|--------|------|
+| `GET /api/analyses/configuration` | administrateur | État, raisons, limites, file, consommation du mois ; aucun secret |
+| `GET /api/analyses`, `GET /api/analyses/quality` | administrateur | Journal (statut, tentatives, erreur, tokens, coût) et qualité |
+| `GET /api/tenders/{id}/analysis` | connecté | Fiche : disponibilité et raison, dernière analyse, historique |
+| `GET /api/analyses/{id}` | connecté | Où en est une analyse, sans réponses ni texte |
+| `POST /api/dossiers/{id}/analyses?force=` | connecté | Met en file l'analyse d'un dossier de GPE (relance avec `force=true`) |
+| `POST /api/analyses/{id}/cancel` | connecté | Annule une analyse pas encore envoyée |
+| `PUT /api/extracted-fields/{id}/decision`, `POST /api/analyses/{id}/validation` | connecté | Validation humaine |
+
+Aucune route n'accepte une adresse ou un texte libre à envoyer : une analyse porte toujours
+sur un dossier existant de GPE. Les droits sont vérifiés côté serveur à chaque requête
+(session, CSRF, rôle). GPE n'a qu'une équipe (l'entreprise) : tous les comptes voient toutes
+les consultations ; il n'y a donc pas de cloisonnement par équipe à préserver aujourd'hui.
+
+### Activer un fournisseur plus tard
+
+1. **Choisir le fournisseur** (décision de l'entreprise) et vérifier ses conditions : lieu de
+   traitement (France, UE), durée de conservation des requêtes, non-réutilisation des données
+   pour l'entraînement (engagement contractuel), sous-traitants, possibilité d'un plafond de
+   dépense, accord de traitement des données ; vérifier que les DCE (documents publics, mais
+   parfois des annexes nominatives) peuvent lui être confiés.
+2. **Écrire son client** dans `analysis` :
+
+   ```java
+   @Component
+   class MonFournisseurClient implements ExtractionClient {
+
+   	private final String apiKey;
+
+   	MonFournisseurClient(@Value("${ANALYSIS_API_KEY:}") String apiKey) {
+   		this.apiKey = apiKey;
+   	}
+
+   	@Override
+   	public String provider() {
+   		return "mon-fournisseur";        // valeur de ANALYSIS_PROVIDER
+   	}
+
+   	@Override
+   	public String model() {
+   		return apiKey.isBlank() ? null : "nom-du-modèle";   // null : pas de clé, IA éteinte
+   	}
+
+   	@Override
+   	public ModelAnswer complete(ExtractionRequest request) {
+   		// instructions() en consignes système, documents() en message utilisateur,
+   		// outputSchema() si le fournisseur sait imposer un format, maxOutputTokens(),
+   		// temperature(), timeout() comme délai du client HTTP. Renvoyer le texte et les
+   		// tokens consommés. Traduire les erreurs : 401/403 → AUTHENTICATION, 429 →
+   		// RATE_LIMITED, quota épuisé → QUOTA_EXCEEDED, délai → TIMEOUT, 5xx et réseau →
+   		// TEMPORARY, contenu refusé → REFUSED, contexte trop long → CONTEXT_TOO_LARGE.
+   		// Ne jamais mettre la clé, les en-têtes ni le texte dans le message.
+   	}
+
+   }
+   ```
+
+   Ajouter des tests avec un serveur HTTP local simulé (comme `SyntheticDceServer`), jamais
+   l'API réelle, et retirer ou adapter `ProviderIsolationTests.noRealProviderIsShipped`.
+3. **Renseigner `.env`** sur le serveur : `ANALYSIS_API_KEY`, `ANALYSIS_PROVIDER`,
+   `ANALYSIS_INPUT_PRICE`, `ANALYSIS_OUTPUT_PRICE`, `ANALYSIS_MONTHLY_BUDGET` ; fixer aussi un
+   plafond chez le fournisseur.
+4. **Autoriser** : `ANALYSIS_EXTERNAL_TRANSMISSION=true` puis `ANALYSIS_ENABLED=true`,
+   `docker compose up -d backend`. Le journal affiche `AI analysis: READY`, Paramètres →
+   Analyses par IA indique « Disponible ».
+5. **Essayer sur un dossier** (bouton « Lancer l'analyse »), vérifier la fiche, le coût et le
+   journal avant de laisser l'analyse automatique (RM8) traiter les appels d'offres retenus.
+   Revenir en arrière : `ANALYSIS_ENABLED=false` et redémarrer.
+
+### Limites actuelles
+
+- Aucun fournisseur réel : rien n'est analysé tant que l'étape 2 n'est pas faite.
+- Pas d'OCR : les pages scannées sont signalées (`SCANNED`, « OCR nécessaire ») et non lues.
+- Tableurs (DPGF, BPU, DQE, XLSX), plans, images, 7z et RAR conservés mais non lus ; Word
+  converti par LibreOffice ; TXT et HTML lus par sections (jsoup, sans aucun chargement de
+  ressource distante).
+- Une analyse partagée entre deux consultations au même contenu n'est pas réutilisée :
+  chacune est analysée (et payée) séparément.
+- Le plafond mensuel est une estimation locale ; le mois est celui de la création de l'analyse.
+- Aucune détection automatique de données personnelles dans les DCE : à vérifier avant
+  activation (étape 1).
+- La version de la bibliothèque d'extraction n'est pas enregistrée par page, seule la méthode
+  (`NATIVE`, `OCR`, `TEXT`, `HTML`).
 
 ## Ajouter ou modifier une information de la grille
 
@@ -817,3 +1014,24 @@ cd frontend && npm run lint && npx tsc --noEmit
 Les règles où une erreur serait silencieuse sont couvertes par des tests automatisés :
 filtrage, normalisation, rattachement des rectificatifs, lecture des documents, vérification
 des citations, lecture de la réponse de l'IA.
+
+Sans JDK ni Node sur la machine, les mêmes commandes tournent dans des conteneurs :
+
+```bash
+docker run --rm -v "$PWD/backend:/app" -v "$HOME/.m2:/root/.m2" \
+  -v /var/run/docker.sock:/var/run/docker.sock -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \
+  -w /app eclipse-temurin:21-jdk ./mvnw -B test
+```
+
+Analyse par IA, sans clé ni appel réel (fournisseur simulé par Mockito) :
+
+| Classe de test | Ce qui est vérifié |
+|----------------|--------------------|
+| `AnalysisWithoutProviderTests` | Démarrage sans clé ni fournisseur, état `DISABLED` affiché, demande refusée, aucune ligne créée, demande en attente close au démarrage, configuration sans secret |
+| `AnalysisTransmissionTests` | Clé et IA activée mais envoi non autorisé : rien n'est envoyé, même pour un dossier retenu lu |
+| `AnalysisGateTests` | Ordre des conditions, choix du fournisseur, plafond mensuel, validation des réglages, délai de reprise avec jitter |
+| `AnalysisApiTests` | Analyse d'un dossier retenu, réutilisation d'une même empreinte, réponse illisible, validation humaine, journal et coût |
+| `AnalysisQueueTests` | Reprise des erreurs temporaires, clé refusée jamais retentée ni affichée (réponses et journaux), un appel à la fois, reprise après arrêt sans appel au démarrage, annulation, nouvelle analyse après changement de grille, séparation des consultations, nombre de pièces, droits sur chaque route |
+| `AnswerReaderTests`, `AnswerCheckerTests`, `CitationVerifierTests`, `ExtractionGridTests` | Réponse mal formée, champs inconnus, absence sans invention, contradictions, preuves et pages, schéma JSON |
+| `ProviderIsolationTests`, `SecretRedactorTests` | Aucun SDK ni fournisseur réel, contrat confiné au package, masquage des clés |
+| `TextFileExtractorTests`, `DocumentApiTests` | TXT, HTML sans chargement distant, PDF illisible, format inconnu, PDF scanné (OCR) |

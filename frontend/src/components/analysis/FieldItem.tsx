@@ -30,7 +30,10 @@ export function FieldItem({ field, grid, readable, onChanged }: Props) {
   const [correction, setCorrection] = useState(field.correctedValue ?? field.value ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The source and the quote take room: shown on request, from the badge.
+  const [sourceShown, setSourceShown] = useState(false);
   const value = effectiveValue(field);
+  const hasSource = Boolean((field.documentId && field.pageNumber) || field.quote);
 
   const decide = async (decision: FieldDecision | null, correctedValue?: string) => {
     setSaving(true);
@@ -58,14 +61,28 @@ export function FieldItem({ field, grid, readable, onChanged }: Props) {
         <span className={field.decision === "REJECTED" ? "struck" : ""}>
           {notIndicated ? NOT_IN_DOCUMENTS : formatValue(grid?.kind, field.decision === "REJECTED" ? field.value : value)}
         </span>
-        {!notIndicated && (
-          <span className={isReliable(field) ? "badge verified" : "badge urgent"}>
-            {field.decision ? DECISION_LABELS[field.decision] : FIELD_STATE_LABELS[field.state]}
-          </span>
-        )}
+        {!notIndicated &&
+          (hasSource ? (
+            <button
+              type="button"
+              className={isReliable(field) ? "badge verified badge-toggle" : "badge urgent badge-toggle"}
+              aria-expanded={sourceShown}
+              title={sourceShown ? "Masquer la source" : "Afficher la source et l'extrait cité"}
+              onClick={() => setSourceShown(!sourceShown)}
+            >
+              {field.decision ? DECISION_LABELS[field.decision] : FIELD_STATE_LABELS[field.state]}
+              <span className="badge-chevron" aria-hidden="true">
+                {sourceShown ? "▴" : "▾"}
+              </span>
+            </button>
+          ) : (
+            <span className={isReliable(field) ? "badge verified" : "badge urgent"}>
+              {field.decision ? DECISION_LABELS[field.decision] : FIELD_STATE_LABELS[field.state]}
+            </span>
+          ))}
       </div>
 
-      {field.documentId && field.pageNumber && (
+      {sourceShown && field.documentId && field.pageNumber && (
         <p className="source">
           Source :{" "}
           {readable ? (
@@ -79,7 +96,7 @@ export function FieldItem({ field, grid, readable, onChanged }: Props) {
           )}
         </p>
       )}
-      {field.quote && <blockquote className="quote">« {field.quote} »</blockquote>}
+      {sourceShown && field.quote && <blockquote className="quote">« {field.quote} »</blockquote>}
 
       {field.decision && (
         <p className="hint">

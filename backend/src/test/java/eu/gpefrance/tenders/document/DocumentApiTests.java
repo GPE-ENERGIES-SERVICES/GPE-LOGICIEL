@@ -2,6 +2,7 @@ package eu.gpefrance.tenders.document;
 
 import static eu.gpefrance.tenders.document.TestFiles.entries;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 import java.time.Instant;
@@ -89,6 +90,31 @@ class DocumentApiTests {
 		assertThat(mvc.get().uri("/api/documents/{id}/pages/1", rc.id()).with(TestUsers.user())).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("{\"pageNumber\": 1, \"text\": \"Date limite : 15/11/2026\", \"method\": \"NATIVE\"}");
+	}
+
+	@Test
+	void readsTextAndHtmlAndReportsEveryFileThatCannotBeRead() throws InterruptedException {
+		byte[] archive = TestFiles.zip(entries("notes.txt", "Visite obligatoire le 3 novembre.", "avis.html",
+				"<html><body><p>Avis : travaux de voirie</p><img src=\"http://127.0.0.1:1/x.png\"></body></html>",
+				"RC.pdf", "%PDF-1.4 tronqué", "scan.pdf", TestFiles.pdf("", ""), "plan.xyz", "inconnu"));
+
+		upload(new MockMultipartFile("files", "DCE.zip", "application/zip", archive));
+		DossierResponse dossier = waitUntilProcessed();
+
+		assertThat(dossier.documents()).extracting(DossierResponse.DocumentResponse::fileName,
+				DossierResponse.DocumentResponse::state)
+			.containsExactly(tuple("DCE.zip/avis.html", DocumentState.READ), tuple("DCE.zip/notes.txt", DocumentState.READ),
+					tuple("DCE.zip/plan.xyz", DocumentState.NOT_ANALYZED), tuple("DCE.zip/RC.pdf", DocumentState.FAILED),
+					tuple("DCE.zip/scan.pdf", DocumentState.SCANNED));
+		assertThat(dossier.documents().get(3).stateDetail()).contains("illisible");
+		assertThat(dossier.documents().get(2).stateDetail()).isEqualTo("Format non analysé");
+		assertThat(dossier.documents().get(4).stateDetail()).contains("OCR");
+		assertThat(mvc.get().uri("/api/documents/{id}/pages/1", dossier.documents().get(0).id()).with(TestUsers.user()))
+			.bodyJson()
+			.isLenientlyEqualTo("{\"text\": \"Avis : travaux de voirie\", \"method\": \"HTML\"}");
+		assertThat(mvc.get().uri("/api/documents/{id}/pages/1", dossier.documents().get(1).id()).with(TestUsers.user()))
+			.bodyJson()
+			.isLenientlyEqualTo("{\"text\": \"Visite obligatoire le 3 novembre.\", \"method\": \"TEXT\"}");
 	}
 
 	@Test

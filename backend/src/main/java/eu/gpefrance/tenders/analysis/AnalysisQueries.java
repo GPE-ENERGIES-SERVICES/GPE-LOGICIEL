@@ -32,16 +32,16 @@ public class AnalysisQueries {
 
 	private final TenderRepository tenders;
 
-	private final AnalysisService service;
+	private final AnalysisGate gate;
 
 	private final AnalysisProperties properties;
 
 	public AnalysisQueries(AnalysisRepository analyses, DossierRepository dossiers, TenderRepository tenders,
-			AnalysisService service, AnalysisProperties properties) {
+			AnalysisGate gate, AnalysisProperties properties) {
 		this.analyses = analyses;
 		this.dossiers = dossiers;
 		this.tenders = tenders;
-		this.service = service;
+		this.gate = gate;
 		this.properties = properties;
 	}
 
@@ -50,13 +50,17 @@ public class AnalysisQueries {
 		Tender tender = tenders.findById(tenderId).orElseThrow(() -> new TenderNotFoundException(tenderId));
 		List<Analysis> all = analyses.findByTenderIdOrderByIdDesc(tenderId);
 		AnalysisResponse latest = all.isEmpty() ? null : detail(all.getFirst(), tender.getDeadline());
-		return new TenderAnalysis(service.isConfigured(), ExtractionGrid.FIELDS, latest,
-				all.stream().map(this::summary).toList());
+		AnalysisGate.Status status = gate.status();
+		return new TenderAnalysis(status.ready(), status.ready() ? null : status.message(), ExtractionGrid.FIELDS,
+				latest, all.stream().map(this::summary).toList());
 	}
 
+	/**
+	 * Where an analysis stands, without its answers nor any text.
+	 */
 	@Transactional(readOnly = true)
 	public AnalysisResponse summary(Long analysisId) {
-		return summary(analyses.findById(analysisId).orElseThrow());
+		return summary(analyses.findById(analysisId).orElseThrow(() -> new AnalysisNotFoundException(analysisId)));
 	}
 
 	private AnalysisResponse summary(Analysis analysis) {
@@ -89,7 +93,9 @@ public class AnalysisQueries {
 	private AnalysisResponse response(Analysis analysis, Dossier dossier, Instant noticeDeadline,
 			List<FieldResponse> fields, List<DocumentResponse> documents) {
 		return new AnalysisResponse(analysis.getId(), analysis.getDossierId(), dossier.getVersion(),
-				analysis.getStatus(), analysis.getModel(), analysis.getPromptVersion(), analysis.getCreatedAt(),
+				analysis.getStatus(), analysis.getProvider(), analysis.getModel(), analysis.getPromptVersion(),
+				analysis.getErrorKind(), analysis.getAttempts(), analysis.getNextAttemptAt(), analysis.getRequestedBy(),
+				analysis.getCreatedAt(),
 				analysis.getFinishedAt(), analysis.getErrorMessage(), analysis.getInputTokens(),
 				analysis.getOutputTokens(), cost(analysis), noticeDeadline, analysis.getValidatedBy(),
 				analysis.getValidatedAt(), fields, documents);

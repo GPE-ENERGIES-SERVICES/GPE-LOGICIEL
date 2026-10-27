@@ -1654,30 +1654,94 @@ details summary {
   margin-left: 0;
 }
 
+/* Summary sheet: one band per section, one block per field of the grid. */
 .summary h3 {
-  margin-top: 1.5rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--border);
+  margin: 2rem 0 0.9rem;
+  padding: 0.65rem 1rem;
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+  color: var(--accent);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.summary h3:first-of-type {
+  margin-top: 1.25rem;
+}
+
+/* One horizontal block per field: its name on the left, what was found on the right. */
+.field-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 .field-group {
-  margin: 0.75rem 0;
+  display: grid;
+  grid-template-columns: minmax(11rem, 16rem) minmax(0, 1fr);
+  column-gap: 1.25rem;
+  margin: 0;
+  padding: 0.8rem 1rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+
+.field-group > * {
+  grid-column: 2;
+  min-width: 0;
 }
 
 .field-group h4 {
-  margin: 0 0 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 650;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+  grid-column: 1;
+  grid-row: 1 / span 50;
+  align-self: start;
+  margin: 0 0 0.5rem;
+  padding-right: 1rem;
+  border-right: 1px solid var(--border);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.field-group > .muted {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.field-group > .hint {
+  margin: 0 0 0.4rem;
+}
+
+/* Narrow screens: the name above its content. */
+@media (max-width: 640px) {
+  .field-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .field-group > *,
+  .field-group h4 {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .field-group h4 {
+    padding: 0 0 0.4rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
 }
 
 .field-group .field,
 .summary .field {
-  padding: 0.45rem 0 0.45rem 0.85rem;
-  border-left: 3px solid var(--border);
-  margin-bottom: 0.5rem;
+  padding: 0.35rem 0 0.35rem 0.75rem;
+  border-left: 3px solid var(--info-border);
+  margin-bottom: 0.6rem;
 }
 
 .field.rejected {
@@ -1685,7 +1749,50 @@ details summary {
 }
 
 .field-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
+  font-size: 0.98rem;
   font-weight: 600;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.field-value .badge {
+  margin-left: 0;
+  font-size: 0.72rem;
+}
+
+/* The badge of a value opens its source and quote. */
+.badge-toggle {
+  gap: 0.3rem;
+  min-height: 0;
+  padding: 0.05rem 0.55rem;
+  font-family: inherit;
+  line-height: 1.6;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.badge-toggle.verified:hover:not(:disabled) {
+  background: var(--success-soft);
+  border-color: var(--success);
+}
+
+.badge-toggle.urgent:hover:not(:disabled) {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+}
+
+.badge-toggle[aria-expanded="true"] {
+  border-style: solid;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.badge-chevron {
+  font-size: 0.65rem;
+  line-height: 1;
 }
 
 .struck {
@@ -1724,6 +1831,12 @@ details summary {
 }
 
 .attention {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 1rem 0.7rem 2rem;
+  border: 1px solid var(--warning-border);
+  border-left: 4px solid var(--warning);
+  border-radius: var(--radius);
+  background: var(--warning-soft);
   color: var(--warning);
   font-weight: 600;
 }

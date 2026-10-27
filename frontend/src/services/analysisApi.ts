@@ -1,4 +1,5 @@
 import type {
+  AnalysisConfiguration,
   AnalysisJournalEntry,
   AnalysisQuality,
   FieldDecision,
@@ -14,6 +15,11 @@ export function getTenderAnalysis(tenderId: number): Promise<TenderAnalysis> {
 /** Starts the analysis of a dossier; force analyses again content already analysed. */
 export function startAnalysis(dossierId: number, force: boolean): Promise<void> {
   return api(`/api/dossiers/${dossierId}/analyses?force=${force}`, { method: "POST" });
+}
+
+/** Cancels an analysis not sent to the provider yet. */
+export function cancelAnalysis(analysisId: number): Promise<TenderAnalysis> {
+  return api(`/api/analyses/${analysisId}/cancel`, { method: "POST" });
 }
 
 export function validateAnalysis(analysisId: number): Promise<TenderAnalysis> {
@@ -35,4 +41,9 @@ export function getAnalysisJournal(limit: number): Promise<AnalysisJournalEntry[
 
 export function getAnalysisQuality(): Promise<AnalysisQuality> {
   return api("/api/analyses/quality");
+}
+
+/** Configuration of the AI analysis, queue and consumption of the month (administrator). */
+export function getAnalysisConfiguration(): Promise<AnalysisConfiguration> {
+  return api("/api/analyses/configuration");
 }

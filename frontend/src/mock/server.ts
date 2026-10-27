@@ -10,7 +10,7 @@ import { REGIONS } from "@/lib/regions";
 import { ApiError } from "@/services/http";
 import type { Alert, AlertInput, AlertSummary } from "@/types/alert";
 import type { AwardedContract, AwardSearch } from "@/types/award";
-import type { TenderAnalysis } from "@/types/analysis";
+import type { AnalysisConfiguration, AnalysisQuality, TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
 import type { DceLink, DceSummary, DocumentHit, DocumentInfo, PieceType } from "@/types/document";
 import type { CollectJournal, CollectRun, CollectSource } from "@/types/settings";
@@ -737,7 +737,36 @@ function collectSources(): CollectSource[] {
   ];
 }
 
-const NO_ANALYSIS: TenderAnalysis = { configured: false, grid: [], latest: null, history: [] };
+const NOT_ENABLED =
+  "L'analyse par IA est préparée mais désactivée sur ce serveur (analysis.enabled=false) : aucun document n'est envoyé.";
+
+// No simulated analysis: the demo shows the AI analysis as it is delivered, disabled.
+const NO_ANALYSIS: TenderAnalysis = { configured: false, unavailableReason: NOT_ENABLED, grid: [], latest: null, history: [] };
+
+const ANALYSIS_CONFIGURATION: AnalysisConfiguration = {
+  state: "DISABLED",
+  message: NOT_ENABLED,
+  enabled: false,
+  provider: "none",
+  model: null,
+  externalTransmissionAllowed: false,
+  availableProviders: [],
+  problems: [],
+  limits: {
+    maxCharacters: 400000,
+    maxDocumentsPerTender: 10,
+    maxOutputTokens: 8000,
+    maxConcurrentRequests: 1,
+    maxAttempts: 3,
+    requestTimeoutSeconds: 300,
+    monthlyBudget: null,
+    pricesSet: false,
+  },
+  queue: { PENDING: 0, PROCESSING: 0, DONE: 0, FAILED: 0, RETRY_WAITING: 0, CANCELLED: 0 },
+  monthToDate: { inputTokens: 0, outputTokens: 0, estimatedCost: null },
+};
+
+const NO_QUALITY: AnalysisQuality = { done: 0, failed: 0, totalCost: null, averageCost: null, fields: [] };
 
 // --- Routing ----------------------------------------------------------------
 
@@ -767,6 +796,9 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/dce\/events$/, () => []],
   ["POST", /^\/api\/dce-links\/(\d+)\/retry$/, () => refuseRetry()],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
+  ["GET", /^\/api\/analyses\/configuration$/, () => ANALYSIS_CONFIGURATION],
+  ["GET", /^\/api\/analyses\/quality$/, () => NO_QUALITY],
+  ["GET", /^\/api\/analyses$/, () => []],
   ["GET", /^\/api\/tenders\/(\d+)\/documents\/search$/, (id, url) => searchDocuments(id, url)],
   ["GET", /^\/api\/tenders\/(\d+)\/awards$/, (id) => MOCK_AWARDS.filter((award) => award.tenderId === find(id).id)],
   ["PUT", /^\/api\/documents\/(\d+)\/piece-type$/, (id, _, body) => changePieceType(id, body)],

@@ -8,7 +8,23 @@ export type FieldState = "VERIFIED" | "UNVERIFIED" | "NOT_INDICATED" | "AMBIGUOU
 
 export type FieldDecision = "VALIDATED" | "CORRECTED" | "REJECTED";
 
-export type AnalysisStatus = "PENDING" | "PROCESSING" | "DONE" | "FAILED";
+export type AnalysisStatus = "PENDING" | "PROCESSING" | "DONE" | "FAILED" | "RETRY_WAITING" | "CANCELLED";
+
+/** Why an analysis failed or waits for a new attempt. */
+export type FailureKind =
+  | "NOT_CONFIGURED"
+  | "AUTHENTICATION"
+  | "RATE_LIMITED"
+  | "QUOTA_EXCEEDED"
+  | "BUDGET_REACHED"
+  | "TIMEOUT"
+  | "TEMPORARY"
+  | "INVALID_RESPONSE"
+  | "UNUSABLE_DOCUMENT"
+  | "REFUSED"
+  | "CONTEXT_TOO_LARGE"
+  | "INTERRUPTED"
+  | "UNEXPECTED";
 
 export type GridField = {
   key: string;
@@ -50,8 +66,13 @@ export type Analysis = {
   dossierId: number;
   dossierVersion: number;
   status: AnalysisStatus;
+  provider: string | null;
   model: string;
   promptVersion: string;
+  errorKind: FailureKind | null;
+  attempts: number;
+  nextAttemptAt: string | null;
+  requestedBy: string | null;
   createdAt: string;
   finishedAt: string | null;
   errorMessage: string | null;
@@ -71,8 +92,11 @@ export type AnalysisJournalEntry = {
   tenderTitle: string | null;
   dossierVersion: number;
   status: AnalysisStatus;
+  provider: string | null;
   model: string;
   promptVersion: string;
+  errorKind: FailureKind | null;
+  attempts: number;
   createdAt: string;
   finishedAt: string | null;
   errorMessage: string | null;
@@ -99,8 +123,44 @@ export type AnalysisQuality = {
 };
 
 export type TenderAnalysis = {
+  /** Whether an analysis can be started now. */
   configured: boolean;
+  /** Why not, when not configured. */
+  unavailableReason: string | null;
   grid: GridField[];
   latest: Analysis | null;
   history: Analysis[];
+};
+
+export type AnalysisState =
+  | "DISABLED"
+  | "MISCONFIGURED"
+  | "NOT_CONFIGURED"
+  | "TRANSMISSION_NOT_ALLOWED"
+  | "BUDGET_REACHED"
+  | "READY";
+
+/** Configuration of the AI analysis as the server applies it (administrator); never holds a key. */
+export type AnalysisConfiguration = {
+  state: AnalysisState;
+  message: string;
+  enabled: boolean;
+  provider: string;
+  model: string | null;
+  externalTransmissionAllowed: boolean;
+  availableProviders: string[];
+  problems: string[];
+  limits: {
+    maxCharacters: number;
+    maxDocumentsPerTender: number;
+    maxOutputTokens: number;
+    maxConcurrentRequests: number;
+    maxAttempts: number;
+    requestTimeoutSeconds: number;
+    monthlyBudget: number | null;
+    pricesSet: boolean;
+  };
+  queue: Record<AnalysisStatus, number>;
+  /** Tokens counted by GPE; the cost is an estimate, not the invoice of the provider. */
+  monthToDate: { inputTokens: number; outputTokens: number; estimatedCost: number | null };
 };

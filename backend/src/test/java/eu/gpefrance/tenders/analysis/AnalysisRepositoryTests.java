@@ -1,6 +1,7 @@
 package eu.gpefrance.tenders.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Instant;
@@ -13,6 +14,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import eu.gpefrance.tenders.TestcontainersConfiguration;
 import eu.gpefrance.tenders.document.Document;
@@ -78,11 +80,21 @@ class AnalysisRepositoryTests {
 
 	@Test
 	void aNewAnalysisKeepsTheEarlierOnes() {
-		repository.save(analysis("v1", NOW));
+		Analysis first = analysis("v1", NOW);
+		first.finish(100, 10, NOW.plusSeconds(30));
+		repository.save(first);
 		repository.save(analysis("v2", NOW.plusSeconds(60)));
 
 		assertThat(repository.findByDossierIdOrderByIdDesc(dossier.getId())).extracting(Analysis::getPromptVersion)
 			.containsExactly("v2", "v1");
+	}
+
+	@Test
+	void refusesASecondUnfinishedAnalysisOfTheSameTender() {
+		repository.saveAndFlush(analysis("v1", NOW));
+
+		assertThatThrownBy(() -> repository.saveAndFlush(analysis("v2", NOW.plusSeconds(60))))
+			.isInstanceOf(DataIntegrityViolationException.class);
 	}
 
 	@Test

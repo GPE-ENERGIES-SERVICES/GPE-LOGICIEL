@@ -91,7 +91,12 @@ public class Document {
 	public void markRead(int pageCount, int pagesWithoutText, String pdfPath) {
 		this.pageCount = pageCount;
 		this.pdfPath = pdfPath;
-		if (pagesWithoutText > 0) {
+		if (pageCount > 0 && pagesWithoutText == pageCount) {
+			this.state = DocumentState.SCANNED;
+			this.stateDetail = "Aucune page avec du texte : document scanné, reconnaissance de caractères (OCR) "
+					+ "nécessaire, non analysé";
+		}
+		else if (pagesWithoutText > 0) {
 			this.state = DocumentState.SCANNED;
 			this.stateDetail = pagesWithoutText + " page(s) sans texte sur " + pageCount
 					+ " : document probablement scanné, ces pages ne sont pas analysées";

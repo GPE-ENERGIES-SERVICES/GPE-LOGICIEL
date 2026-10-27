@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import eu.gpefrance.tenders.analysis.AnalysisReport.Configuration;
 import eu.gpefrance.tenders.analysis.AnalysisReport.JournalEntry;
 import eu.gpefrance.tenders.analysis.AnalysisReport.Quality;
 import eu.gpefrance.tenders.analysis.AnalysisResponse.TenderAnalysis;
@@ -58,20 +59,46 @@ public class AnalysisController {
 		return reports.quality();
 	}
 
+	/**
+	 * Configuration of the AI analysis, queue and consumption of the month
+	 * (administrator). No key is ever returned.
+	 */
+	@GetMapping("/api/analyses/configuration")
+	public Configuration configuration() {
+		return reports.configuration();
+	}
+
+	/**
+	 * Where an analysis stands, without its answers nor any text.
+	 */
+	@GetMapping("/api/analyses/{analysisId}")
+	public AnalysisResponse status(@PathVariable Long analysisId) {
+		return queries.summary(analysisId);
+	}
+
 	@GetMapping("/api/tenders/{tenderId}/analysis")
 	public TenderAnalysis ofTender(@PathVariable Long tenderId) {
 		return queries.ofTender(tenderId);
 	}
 
 	/**
-	 * Starts the analysis of a dossier in the background.
+	 * Queues the analysis of a dossier of GPE; it runs in the background. A
+	 * failed analysis is tried again the same way, with force.
 	 * @param force analyse again content already analysed
 	 */
 	@PostMapping("/api/dossiers/{dossierId}/analyses")
 	@ResponseStatus(HttpStatus.ACCEPTED)
 	public AnalysisResponse request(@PathVariable Long dossierId,
-			@RequestParam(defaultValue = "false") boolean force) {
-		return queries.summary(service.request(dossierId, force));
+			@RequestParam(defaultValue = "false") boolean force, @AuthenticationPrincipal AppUserPrincipal user) {
+		return queries.summary(service.request(dossierId, force, user.displayName()));
+	}
+
+	/**
+	 * Cancels an analysis not sent yet.
+	 */
+	@PostMapping("/api/analyses/{analysisId}/cancel")
+	public TenderAnalysis cancel(@PathVariable Long analysisId, @AuthenticationPrincipal AppUserPrincipal user) {
+		return queries.ofTender(service.cancel(analysisId, user.displayName()));
 	}
 
 	/**

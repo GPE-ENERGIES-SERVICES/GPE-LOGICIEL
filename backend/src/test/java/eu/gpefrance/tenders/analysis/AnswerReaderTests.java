@@ -86,4 +86,40 @@ class AnswerReaderTests {
 			.isInstanceOf(UnreadableAnswerException.class);
 	}
 
+
+	@Test
+	void marksASingleFieldAnsweredTwiceDifferentlyAsContradictory() {
+		List<Proposal> proposals = AnswerReader.read("""
+				{"fields": [
+				  {"key": "estimated_amount", "status": "FOUND", "value": "125000", "quote": "125 000 €"},
+				  {"key": "estimated_amount", "status": "FOUND", "value": "98000", "quote": "98 000 €"},
+				  {"key": "buyer", "status": "FOUND", "value": "Ville de Lyon"},
+				  {"key": "buyer", "status": "FOUND", "value": "ville de lyon"}
+				]}""", Set.of());
+
+		assertThat(proposals).filteredOn(proposal -> proposal.key().equals("estimated_amount"))
+			.extracting(Proposal::value, Proposal::state)
+			.containsExactly(tuple("125000", FieldState.CONTRADICTORY));
+		assertThat(proposals).filteredOn(proposal -> proposal.key().equals("buyer"))
+			.extracting(Proposal::state)
+			.containsExactly(FieldState.UNVERIFIED);
+	}
+
+	@Test
+	void inventsNothingForAFieldWithoutAnswer() {
+		List<Proposal> proposals = AnswerReader.read("""
+				{"fields": [{"key": "deadline", "status": "NOT_INDICATED", "value": "2026-12-01", "quote": "x",
+				  "document_id": 7, "page": 1}, {"key": "unknown_key", "status": "FOUND", "value": "x"}, 42]}""",
+				Set.of(7L));
+
+		assertThat(proposals).extracting(Proposal::key).doesNotContain("unknown_key");
+		assertThat(proposals)
+			.filteredOn(proposal -> proposal.key().equals("deadline") || proposal.key().equals("estimated_amount"))
+			.allSatisfy(proposal -> {
+				assertThat(proposal.value()).isNull();
+				assertThat(proposal.quote()).isNull();
+				assertThat(proposal.state()).isIn(FieldState.NOT_INDICATED, FieldState.UNVERIFIED);
+			});
+	}
+
 }

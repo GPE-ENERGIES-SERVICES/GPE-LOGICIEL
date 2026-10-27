@@ -141,44 +141,46 @@ class SafeHttpFetcherTests {
 	}
 
 	@Test
-	void ambiguousNumericHostsAreRefusedWithoutAnyResolution() {
-		SafeHttpFetcher strict = new SafeHttpFetcher(Duration.ofSeconds(1), Duration.ofSeconds(1), 3);
-		for (String host : List.of("2130706433", "0177.0.0.1", "0x7f.0.0.1", "0x7f000001", "127.1", "017700000001")) {
-			assertThatThrownBy(() -> strict.check(URI.create("http://" + host + "/"))).as(host)
-				.isInstanceOf(ForbiddenAddressException.class)
-				.satisfies(ex -> assertThat(ex.getMessage()).containsAnyOf("ambiguë", "Adresse refusée"));
+	void ambiguousNumericHostsAreRefusedWithoutAnyResolution() throws IOException {
+		try (SafeHttpFetcher strict = new SafeHttpFetcher(Duration.ofSeconds(1), Duration.ofSeconds(1), 3)) {
+			for (String host : List.of("2130706433", "0177.0.0.1", "0x7f.0.0.1", "0x7f000001", "127.1", "017700000001")) {
+				assertThatThrownBy(() -> strict.check(URI.create("http://" + host + "/"))).as(host)
+					.isInstanceOf(ForbiddenAddressException.class)
+					.satisfies(ex -> assertThat(ex.getMessage()).containsAnyOf("ambiguë", "Adresse refusée"));
+			}
 		}
 		assertThat(dns.totalCalls()).isZero();
 	}
 
 	@Test
-	void privateLocalAndReservedLiteralsAreRefusedInIpv4AndIpv6() {
-		SafeHttpFetcher strict = new SafeHttpFetcher(Duration.ofSeconds(1), Duration.ofSeconds(1), 3);
-		for (String host : List.of("127.0.0.1", "10.1.2.3", "172.31.0.1", "192.168.0.1", "169.254.169.254",
-				"100.64.0.1", "0.0.0.0", "224.0.0.1", "255.255.255.255", "192.0.2.1", "198.51.100.1", "203.0.113.1",
-				"[::1]", "[::]", "[::ffff:127.0.0.1]", "[::ffff:10.0.0.1]", "[::127.0.0.1]", "[fe80::1]", "[fc00::1]",
-				"[fd12:3456::1]", "[fec0::1]", "[ff02::1]", "[64:ff9b::a00:1]", "[2002:a00:1::]", "[2001:db8::1]",
-				"[2001::1]", "[100::1]")) {
-			assertThatThrownBy(() -> strict.check(URI.create("http://" + host + "/"))).as(host)
-				.isInstanceOf(ForbiddenAddressException.class);
+	void privateLocalAndReservedLiteralsAreRefusedInIpv4AndIpv6() throws IOException {
+		try (SafeHttpFetcher strict = new SafeHttpFetcher(Duration.ofSeconds(1), Duration.ofSeconds(1), 3)) {
+			for (String host : List.of("127.0.0.1", "10.1.2.3", "172.31.0.1", "192.168.0.1", "169.254.169.254",
+					"100.64.0.1", "0.0.0.0", "224.0.0.1", "255.255.255.255", "192.0.2.1", "198.51.100.1", "203.0.113.1",
+					"[::1]", "[::]", "[::ffff:127.0.0.1]", "[::ffff:10.0.0.1]", "[::127.0.0.1]", "[fe80::1]", "[fc00::1]",
+					"[fd12:3456::1]", "[fec0::1]", "[ff02::1]", "[64:ff9b::a00:1]", "[2002:a00:1::]", "[2001:db8::1]",
+					"[2001::1]", "[100::1]")) {
+				assertThatThrownBy(() -> strict.check(URI.create("http://" + host + "/"))).as(host)
+					.isInstanceOf(ForbiddenAddressException.class);
+			}
+			// Public addresses, and IPv4 ones carried by IPv6, pass the check (no connection is made here).
+			strict.check(URI.create("https://8.8.8.8/"));
+			strict.check(URI.create("https://[2001:4860:4860::8888]/"));
+			strict.check(URI.create("https://[64:ff9b::808:808]/"));
 		}
-		// Public addresses, and IPv4 ones carried by IPv6, pass the check (no connection is made here).
-		strict.check(URI.create("https://8.8.8.8/"));
-		strict.check(URI.create("https://[2001:4860:4860::8888]/"));
-		strict.check(URI.create("https://[64:ff9b::808:808]/"));
 	}
 
 	@Test
-	void onlyHttpWithoutUserInformationOnTheDefaultPortsByDefault() {
-		SafeHttpFetcher strict = new SafeHttpFetcher(Duration.ofSeconds(1), Duration.ofSeconds(1), 3);
-
-		assertThatThrownBy(() -> strict.check(URI.create("ftp://8.8.8.8/dce.zip"))).hasMessageContaining("protocole");
-		assertThatThrownBy(() -> strict.check(URI.create("file:///etc/passwd"))).hasMessageContaining("protocole");
-		assertThatThrownBy(() -> strict.check(URI.create("https://user:secret@8.8.8.8/")))
-			.isInstanceOf(ForbiddenAddressException.class);
-		assertThatThrownBy(() -> strict.check(URI.create("http://8.8.8.8:8080/"))).hasMessageContaining("Port refusé");
-		strict.check(URI.create("http://8.8.8.8:80/"));
-		strict.check(URI.create("https://8.8.8.8:443/"));
+	void onlyHttpWithoutUserInformationOnTheDefaultPortsByDefault() throws IOException {
+		try (SafeHttpFetcher strict = new SafeHttpFetcher(Duration.ofSeconds(1), Duration.ofSeconds(1), 3)) {
+			assertThatThrownBy(() -> strict.check(URI.create("ftp://8.8.8.8/dce.zip"))).hasMessageContaining("protocole");
+			assertThatThrownBy(() -> strict.check(URI.create("file:///etc/passwd"))).hasMessageContaining("protocole");
+			assertThatThrownBy(() -> strict.check(URI.create("https://user:secret@8.8.8.8/")))
+				.isInstanceOf(ForbiddenAddressException.class);
+			assertThatThrownBy(() -> strict.check(URI.create("http://8.8.8.8:8080/"))).hasMessageContaining("Port refusé");
+			strict.check(URI.create("http://8.8.8.8:80/"));
+			strict.check(URI.create("https://8.8.8.8:443/"));
+		}
 	}
 
 	@Test

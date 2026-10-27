@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.analysis;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +35,17 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 	 */
 	@Query("select coalesce(sum(a.inputTokens), 0) as input, coalesce(sum(a.outputTokens), 0) as output from Analysis a")
 	TokenTotals sumTokens();
+
+	/**
+	 * Tokens of the analyses created since the given time, failed ones
+	 * included.
+	 */
+	@Query("""
+			select coalesce(sum(a.inputTokens), 0) as input, coalesce(sum(a.outputTokens), 0) as output
+			from Analysis a where a.createdAt >= :since""")
+	TokenTotals sumTokensSince(Instant since);
+
+	List<Analysis> findByStatus(AnalysisStatus status);
 
 	interface TokenTotals {
 

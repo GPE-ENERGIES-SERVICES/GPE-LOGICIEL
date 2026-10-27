@@ -82,6 +82,29 @@ public class Analysis {
 	@Column(name = "validated_at")
 	private Instant validatedAt;
 
+	@Column(updatable = false)
+	private String provider;
+
+	/** Who asked for it; null when started by itself after the reading of the dossier. */
+	@Column(name = "requested_by", updatable = false)
+	private String requestedBy;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "error_kind")
+	private FailureKind errorKind;
+
+	@Column(nullable = false)
+	private int attempts;
+
+	@Column(name = "next_attempt_at")
+	private Instant nextAttemptAt;
+
+	@Column(name = "locked_at")
+	private Instant lockedAt;
+
+	@Column(name = "locked_by")
+	private String lockedBy;
+
 	@OneToMany(mappedBy = "analysis", cascade = CascadeType.ALL)
 	@OrderBy("id")
 	private List<ExtractedField> fields = new ArrayList<>();
@@ -95,13 +118,25 @@ public class Analysis {
 	 */
 	public Analysis(Long tenderId, Long dossierId, String model, String promptVersion, Collection<Long> documentIds,
 			String inputFingerprint, Instant now) {
+		this(tenderId, dossierId, null, model, promptVersion, documentIds, inputFingerprint, null, now);
+	}
+
+	/**
+	 * A queued analysis.
+	 * @param requestedBy the user who asked for it, null when automatic
+	 */
+	public Analysis(Long tenderId, Long dossierId, String provider, String model, String promptVersion,
+			Collection<Long> documentIds, String inputFingerprint, String requestedBy, Instant now) {
 		this.tenderId = tenderId;
 		this.dossierId = dossierId;
+		this.provider = provider;
 		this.model = model;
 		this.promptVersion = promptVersion;
 		this.documentIds.addAll(documentIds);
 		this.inputFingerprint = inputFingerprint;
+		this.requestedBy = requestedBy;
 		this.createdAt = now;
+		this.nextAttemptAt = now;
 		this.status = AnalysisStatus.PENDING;
 	}
 
@@ -112,9 +147,65 @@ public class Analysis {
 		return field;
 	}
 
-	public void startProcessing() {
+	/**
+	 * Taken by a worker, just before the call to the provider.
+	 */
+	void claim(String worker, Instant now) {
 		status = AnalysisStatus.PROCESSING;
-		errorMessage = null;
+		attempts++;
+		lockedBy = worker;
+		lockedAt = now;
+		nextAttemptAt = null;
+	}
+
+	/**
+	 * A temporary failure: tried again at the given time.
+	 */
+	void retryAt(FailureKind kind, String message, Instant next) {
+		status = AnalysisStatus.RETRY_WAITING;
+		errorKind = kind;
+		errorMessage = truncate(message);
+		nextAttemptAt = next;
+		unlock();
+	}
+
+	/**
+	 * Interrupted while in progress (stop, lease expired): queued again.
+	 */
+	void release(Instant now) {
+		status = AnalysisStatus.PENDING;
+		nextAttemptAt = now;
+		unlock();
+	}
+
+	/**
+	 * Only an analysis not sent yet can be cancelled: a call in progress is
+	 * paid anyway and its answer kept.
+	 */
+	void cancel(String user, Instant now) {
+		if (status != AnalysisStatus.PENDING && status != AnalysisStatus.RETRY_WAITING) {
+			throw new AnalysisRejectedException("Seule une analyse en attente peut être annulée.");
+		}
+		status = AnalysisStatus.CANCELLED;
+		errorKind = null;
+		errorMessage = "Annulée par " + user;
+		nextAttemptAt = null;
+		finishedAt = now;
+	}
+
+	boolean isUnfinished() {
+		return status == AnalysisStatus.PENDING || status == AnalysisStatus.PROCESSING
+				|| status == AnalysisStatus.RETRY_WAITING;
+	}
+
+	private void unlock() {
+		lockedBy = null;
+		lockedAt = null;
+	}
+
+	private static String truncate(String message) {
+		return message == null || message.length() <= MAX_ERROR_LENGTH ? message
+				: message.substring(0, MAX_ERROR_LENGTH);
 	}
 
 	/**
@@ -129,14 +220,23 @@ public class Analysis {
 	public void finish(int inputTokens, int outputTokens, Instant now) {
 		recordUsage(inputTokens, outputTokens);
 		status = AnalysisStatus.DONE;
+		errorKind = null;
+		errorMessage = null;
 		finishedAt = now;
+		unlock();
 	}
 
 	public void fail(String message, Instant now) {
+		fail(FailureKind.UNEXPECTED, message, now);
+	}
+
+	public void fail(FailureKind kind, String message, Instant now) {
 		status = AnalysisStatus.FAILED;
-		errorMessage = message == null || message.length() <= MAX_ERROR_LENGTH ? message
-				: message.substring(0, MAX_ERROR_LENGTH);
+		errorKind = kind;
+		errorMessage = truncate(message);
+		nextAttemptAt = null;
 		finishedAt = now;
+		unlock();
 	}
 
 	/**
@@ -181,6 +281,34 @@ public class Analysis {
 
 	public String getModel() {
 		return model;
+	}
+
+	public String getProvider() {
+		return provider;
+	}
+
+	public String getRequestedBy() {
+		return requestedBy;
+	}
+
+	public FailureKind getErrorKind() {
+		return errorKind;
+	}
+
+	public int getAttempts() {
+		return attempts;
+	}
+
+	public Instant getNextAttemptAt() {
+		return nextAttemptAt;
+	}
+
+	public Instant getLockedAt() {
+		return lockedAt;
+	}
+
+	public String getLockedBy() {
+		return lockedBy;
 	}
 
 	public String getPromptVersion() {

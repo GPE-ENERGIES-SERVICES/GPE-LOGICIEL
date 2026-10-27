@@ -1,7 +1,7 @@
 package eu.gpefrance.tenders.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -38,7 +38,9 @@ import eu.gpefrance.tenders.tender.Tender;
 import eu.gpefrance.tenders.tender.TenderDetails;
 import eu.gpefrance.tenders.tender.TenderRepository;
 
-@SpringBootTest(properties = { "analysis.input-price-per-million=3", "analysis.output-price-per-million=15" })
+@SpringBootTest(properties = { "analysis.enabled=true", "analysis.provider=test",
+		"analysis.external-transmission-allowed=true", "analysis.input-price-per-million=3",
+		"analysis.output-price-per-million=15", "analysis.max-attempts=2", "analysis.max-documents-per-tender=2" })
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class AnalysisApiTests {
@@ -70,13 +72,14 @@ class AnalysisApiTests {
 	void cleanDatabase() {
 		jdbc.execute("TRUNCATE extracted_field, analysis_document, analysis, document_page, document, dossier, "
 				+ "tender_notice, lot, tender RESTART IDENTITY CASCADE");
+		given(client.provider()).willReturn("test");
 		given(client.model()).willReturn("test-model");
-		given(client.complete(anyString(), anyString())).willAnswer(invocation -> new ModelAnswer("""
+		given(client.complete(any(ExtractionRequest.class))).willAnswer(invocation -> new ModelAnswer("""
 				{"fields": [
 				  {"key": "deadline", "status": "FOUND", "value": "2026-11-15T12:00",
 				   "quote": "Les offres devront parvenir avant le 15/11/2026 à 12h00", "document_id": %s, "page": 1},
 				  {"key": "site_visit", "status": "NOT_INDICATED"}
-				]}""".formatted(documentId(invocation.getArgument(1))), 1000, 200));
+				]}""".formatted(documentId(invocation.<ExtractionRequest>getArgument(0).documents())), 1000, 200));
 	}
 
 	@Test
@@ -91,8 +94,8 @@ class AnalysisApiTests {
 			.hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("""
-					{"configured": true,
-					 "latest": {"status": "DONE", "model": "test-model", "inputTokens": 1000, "outputTokens": 200,
+					{"configured": true, "unavailableReason": null,
+					 "latest": {"status": "DONE", "provider": "test", "model": "test-model", "attempts": 1, "inputTokens": 1000, "outputTokens": 200,
 					   "cost": 0.006, "noticeDeadline": "2026-11-15T11:00:00Z",
 					   "documents": [{"fileName": "RC.pdf", "analysed": true, "readable": true}]}}""");
 		assertThat(analysis.getFields()).filteredOn(field -> field.getFieldKey().equals("deadline"))
@@ -119,7 +122,7 @@ class AnalysisApiTests {
 		assertThat(requestAnalysis(dossier, true)).hasStatus(HttpStatus.ACCEPTED);
 		waitForAnalysis(tender, 2);
 
-		verify(client, times(2)).complete(anyString(), anyString());
+		verify(client, times(2)).complete(any(ExtractionRequest.class));
 	}
 
 	@Test
@@ -134,9 +137,9 @@ class AnalysisApiTests {
 	}
 
 	@Test
-	void refusesADossierWithoutConsultationRules() throws InterruptedException {
+	void refusesADossierWithoutAnyReadablePiece() throws InterruptedException {
 		Tender tender = tender(false);
-		Dossier dossier = upload(tender, "CCTP.pdf", "Prescriptions techniques");
+		Dossier dossier = upload(tender, "DPGF.pdf", "Prix unitaires");
 
 		assertThat(requestAnalysis(dossier, false)).hasStatus(HttpStatus.CONFLICT)
 			.bodyJson()
@@ -147,7 +150,7 @@ class AnalysisApiTests {
 
 	@Test
 	void recordsAnUnreadableAnswerAsAFailureWithItsCost() throws InterruptedException {
-		given(client.complete(anyString(), anyString())).willReturn(new ModelAnswer("Désolé.", 500, 10));
+		given(client.complete(any(ExtractionRequest.class))).willReturn(new ModelAnswer("Désolé.", 500, 10));
 		Tender tender = tender(true);
 		upload(tender, "RC.pdf", "Règlement");
 
@@ -155,6 +158,8 @@ class AnalysisApiTests {
 
 		assertThat(analysis.getStatus()).isEqualTo(AnalysisStatus.FAILED);
 		assertThat(analysis.getErrorMessage()).contains("illisible");
+		assertThat(analysis.getErrorKind()).isEqualTo(FailureKind.INVALID_RESPONSE);
+		assertThat(analysis.getAttempts()).isEqualTo(1);
 		assertThat(analysis.getInputTokens()).isEqualTo(500);
 	}
 

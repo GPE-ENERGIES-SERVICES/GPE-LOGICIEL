@@ -27,6 +27,8 @@ export const ANALYSIS_STATUS_LABELS: Record<AnalysisStatus, string> = {
   PROCESSING: "Analyse en cours",
   DONE: "Analyse terminée",
   FAILED: "Échec de l'analyse",
+  RETRY_WAITING: "Nouvelle tentative prévue",
+  CANCELLED: "Annulée",
 };
 
 /**

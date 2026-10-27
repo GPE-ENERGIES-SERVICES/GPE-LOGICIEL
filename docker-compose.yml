@@ -34,6 +34,14 @@ services:
       BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Administrateur}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       STORAGE_DIR: /data/storage
+      # AI analysis: off unless all three are set and a provider has its key
+      ANALYSIS_ENABLED: ${ANALYSIS_ENABLED:-false}
+      ANALYSIS_PROVIDER: ${ANALYSIS_PROVIDER:-none}
+      ANALYSIS_EXTERNAL_TRANSMISSION: ${ANALYSIS_EXTERNAL_TRANSMISSION:-false}
+      ANALYSIS_API_KEY: ${ANALYSIS_API_KEY:-}
+      ANALYSIS_ANTHROPIC_MODEL: ${ANALYSIS_ANTHROPIC_MODEL:-claude-opus-5-5}
+      ANALYSIS_ANTHROPIC_EFFORT: ${ANALYSIS_ANTHROPIC_EFFORT:-high}
+      ANALYSIS_MONTHLY_BUDGET: ${ANALYSIS_MONTHLY_BUDGET:-}
       ANALYSIS_INPUT_PRICE: ${ANALYSIS_INPUT_PRICE:-0}
       ANALYSIS_OUTPUT_PRICE: ${ANALYSIS_OUTPUT_PRICE:-0}
       # Sources not collected; remove AWS from the list to collect marches-publics.info

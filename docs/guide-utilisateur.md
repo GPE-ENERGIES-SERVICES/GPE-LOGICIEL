@@ -94,9 +94,11 @@ Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramèt
    Une fois le dossier lu, « Rechercher dans les documents » trouve les pages qui contiennent les
    mots cherchés (synonymes du métier compris) : document, page et extrait, avec un lien qui ouvre
    le document à la bonne page. Seul le texte lu dans les PDF et les documents Word est couvert.
-9. **Analyse** : pour un appel d'offres retenu, l'analyse démarre seule à la fin de la lecture
-   et prend quelques minutes. Pour un appel d'offres écarté par le filtre, utiliser « Lancer
-   l'analyse ».
+9. **Analyse** : **pas encore disponible** : l'analyse par IA est préparée mais désactivée
+   tant que l'entreprise n'a pas choisi et configuré un fournisseur ; la fiche l'indique et les
+   documents restent consultables. Une fois activée, pour un appel d'offres retenu, l'analyse
+   démarre seule à la fin de la lecture et prend quelques minutes. Pour un appel d'offres écarté
+   par le filtre, utiliser « Lancer l'analyse ». Une analyse en attente peut être annulée.
 10. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
    le document à la bonne page ; l'extrait cité est affiché sous la valeur. Valider, corriger
    ou rejeter les informations importantes, puis « Valider la fiche ».
@@ -144,7 +146,9 @@ la fiche.
 
 - Une seule source : le BOAMP. Les marchés publiés uniquement ailleurs ne sont pas couverts.
 - Le DCE est déposé à la main.
-- L'analyse lit le règlement de consultation, l'avis et l'acte d'engagement. Le CCAP, le
-  CCTP, les tableurs (DPGF, BPU, DQE), les plans et les pages scannées ne sont pas analysés.
+- L'analyse par IA n'est pas encore activée (aucun fournisseur configuré).
+- Une fois activée, l'analyse lit le règlement de consultation, l'avis, l'acte d'engagement, le
+  CCAP, le CCTP et les autres pièces lues (PDF, Word, texte, HTML), dans une limite de volume.
+  Les tableurs (DPGF, BPU, DQE), les plans et les pages scannées ne sont pas analysés.
 - L'analyse est une aide à la lecture, pas une garantie : vérifier les informations
   importantes (date limite, visite, qualifications) à leur source avant de décider.

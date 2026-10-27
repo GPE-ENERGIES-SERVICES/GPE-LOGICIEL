@@ -49,8 +49,6 @@ class CollectCatchUpTests {
 	/** Thursday 22/10/2026 at 9:30 in Paris: the 7:00 collection is the last one. */
 	private static final Instant NOW = Instant.parse("2026-10-22T07:30:00Z");
 
-	private static final Instant SLOT = Instant.parse("2026-10-22T05:00:00Z");
-
 	@Autowired
 	private CollectService service;
 

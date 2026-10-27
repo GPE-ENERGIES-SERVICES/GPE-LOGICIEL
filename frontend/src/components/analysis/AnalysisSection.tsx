@@ -13,7 +13,7 @@ import {
 } from "@/lib/analysis";
 import { DOCUMENT_STATE_LABELS, formatDateTime, PIECE_TYPE_LABELS } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
-import { getTenderAnalysis, startAnalysis, validateAnalysis } from "@/services/analysisApi";
+import { cancelAnalysis, getTenderAnalysis, startAnalysis, validateAnalysis } from "@/services/analysisApi";
 import { getDossiers } from "@/services/documentApi";
 import type { Analysis, GridField, SummarySection, TenderAnalysis } from "@/types/analysis";
 
@@ -97,10 +97,15 @@ function SummarySheet({
     }
   };
 
-  const section = (name: SummarySection) =>
-    data.grid
-      .filter((grid) => grid.section === name)
-      .map((grid) => <FieldGroup key={grid.key} grid={grid} analysis={analysis} onChanged={onChanged} />);
+  const section = (name: SummarySection) => (
+    <div className="field-grid">
+      {data.grid
+        .filter((grid) => grid.section === name)
+        .map((grid) => (
+          <FieldGroup key={grid.key} grid={grid} analysis={analysis} onChanged={onChanged} />
+        ))}
+    </div>
+  );
 
   return (
     <div className="summary">
@@ -190,10 +195,10 @@ function notAnalysedReason(document: Analysis["documents"][number]): string {
   if (document.state !== "READ" && document.state !== "SCANNED") {
     return document.stateDetail ?? DOCUMENT_STATE_LABELS[document.state];
   }
-  if (["CCAP", "CCTP", "DPGF", "BPU", "DQE", "PLAN"].includes(document.pieceType)) {
+  if (["DPGF", "BPU", "DQE", "PLAN"].includes(document.pieceType)) {
     return `${PIECE_TYPE_LABELS[document.pieceType]} non analysé dans cette version`;
   }
-  return "volume trop important pour une seule analyse";
+  return "volume ou nombre de documents trop important pour une seule analyse";
 }
 
 /**
@@ -206,11 +211,14 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
   // The analysis as returned by the last decision, until the next reload.
   const [saved, setSaved] = useState<TenderAnalysis | null>(null);
   const [starting, setStarting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const data = saved ?? loaded.data;
   const analysis = data?.latest ?? null;
   const latestDossier = dossiers.data?.[0] ?? null;
   const analysing = analysis?.status === "PENDING" || analysis?.status === "PROCESSING";
+  // Not sent to the provider yet: can still be cancelled.
+  const waiting = analysis?.status === "PENDING" || analysis?.status === "RETRY_WAITING";
   const reading = latestDossier?.status === "PENDING" || latestDossier?.status === "PROCESSING";
   const { reload: reloadAnalysis } = loaded;
   const { reload: reloadDossiers } = dossiers;
@@ -247,6 +255,21 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
     }
   };
 
+  const cancel = async () => {
+    if (!analysis) {
+      return;
+    }
+    setCancelling(true);
+    setStartError(null);
+    try {
+      setSaved(await cancelAnalysis(analysis.id));
+    } catch (err) {
+      setStartError(err instanceof Error ? err.message : "Impossible d'annuler l'analyse.");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loaded.error) {
     return <p className="error">{loaded.error}</p>;
   }
@@ -258,7 +281,7 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
     <div>
       {!data.configured && (
         <p className="banner info">
-          Aucun fournisseur d&apos;IA n&apos;est configuré : l&apos;analyse automatique n&apos;est pas disponible. Les
+          Analyse par IA indisponible : {data.unavailableReason ?? "aucun fournisseur d'IA n'est configuré."} Les
           documents déposés restent consultables.
         </p>
       )}
@@ -272,6 +295,12 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
             {ANALYSIS_STATUS_LABELS[analysis.status]}
           </span>{" "}
           Dossier version {analysis.dossierVersion}, analyse du {formatDateTime(analysis.createdAt)}
+          {analysis.provider && (
+            <span className="muted">
+              {" "}
+              ({analysis.provider}, {analysis.model})
+            </span>
+          )}
           {analysis.cost !== null && <> — coût {costFormat.format(analysis.cost)}</>}
           {data.history.length > 1 && (
             <span className="muted">
@@ -282,9 +311,24 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
           )}
         </p>
       )}
-      {analysis?.errorMessage && <p className="error">{analysis.errorMessage}</p>}
+      {analysis?.errorMessage && (
+        <p className={analysis.status === "CANCELLED" ? "muted" : "error"}>{analysis.errorMessage}</p>
+      )}
+      {analysis?.status === "RETRY_WAITING" && analysis.nextAttemptAt && (
+        <p className="hint">
+          Tentative {analysis.attempts} échouée ; nouvelle tentative automatique après{" "}
+          {formatDateTime(analysis.nextAttemptAt)}.
+        </p>
+      )}
+      {waiting && (
+        <div className="form-actions">
+          <button type="button" className="secondary" onClick={cancel} disabled={cancelling}>
+            Annuler l&apos;analyse
+          </button>
+        </div>
+      )}
 
-      {data.configured && latestDossier?.status === "DONE" && !analysing && (
+      {data.configured && latestDossier?.status === "DONE" && !analysing && !waiting && (
         <div className="form-actions">
           <button type="button" className={analysis ? "secondary" : "primary"} onClick={start} disabled={starting}>
             {analysis ? "Relancer l'analyse" : "Lancer l'analyse"}

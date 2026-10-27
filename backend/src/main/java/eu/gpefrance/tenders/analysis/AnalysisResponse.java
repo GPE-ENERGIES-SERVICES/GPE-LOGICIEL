@@ -14,11 +14,15 @@ import eu.gpefrance.tenders.document.PieceType;
  * @param noticeDeadline deadline published in the notice, shown next to the
  * one read in the documents
  * @param validatedBy who validated the whole sheet, or null
+ * @param errorKind why it failed or waits for a new attempt
+ * @param nextAttemptAt when it is tried again, while waiting
+ * @param requestedBy who asked for it, null when automatic
  */
-public record AnalysisResponse(Long id, Long dossierId, int dossierVersion, AnalysisStatus status, String model,
-		String promptVersion, Instant createdAt, Instant finishedAt, String errorMessage, Integer inputTokens,
-		Integer outputTokens, BigDecimal cost, Instant noticeDeadline, String validatedBy, Instant validatedAt,
-		List<FieldResponse> fields, List<DocumentResponse> documents) {
+public record AnalysisResponse(Long id, Long dossierId, int dossierVersion, AnalysisStatus status, String provider,
+		String model, String promptVersion, FailureKind errorKind, int attempts, Instant nextAttemptAt, String requestedBy,
+		Instant createdAt, Instant finishedAt, String errorMessage, Integer inputTokens, Integer outputTokens,
+		BigDecimal cost, Instant noticeDeadline, String validatedBy, Instant validatedAt, List<FieldResponse> fields,
+		List<DocumentResponse> documents) {
 
 	/**
 	 * @param value the value of the model, kept even when corrected
@@ -40,12 +44,13 @@ public record AnalysisResponse(Long id, Long dossierId, int dossierVersion, Anal
 
 	/**
 	 * Everything the summary sheet of a tender needs.
-	 * @param configured whether an AI provider is configured
+	 * @param configured whether an analysis can be started now
+	 * @param unavailableReason why not, when not configured
 	 * @param latest the latest analysis, or null
 	 * @param history every analysis of the tender, latest first
 	 */
-	public record TenderAnalysis(boolean configured, List<GridField> grid, AnalysisResponse latest,
-			List<AnalysisResponse> history) {
+	public record TenderAnalysis(boolean configured, String unavailableReason, List<GridField> grid,
+			AnalysisResponse latest, List<AnalysisResponse> history) {
 	}
 
 }

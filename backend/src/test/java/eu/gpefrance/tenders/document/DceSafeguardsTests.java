@@ -34,19 +34,19 @@ class DceSafeguardsTests {
 	}
 
 	@Test
-	void anHttpRetrieverNeverContactsAPrivateLocalOrReservedAddress() {
-		SafeHttpFetcher fetcher = new SafeHttpFetcher(Duration.ofSeconds(1), Duration.ofSeconds(1), 3);
-
-		for (String address : new String[] { "http://127.0.0.1/dce.zip",
-				"http://10.0.0.8/dce.zip", "http://192.168.1.10/dce.zip", "http://169.254.169.254/latest",
-				"http://172.16.0.1/", "http://[::1]/dce.zip", "http://100.64.0.1/", "http://0.0.0.0/" }) {
-			assertThatThrownBy(() -> fetcher.check(URI.create(address))).as(address)
+	void anHttpRetrieverNeverContactsAPrivateLocalOrReservedAddress() throws Exception {
+		try (SafeHttpFetcher fetcher = new SafeHttpFetcher(Duration.ofSeconds(1), Duration.ofSeconds(1), 3)) {
+			for (String address : new String[] { "http://127.0.0.1/dce.zip",
+					"http://10.0.0.8/dce.zip", "http://192.168.1.10/dce.zip", "http://169.254.169.254/latest",
+					"http://172.16.0.1/", "http://[::1]/dce.zip", "http://100.64.0.1/", "http://0.0.0.0/" }) {
+				assertThatThrownBy(() -> fetcher.check(URI.create(address))).as(address)
+					.isInstanceOf(ForbiddenAddressException.class);
+			}
+			assertThatThrownBy(() -> fetcher.check(URI.create("ftp://8.8.8.8/dce.zip")))
+				.hasMessageContaining("protocole ftp");
+			assertThatThrownBy(() -> fetcher.check(URI.create("http://user:secret@8.8.8.8/dce.zip")))
 				.isInstanceOf(ForbiddenAddressException.class);
 		}
-		assertThatThrownBy(() -> fetcher.check(URI.create("ftp://8.8.8.8/dce.zip")))
-			.hasMessageContaining("protocole ftp");
-		assertThatThrownBy(() -> fetcher.check(URI.create("http://user:secret@8.8.8.8/dce.zip")))
-			.isInstanceOf(ForbiddenAddressException.class);
 	}
 
 	@Test

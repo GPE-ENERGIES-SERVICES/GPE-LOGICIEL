@@ -36,7 +36,8 @@ public class SecurityConfiguration {
 			.requestMatchers("/api/duplicates", "/api/duplicates/**").hasRole("ADMIN")
 			.requestMatchers("/api/dce/**").hasRole("ADMIN")
 			.requestMatchers(HttpMethod.POST, "/api/dce-links/*/retry").hasRole("ADMIN")
-			.requestMatchers(HttpMethod.GET, "/api/analyses", "/api/analyses/quality").hasRole("ADMIN")
+			.requestMatchers(HttpMethod.GET, "/api/analyses", "/api/analyses/quality", "/api/analyses/configuration")
+				.hasRole("ADMIN")
 			.anyRequest().authenticated())
 			.csrf(csrf -> csrf.spa())
 			.exceptionHandling(exceptions -> exceptions

@@ -1,25 +1,35 @@
 package eu.gpefrance.tenders.analysis;
 
 /**
- * Access to the AI model, isolated here so that the provider can be changed
+ * Access to an AI provider, isolated here so that the provider can be changed
  * without touching the rest of the analysis. An implementation only sends the
- * text and returns the raw answer: the instructions, the reading of the
- * answer and the checks stay in the application.
+ * request and returns the raw answer: the instructions, the reading of the
+ * answer and the checks stay in the application. No class of a provider SDK
+ * may appear outside its implementation.
+ * <p>
+ * Implementations are Spring components; the one whose {@link #provider()}
+ * equals {@code analysis.provider} is used, and only when
+ * {@link AnalysisGate} allows it. None is part of the application today.
  */
 public interface ExtractionClient {
 
 	/**
+	 * @return identifier chosen with {@code analysis.provider}, such as
+	 * "mistral" or "anthropic"
+	 */
+	String provider();
+
+	/**
 	 * @return the model used, recorded with each analysis, or {@code null}
-	 * when no provider is configured
+	 * when the client cannot be used (key missing)
 	 */
 	String model();
 
 	/**
-	 * @param instructions what to extract and the expected JSON format
-	 * @param documents text of the documents, page by page
 	 * @return the answer of the model and the tokens it consumed
+	 * @throws ProviderException for any failure of the provider
 	 */
-	ModelAnswer complete(String instructions, String documents);
+	ModelAnswer complete(ExtractionRequest request);
 
 	record ModelAnswer(String text, int inputTokens, int outputTokens) {
 	}
