@@ -33,6 +33,12 @@ public class SecurityConfiguration {
 			.requestMatchers(HttpMethod.POST, "/api/collect-runs").hasRole("ADMIN")
 			.requestMatchers(HttpMethod.PUT, "/api/filter-criteria").hasRole("ADMIN")
 			.requestMatchers("/api/users/**").hasRole("ADMIN")
+			.requestMatchers(HttpMethod.GET, "/api/pricing-settings", "/api/pricing-rates", "/api/suppliers")
+				.authenticated()
+			.requestMatchers("/api/pricing-settings", "/api/pricing-rates/**", "/api/suppliers/**").hasRole("ADMIN")
+			// The company: read by every user (estimates, bids), changed by an administrator.
+			.requestMatchers(HttpMethod.GET, "/api/company/**").authenticated()
+			.requestMatchers("/api/company/**").hasRole("ADMIN")
 			.requestMatchers("/api/duplicates", "/api/duplicates/**").hasRole("ADMIN")
 			.requestMatchers("/api/dce/**").hasRole("ADMIN")
 			.requestMatchers(HttpMethod.POST, "/api/dce-links/*/retry").hasRole("ADMIN")

@@ -9,6 +9,7 @@ import { DecisionSection } from "@/components/analysis/DecisionSection";
 import { FinancialSection } from "@/components/analysis/FinancialSection";
 import { DeadlineBadge } from "@/components/DeadlineBadge";
 import { DocumentsSection } from "@/components/DocumentsSection";
+import { EstimatesSection } from "@/components/estimate/EstimatesSection";
 import { NoticeHistory } from "@/components/NoticeHistory";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { Tabs } from "@/components/Tabs";
@@ -401,6 +402,16 @@ function TenderDetails() {
                   </p>
                   <FinancialSection tenderId={tender.id} />
                 </section>
+            ),
+          },
+          {
+            id: "chiffrage",
+            label: "Chiffrage",
+            content: (
+              <section className="card">
+                <h2>Chiffrage</h2>
+                <EstimatesSection tender={tender} />
+              </section>
             ),
           },
           {

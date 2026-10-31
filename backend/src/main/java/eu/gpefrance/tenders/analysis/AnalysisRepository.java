@@ -47,9 +47,12 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 	 * Tokens of the analyses created since the given time, failed ones
 	 * included.
 	 */
-	@Query("""
-			select coalesce(sum(a.inputTokens), 0) as input, coalesce(sum(a.outputTokens), 0) as output
-			from Analysis a where a.createdAt >= :since""")
+	// The calls of the assistance to the estimates count too (ai_call).
+	@Query(nativeQuery = true, value = """
+			select coalesce(sum(t.input_tokens), 0) as input, coalesce(sum(t.output_tokens), 0) as output from (
+			    select input_tokens, output_tokens from analysis where created_at >= :since
+			    union all
+			    select input_tokens, output_tokens from ai_call where created_at >= :since) t""")
 	TokenTotals sumTokensSince(Instant since);
 
 	List<Analysis> findByStatus(AnalysisStatus status);

@@ -24,9 +24,10 @@ import eu.gpefrance.tenders.document.Spreadsheet.Sheet;
  * columns (their names vary from one buyer to another), then for each line
  * compares quantity times unit price with the amount, and each total written
  * with the sum of its lines, and the HT plus VAT with the TTC. Nothing is
- * guessed: a value missing or unreadable is reported, never replaced.
+ * guessed: a value missing or unreadable is reported, never replaced. The
+ * same reading gives the lines of work to an estimate ({@link #lines}).
  */
-final class PriceScheduleChecker {
+public final class PriceScheduleChecker {
 
 	/** Rows looked at to find the header. */
 	private static final int HEADER_SEARCH = 40;
@@ -174,6 +175,75 @@ final class PriceScheduleChecker {
 				withUnitPrice, withAmount, textPrices, all, header.basis(), blank, List.copyOf(totals),
 				List.copyOf(issues.list), issues.more);
 	}
+
+	/**
+	 * A line of work of a price schedule, as written in it.
+	 * @param chapter the last title above it, or null
+	 * @param quantity null when none is written or readable (BPU)
+	 * @param textPrice a price written as words (PM, inclus...), or null
+	 * @param complete false when a value of the line could not be read (formula
+	 * without saved value, cell in error)
+	 */
+	public record ScheduleLine(int row, String chapter, String reference, String designation, String unit,
+			BigDecimal quantity, String textPrice, boolean complete) {
+	}
+
+	/**
+	 * The lines of work of a sheet, in order, each with the title above it as
+	 * its chapter; totals and repeated headers left out. Empty when the header
+	 * of the columns is not recognised. The prices written are not read: they
+	 * are those of the buyer, never a cost.
+	 */
+	public static List<ScheduleLine> lines(Sheet sheet) {
+		Header header = header(sheet);
+		if (header == null) {
+			return List.of();
+		}
+		List<ScheduleLine> lines = new ArrayList<>();
+		String chapter = null;
+		for (Row row : sheet.rows()) {
+			if (row.number() <= header.row() || isHeader(row)) {
+				continue;
+			}
+			String label = label(row);
+			if (label != null && TOTAL.matcher(normalize(label)).find()) {
+				continue;
+			}
+			String reference = shown(cell(row, header, Role.REFERENCE));
+			String designation = shown(cell(row, header, Role.DESIGNATION));
+			Cell quantity = cell(row, header, Role.QUANTITY);
+			Cell unitPrice = cell(row, header, Role.UNIT_PRICE);
+			Cell amount = cell(row, header, Role.AMOUNT);
+			String unit = shown(cell(row, header, Role.UNIT));
+			if (designation == null && reference == null) {
+				continue;
+			}
+			if (quantity == null && unitPrice == null && amount == null && unit == null) {
+				// A title: the chapter of the lines below it.
+				chapter = reference == null ? designation : designation == null ? reference : reference + " " + designation;
+				continue;
+			}
+			String textPrice = isTextPrice(unitPrice) ? unitPrice.text().strip()
+					: isTextPrice(amount) ? amount.text().strip() : null;
+			boolean complete = quantity == null || !quantity.valueMissing() && quantity.type() != Spreadsheet.CellType.ERROR;
+			BigDecimal q = value(quantity);
+			lines.add(new ScheduleLine(row.number(), chapter, reference,
+					designation == null ? reference : designation, unit, q == null || q.signum() < 0 ? null : q,
+					textPrice, complete && (quantity == null || q != null)));
+		}
+		return List.copyOf(lines);
+	}
+
+	/** The value of a cell as shown: its text, or its number written plainly. */
+	private static String shown(Cell cell) {
+		if (cell == null) {
+			return null;
+		}
+		String text = cell.text() != null && !cell.text().isBlank() ? cell.text().strip()
+				: cell.number() != null ? cell.number().stripTrailingZeros().toPlainString() : null;
+		return text == null || text.isEmpty() ? null : text;
+	}
+
 
 	private static Total total(String label, Row row, Cell cell, BigDecimal section, BigDecimal all,
 			BigDecimal lastHt, BigDecimal lastVat) {
