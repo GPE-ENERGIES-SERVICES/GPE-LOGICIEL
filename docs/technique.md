@@ -334,6 +334,91 @@ les consultations ; il n'y a donc pas de cloisonnement par équipe à préserver
 - La version de la bibliothèque d'extraction n'est pas enregistrée par page, seule la méthode
   (`NATIVE`, `OCR`, `TEXT`, `HTML`).
 
+## Chiffrage
+
+Paquets `estimate` (chiffrages, paramètres GPE, assistance IA) et `supplier` (fournisseurs et
+tarifs). Principe : **l'IA propose, le moteur calcule, l'humain valide**.
+
+| Élément | Rôle |
+|---|---|
+| `EstimateCalculator` | Calcul pur et déterministe (sans Spring ni base) : coûts, PU, montants, totaux, TVA, options. `BigDecimal`, arrondi `HALF_UP` au centime pour les PU et montants, 4 décimales pour les coûts |
+| `EstimateService` | Toute modification verrouille le chiffrage (`PESSIMISTIC_WRITE`), l'applique puis recalcule tout. Seul un `DRAFT` change. Validation, nouvelle version par copie, journal |
+| `EstimateImportService` | Lignes d'un DPGF/BPU/DQE du DCE du marché, lues par `PriceScheduleChecker.lines` (même détection d'en-têtes que les contrôles). Prix du fichier jamais repris. Lignes de PDF ou incomplètes : `to_check` |
+| `EstimateExportService` | Export XLSX (Apache POI) : postes, totaux, sous-détail ; valeurs, pas de formules |
+| `PricingService` | `pricing_settings` (ligne unique : TVA, coefficients par type) et `pricing_rate` (taux : profil horaire, km, location) |
+| `SupplierCatalog` | Seul contrat que connaît le chiffrage. Implémentation actuelle : `ImportedSupplierCatalog`, prix importés des fichiers des fournisseurs (`OfferFileReader`, colonnes reconnues par leurs en-têtes). Aucun fournisseur n'est contacté |
+| `EstimateAssistant` | Propositions de l'IA (`estimate_suggestion`), via `analysis.AiAssistant` |
+
+**Modèle.** `estimate` (une version : marché, numéro de lot, TVA, coefficients dans
+`estimate_coefficient`, totaux calculés) → `estimate_item` (poste, origine dans le bordereau) →
+`estimate_component` (coût d'**une unité** du poste). `estimate_event` : journal. Le lot est
+désigné par son **numéro**, pas par son id : une rectification réécrit les lots du marché.
+
+**Historisation.** Un coût issu d'un taux (`rate_code`) ou d'une offre (`offer_id`) est **copié**
+dans la composante ; les références ne servent qu'à la traçabilité. Une version validée est figée
+(statut contrôlé par le service) ; la modifier = « nouvelle version » (copie, sans relecture des
+taux ni des tarifs). Valider une version passe la précédente validée en `SUPERSEDED`. La validation
+est refusée tant qu'un poste est sans montant, qu'un coût manque ou qu'une ligne reste à vérifier.
+
+**Règle à arbitrer par GPE.** Le coefficient de vente par type est saisi directement (prix = coût ×
+K). La décomposition de K (frais généraux, marge, taux de marque) n'est pas codée tant qu'elle n'est
+pas décidée. La TVA est unique par chiffrage.
+
+**Tarifs fournisseurs.** Import `POST /api/suppliers/{id}/offers` (ADMIN), CSV/XLSX/XLS/ODS :
+en-tête avec référence (ou réf. fabricant), désignation et prix (net, ou tarif et remise ; une
+remise > 1 est lue en pourcentage). Une ligne sans référence, désignation ou prix est écartée et
+comptée. Un import remplace le prix des références du fichier (`ON CONFLICT`), lots de 500. Limites
+de lecture de `SpreadsheetExtractor` (lignes et cellules par feuille) : un tarif plus grand est lu en
+partie et l'import le signale ; le découper. Recherche : préfixe de référence, EAN exact, ou tous les
+mots dans la désignation (`ILIKE`, sans index plein texte : suffisant pour quelques centaines de
+milliers de lignes ; `pg_trgm` à envisager au-delà).
+
+**Assistance IA.** Désactivée tant que l'analyse par IA l'est (`AnalysisGate`). `AiAssistant`
+(paquet `analysis`, seul autorisé à utiliser `ExtractionClient`) applique le même garde-fou, compte
+ses tokens dans `ai_call`, inclus dans le plafond mensuel (`AnalysisRepository.sumTokensSince`).
+Deux usages : fournitures d'un poste (le code cherche les candidats dans les tarifs, l'IA choisit
+parmi eux, sans voir de prix ; un `offer_id` non transmis est écarté) et relecture d'un brouillon
+(points à vérifier). Accepter une fourniture ajoute une composante au prix du catalogue.
+
+**Droits.** Chiffrages : tout utilisateur connecté (création, modification, validation). Paramètres,
+taux, fournisseurs et imports de tarifs : ADMIN ; lecture des paramètres, taux, fournisseurs et
+recherche d'offres : tout utilisateur.
+
+**Migrations** V31 à V36 (rollback en tête de chaque fichier).
+
+## Entreprise (référentiel GPE)
+
+Paquet `company` : la source de référence des informations de GPE, lue par les autres modules,
+jamais recopiée par eux. Lecture : tout utilisateur connecté (`GET /api/company/**`) ; écriture :
+ADMIN. Aucun module ni aucune IA ne modifie ces données.
+
+| Rubrique | Table | API (`/api/company/…`) |
+|---|---|---|
+| Identité (ligne unique), logo | `company_profile` | `GET/PUT profile`, `POST profile/logo` |
+| Interlocuteurs | `company_contact` | `contacts` |
+| Activités et compétences | `company_activity` (type de travaux des veilles, préfixes CPV) | `activities` |
+| Personnel, habilitations | `employee`, `employee_credential` | `employees`, `credentials` |
+| Matériel (prochain contrôle suivi comme échéance) | `equipment` | `equipment` |
+| Certifications et qualifications | `company_certification` | `certifications` |
+| Références | `company_reference` | `references` |
+| Documents officiels | `company_document` | `documents` |
+| Autres paramètres économiques (non utilisés par un calcul) | `company_economic_parameter` | `economic-parameters` |
+| Fichiers de tout ce qui précède | `company_file` (`owner_type`, `owner_id`) | `{liste}/{id}/files`, `files/{id}` |
+| Échéances et volumes | — | `GET overview` |
+
+Chaque liste : `GET`, `POST`, `PUT /{id}`, `DELETE /{id}` (`RecordController`). La réponse est la ligne
+telle que stockée, avec `validity` (`NONE`, `VALID`, `EXPIRING`, `EXPIRED`) quand elle a une échéance,
+et `files` (le dernier en premier) quand elle a des fichiers. Seuil « expire bientôt » :
+`company.expiry-warning-days` (60 jours). Fichiers : contrôlés par leur contenu (`FileTypeValidator`),
+PDF, images et documents bureautiques seulement, sans archive, 50 Mo au plus (`company.max-file-size`),
+stockés sous `storage/company/`, effacés du disque avec leur ligne. Un document garde ses anciens
+fichiers comme historique ; le fichier en vigueur est le dernier déposé.
+
+**Pour les autres modules** : `CompanyDirectory` (identité, activités, certifications et documents
+valides à une date, échéances). Les coûts horaires et coefficients utilisés par les chiffrages restent
+`pricing_settings` et `pricing_rate` (V32) : ils sont la partie économique de l'entreprise, affichée
+dans Entreprise › Économie, pas une copie. Migration V37.
+
 ## Ajouter ou modifier une information de la grille
 
 1. Ajouter ou modifier l'entrée dans `analysis.ExtractionGrid.FIELDS` : clé (50 caractères

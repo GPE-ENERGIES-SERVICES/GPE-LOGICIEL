@@ -96,7 +96,7 @@ function ArchiveList() {
         placeholder="Rechercher dans les archives : objet, référence, acheteur, ville, type de travaux, CPV…"
         onSearch={(value) => navigate({ q: value, page: null })}
       />
-      <TenderFilters params={searchParams} onApply={navigate} fields={PAST_FILTERS} />
+      <TenderFilters params={searchParams} onApply={navigate} fields={PAST_FILTERS} collapsible />
 
       {list.error && <p className="banner error">{list.error}</p>}
       {list.loading && !list.data && <p className="page-message">Chargement…</p>}

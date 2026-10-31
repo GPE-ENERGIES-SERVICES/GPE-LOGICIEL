@@ -2,26 +2,37 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useRef, useState, type ReactNode } from "react";
+import { Fragment, Suspense, useRef, useState, type ReactNode } from "react";
+
+import { useLoader } from "@/lib/useLoader";
+import { getDuplicateGroups } from "@/services/duplicateApi";
 
 import { useAuth } from "./AuthProvider";
 import { CollectDelayAlert } from "./CollectDelayAlert";
 import { Icon, type IconName } from "./Icon";
 import { ThemeToggle } from "./ThemeToggle";
 
-type Section = { href: string; label: string; icon: IconName };
+/**
+ * @param group the title shown above the first entry of a group, or none
+ * @param admin shown to administrators only
+ * @param separator a line above it, apart from what precedes
+ */
+type Section = { href: string; label: string; icon: IconName; group?: string; admin?: boolean; separator?: boolean };
 
-/** Main sections; a section is active on its page and on the pages below it. */
+/** Main sections, in the order of the work; a section is active on its page and on the pages below it. */
 const SECTIONS: Section[] = [
   { href: "/", label: "Tableau de bord", icon: "dashboard" },
-  { href: "/tenders", label: "Appels d'offres", icon: "tenders" },
-  { href: "/alerts", label: "Mes veilles", icon: "alerts" },
-  { href: "/follows", label: "Mes suivis", icon: "star" },
-  { href: "/archives", label: "Archives", icon: "archive" },
-  { href: "/awards", label: "Marchés attribués", icon: "award" },
+  { href: "/tenders", label: "Tous les appels d'offres", icon: "tenders", group: "Appels d'offres" },
+  { href: "/follows", label: "Mes suivis", icon: "star", group: "Appels d'offres" },
+  { href: "/alerts", label: "Mes veilles", icon: "alerts", group: "Appels d'offres" },
+  { href: "/awards", label: "Marchés attribués", icon: "award", group: "Appels d'offres" },
+  { href: "/archives", label: "Archives", icon: "archive", group: "Appels d'offres" },
+  { href: "/estimates", label: "Chiffrages", icon: "calculator", group: "Chiffrage" },
+  { href: "/suppliers", label: "Tarifs fournisseurs", icon: "tag", group: "Chiffrage", admin: true },
+  { href: "/company", label: "Entreprise", icon: "building", separator: true },
+  { href: "/supervision", label: "Supervision", icon: "eye", admin: true, separator: true },
+  { href: "/settings", label: "Paramètres", icon: "settings", admin: true },
 ];
-
-const SETTINGS: Section = { href: "/settings", label: "Paramètres", icon: "settings" };
 
 /** The section of the current page, or of the page a tender was opened from. */
 function activeSection(sections: Section[], current: string): Section | undefined {
@@ -33,26 +44,37 @@ function SectionNav({
   sections,
   origin,
   onNavigate,
+  badges = {},
 }: {
   sections: Section[];
   origin: string | null;
   onNavigate: () => void;
+  /** A count shown beside an entry, by its href: work waiting there. */
+  badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
   const active = activeSection(sections, origin ?? pathname);
   return (
     <nav className="app-nav" aria-label="Rubriques">
-      {sections.map(({ href, label, icon }) => (
-        <Link
-          key={href}
-          href={href}
-          className={active?.href === href ? "active" : ""}
-          aria-current={active?.href === href ? "page" : undefined}
-          onClick={onNavigate}
-        >
-          <Icon name={icon} />
-          <span>{label}</span>
-        </Link>
+      {sections.map(({ href, label, icon, group, separator }, index) => (
+        <Fragment key={href}>
+          {group && group !== sections[index - 1]?.group && <span className="app-nav-group">{group}</span>}
+          {separator && <span className="app-nav-group" aria-hidden="true" />}
+          <Link
+            href={href}
+            className={active?.href === href ? "active" : ""}
+            aria-current={active?.href === href ? "page" : undefined}
+            onClick={onNavigate}
+          >
+            <Icon name={icon} />
+            <span>{label}</span>
+            {Boolean(badges[href]) && (
+              <span className="nav-badge" aria-label={`${badges[href]} à traiter`}>
+                {badges[href]}
+              </span>
+            )}
+          </Link>
+        </Fragment>
       ))}
     </nav>
   );
@@ -70,8 +92,16 @@ function useOrigin(sections: Section[]) {
   return pathname.startsWith("/tenders/") && sections.some(({ href }) => href === from) ? from : null;
 }
 
-function SectionNavWithOrigin({ sections, onNavigate }: { sections: Section[]; onNavigate: () => void }) {
-  return <SectionNav sections={sections} origin={useOrigin(sections)} onNavigate={onNavigate} />;
+function SectionNavWithOrigin({
+  sections,
+  onNavigate,
+  badges,
+}: {
+  sections: Section[];
+  onNavigate: () => void;
+  badges: Record<string, number>;
+}) {
+  return <SectionNav sections={sections} origin={useOrigin(sections)} onNavigate={onNavigate} badges={badges} />;
 }
 
 function SectionTitleWithOrigin({ sections }: { sections: Section[] }) {
@@ -85,7 +115,11 @@ function initials(name: string): string {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const sections = user.role === "ADMIN" ? [...SECTIONS, SETTINGS] : SECTIONS;
+  const admin = user.role === "ADMIN";
+  const sections = SECTIONS.filter((section) => !section.admin || admin);
+  // shortcut: read when the application opens, not again after each decision; a reload updates it.
+  const duplicates = useLoader(() => (admin ? getDuplicateGroups() : Promise.resolve([])), "nav-duplicates");
+  const badges = { "/supervision": duplicates.data?.length ?? 0 };
   // The navigation is a drawer on small screens only.
   const [menuOpen, setMenuOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -120,8 +154,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Icon name="close" />
           </button>
         </div>
-        <Suspense fallback={<SectionNav sections={sections} origin={null} onNavigate={closeMenu} />}>
-          <SectionNavWithOrigin sections={sections} onNavigate={closeMenu} />
+        <Suspense fallback={<SectionNav sections={sections} origin={null} onNavigate={closeMenu} badges={badges} />}>
+          <SectionNavWithOrigin sections={sections} onNavigate={closeMenu} badges={badges} />
         </Suspense>
         <div className="app-user">
           <span className="avatar" aria-hidden="true">

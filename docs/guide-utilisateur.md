@@ -6,8 +6,20 @@ aide à décider ; la décision reste humaine.
 
 ## Parcours
 
-Le bandeau du haut donne accès aux rubriques : Tableau de bord, Appels d'offres, Mes veilles,
-Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramètres.
+Le menu de gauche donne accès au Tableau de bord, puis à deux sections : **Appels d'offres** (Tous
+les appels d'offres, Mes suivis, Mes veilles, Marchés attribués, Archives) et **Chiffrage**
+(Chiffrages, Tarifs fournisseurs), puis **Entreprise**. Pour les administrateurs s'ajoutent
+**Supervision** (doublons à vérifier, en premier, avec leur nombre dans le menu ; journal de collecte ;
+récupération des DCE ; journal et qualité des analyses IA) et **Paramètres** (comptes utilisateurs,
+critères de filtrage, configuration de l'IA).
+
+**Entreprise** rassemble les informations de GPE, consultables par tous et modifiables par un
+administrateur : identité et interlocuteurs, activités et compétences, personnel et habilitations,
+matériel, certifications, références, documents administratifs et économie (coûts horaires, TVA et
+coefficients des chiffrages, autres paramètres). La vue d'ensemble liste ce qui a expiré ou expire
+dans les 60 jours (documents, certifications, habilitations, contrôles du matériel). Un document se
+remplace en déposant le nouveau fichier puis en mettant à jour ses dates ; l'ancien reste en
+historique.
 
 1. **Tableau de bord** : l'état de la dernière collecte, puis « Aujourd'hui » : les nouvelles
    opportunités publiées depuis hier (dont celles qui correspondent aux critères de l'entreprise),
@@ -157,6 +169,67 @@ plans ne sont pas lus.
 L'IA ne propose aucun prix et ne calcule aucune rentabilité. Une valeur de formule non enregistrée
 dans le fichier est signalée comme inconnue, jamais recalculée. Si une pièce de prix est mal
 classée, corriger son type dans « Documents (DCE) ».
+
+## Le chiffrage
+
+L'onglet « Chiffrage » de la fiche d'un marché liste ses chiffrages (par lot s'il y a des lots) et en
+crée un nouveau, avec la TVA et les coefficients des paramètres de GPE.
+
+Le chiffrage se présente comme un **tableau Excel** : N°, désignation, quantité, unité, PU HT et
+montant HT. Chaque cellule se modifie directement et s'enregistre en la quittant ; Entrée ou ↓
+passe à la ligne suivante. La dernière ligne, vide, ajoute une ligne. Le montant HT est calculé par
+le logiciel (quantité × PU, arrondi au centime). Dans la colonne PU, un mot (PM, inclus) est une
+mention à 0 €. Pour **coller depuis Excel**, copier les colonnes dans l'ordre N°, Désignation,
+Quantité, Unité, PU HT et coller dans la cellule de départ : les lignes en dessous sont remplacées,
+les suivantes ajoutées. Les flèches ↑ ↓ déplacent une ligne, ✕ la supprime.
+
+Un chiffrage complet se fait ainsi sans aucun détail. Le bouton **« Détail »** d'une ligne, facultatif,
+donne ses options (chapitre, option PSE, ligne à vérifier) et son **sous-détail** : les coûts
+d'**une unité** du poste (fourniture, main-d'œuvre, prestation, déplacement, location,
+sous-traitance, forfait, divers). Le PU reste celui saisi, sauf à choisir « Calculé » : il est alors
+calculé depuis le détail (affiché en italique dans le tableau ; y saisir un prix le remplace).
+
+Avec un détail, le logiciel calcule :
+
+- coût d'une ligne du sous-détail = quantité par unité × coût unitaire × (1 + perte) ;
+- prix unitaire HT du poste = somme des coûts × coefficient de leur type, arrondie au centime ;
+- montant HT = prix unitaire × quantité, arrondi au centime ;
+- TVA calculée sur le total HT ; les options (PSE) sont totalisées à part ;
+- marge = total HT − déboursé sec, connue seulement quand aucun coût ne manque.
+
+Un poste peut aussi avoir un **prix imposé** (forfait : son sous-détail ne sert qu'à montrer la marge),
+ou une **mention** sans prix (PM, inclus : montant 0). Un poste sans coût, sans prix ou sans quantité
+reste « sans montant » : rien n'est deviné.
+
+Un coût se saisit à la main, ou se choisit :
+
+- dans les **taux de GPE** (heure d'électricien, kilomètre…) : le coût est copié ; « Recopier les
+  taux actuels » le met à jour dans un brouillon, si un taux a changé depuis ;
+- dans les **tarifs des fournisseurs** importés (recherche par référence, EAN ou mots) : le prix net
+  par unité, les références et la date du prix sont copiés.
+
+Un nouveau tarif ou un nouveau taux ne change jamais un chiffrage existant.
+
+« Importer un DPGF, BPU ou DQE du DCE » ajoute les lignes d'un bordereau du dossier (n°, désignation,
+unité, quantité, chapitre), avec leur feuille et leur ligne d'origine. Les prix du fichier ne sont pas
+repris. Les lignes d'un PDF, et celles qui n'ont pas pu être lues entièrement, sont marquées « À
+vérifier » : décocher la case une fois vérifiées.
+
+« Valider » fige le chiffrage. C'est refusé tant qu'un poste est sans montant, qu'un coût manque ou
+qu'une ligne importée reste à vérifier. Pour le modifier ensuite, « Nouvelle version » en crée une
+copie en brouillon ; à sa validation, l'ancienne version passe « Remplacée ». « Exporter (Excel) »
+télécharge les postes, les totaux et le sous-détail. L'historique garde chaque création, import,
+validation et nouvelle version.
+
+**Avec l'IA** (seulement si l'analyse par IA est activée sur le serveur) : « Proposer des
+fournitures » demande à l'IA de choisir, parmi les offres trouvées par le logiciel dans les tarifs
+importés, celles qui correspondent au poste, avec une quantité par unité ; « Relecture par l'IA »
+signale des points à vérifier. L'IA ne donne aucun prix et ne modifie rien : une proposition
+acceptée ajoute un coût au prix du tarif ; la validation reste toujours humaine.
+
+Les **paramètres de chiffrage** (TVA et coefficients par défaut, coûts horaires) se gèrent dans
+« Entreprise › Économie » ; les **fournisseurs** (création, import d'un fichier de prix CSV ou XLSX) dans
+« Chiffrage › Tarifs fournisseurs ». Les deux sont réservés aux administrateurs.
 
 ## Ce qui est envoyé à l'IA
 

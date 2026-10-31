@@ -6,6 +6,8 @@ import { ACTIVITY_LABELS, FOLLOW_UP_LABELS, MARKET_TYPE_LABELS, PROCEDURE_LABELS
 import { REGIONS } from "@/lib/regions";
 import { available, type Feature } from "@/services/http";
 
+import { Fold } from "./Fold";
+
 /** URL parameters set by the filters, passed as is to GET /api/tenders. */
 export type FilterKey =
   | "activity"
@@ -76,6 +78,8 @@ type Props = {
   params: URLSearchParams;
   onApply: (changes: Record<string, string | null>) => void;
   fields: FilterKey[];
+  /** Folded under « Filtres » until opened, open by itself when a filter is active. */
+  collapsible?: boolean;
 };
 
 type SelectProps = {
@@ -190,7 +194,7 @@ const FILTER_FEATURES: Partial<Record<FilterKey, Feature>> = {
 };
 
 /** Combinable filters of a list of tenders, all visible; a list applies as soon as it changes. */
-export function TenderFilters({ params, onApply, fields: wanted }: Props) {
+export function TenderFilters({ params, onApply, fields: wanted, collapsible = false }: Props) {
   const fields = wanted.filter((key) => {
     const feature = FILTER_FEATURES[key];
     return !feature || available(feature);
@@ -216,8 +220,10 @@ export function TenderFilters({ params, onApply, fields: wanted }: Props) {
 
   const clear = () => onApply(Object.fromEntries([...fields, "page"].map((key) => [key, null])));
 
-  return (
-    <form className="card filter-bar" onSubmit={apply} onChange={applyList} key={params.toString()}>
+  const activeLabel =
+    activeCount === 0 ? "Aucun filtre" : `${activeCount} filtre${activeCount > 1 ? "s" : ""} actif${activeCount > 1 ? "s" : ""}`;
+  const form = (
+    <form className={collapsible ? undefined : "card filter-bar"} onSubmit={apply} onChange={applyList} key={params.toString()}>
       <div className="filter-fields">
         {fields.map((key) => (
           <div key={key}>{field(key, value(key))}</div>
@@ -225,7 +231,7 @@ export function TenderFilters({ params, onApply, fields: wanted }: Props) {
       </div>
       <div className="filter-actions">
         <span className="muted">
-          {activeCount === 0 ? "Aucun filtre" : `${activeCount} filtre${activeCount > 1 ? "s" : ""} actif${activeCount > 1 ? "s" : ""}`}
+          {activeLabel}
         </span>
         <button type="submit">Appliquer</button>
         {activeCount > 0 && (
@@ -238,5 +244,12 @@ export function TenderFilters({ params, onApply, fields: wanted }: Props) {
         )}
       </div>
     </form>
+  );
+  return collapsible ? (
+    <Fold title="Filtres" count={activeLabel} open={activeCount > 0} className="card filter-bar">
+      {form}
+    </Fold>
+  ) : (
+    form
   );
 }

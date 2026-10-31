@@ -27,7 +27,7 @@ const STATE_LABELS: Record<AnalysisState, string> = {
  * Configuration as the server applies it: read only. The provider, its key
  * and the permission to send documents are set on the server, never here.
  */
-function ConfigurationPanel() {
+export function AnalysisConfigurationPanel() {
   const loaded = useLoader(() => getAnalysisConfiguration(), "configuration");
   if (loaded.error) {
     return <p className="error">{loaded.error}</p>;
@@ -105,8 +105,8 @@ function ConfigurationPanel() {
 }
 
 /**
- * Configuration of the AI analysis, journal of the analyses (status, errors,
- * cost) and measure of their quality from the decisions of the users.
+ * Journal of the analyses (status, errors, cost) and measure of their quality
+ * from the decisions of the users; the configuration is apart, in the settings.
  */
 export function AnalysisJournal() {
   const journal = useLoader(() => getAnalysisJournal(30), "analyses");
@@ -114,7 +114,6 @@ export function AnalysisJournal() {
 
   return (
     <div>
-      <ConfigurationPanel />
       {quality.error && <p className="error">{quality.error}</p>}
       {quality.data && (
         <>

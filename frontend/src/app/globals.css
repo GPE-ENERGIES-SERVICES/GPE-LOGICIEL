@@ -2529,3 +2529,451 @@ details summary {
 .file-input:focus-visible + label {
   box-shadow: var(--focus-ring);
 }
+
+/* Estimates (chiffrage) */
+
+th.number {
+  text-align: right;
+}
+
+.row-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.row-actions button {
+  min-height: auto;
+  padding: 0.2rem 0.5rem;
+}
+
+.estimate-table td {
+  vertical-align: top;
+}
+
+.estimate-chapter td {
+  font-weight: 620;
+  background: var(--table-header);
+}
+
+.estimate-detail > td {
+  background: var(--surface-2);
+  padding: 0.75rem 1rem;
+}
+
+.estimate-source {
+  font-size: 0.85rem;
+}
+
+.estimate-table .badge {
+  margin-left: 0.4rem;
+}
+
+.estimate-form {
+  margin: 0.75rem 0;
+}
+
+.estimate-form .wide {
+  grid-column: span 2;
+}
+
+.estimate-totals {
+  margin-top: 1rem;
+}
+
+.estimate-suggestions h4 {
+  margin: 0.75rem 0 0.4rem;
+}
+
+.offer-results li {
+  margin: 0.2rem 0;
+}
+
+.estimate-create {
+  margin-top: 1rem;
+}
+
+/* Estimate grid: a spreadsheet, every cell typed into */
+
+.estimate-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.estimate-grid th,
+.estimate-grid td {
+  border: 1px solid var(--border);
+  padding: 0;
+  vertical-align: middle;
+}
+
+.estimate-grid th {
+  padding: 0.4rem 0.5rem;
+  background: var(--table-header);
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.estimate-grid .col-ref {
+  width: 4.5rem;
+}
+
+.estimate-grid .col-unit {
+  width: 5rem;
+}
+
+.estimate-grid .col-number {
+  width: 8.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-grid td.col-number {
+  padding: 0 0.5rem;
+  white-space: nowrap;
+}
+
+.estimate-grid .col-actions {
+  width: 13rem;
+  padding: 0 0.3rem;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.estimate-grid .col-actions button {
+  min-height: auto;
+  padding: 0.15rem 0.45rem;
+}
+
+.estimate-grid td input {
+  width: 100%;
+  min-height: 2rem;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0.3rem 0.5rem;
+}
+
+.estimate-grid td.col-number input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-grid td input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--surface);
+}
+
+.estimate-grid td input.computed {
+  font-style: italic;
+  color: var(--muted);
+}
+
+.estimate-grid td.missing {
+  color: var(--danger);
+}
+
+.estimate-grid .estimate-new-line input::placeholder {
+  font-style: italic;
+}
+
+.estimate-grid tfoot td {
+  padding: 0.45rem 0.5rem;
+  font-weight: 600;
+}
+
+.estimate-grid .col-total-label {
+  text-align: right;
+}
+
+.estimate-grid .estimate-detail > td {
+  padding: 0.75rem 1rem;
+}
+
+/* Estimate page: a toolbar and the sheet, as in a spreadsheet */
+
+.sheet-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.sheet-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.sheet-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.45rem;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface-2);
+}
+
+.sheet-toolbar button,
+.sheet-toolbar .button {
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.sheet-toolbar [aria-pressed="true"] {
+  border-color: var(--primary);
+}
+
+.sheet-panel {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  background: var(--surface);
+}
+
+.sheet-status {
+  margin: 0.5rem 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.estimate-page .estimate-grid {
+  background: var(--surface);
+  font-size: 0.92rem;
+}
+
+.estimate-grid th {
+  text-align: center;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.estimate-grid .col-row {
+  width: 2.75rem;
+  padding: 0 0.35rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  background: var(--table-header);
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-grid td input:focus-visible {
+  outline: 2px solid #217346;
+}
+
+.estimate-grid tbody tr:hover > td.col-row,
+.estimate-grid tbody tr:focus-within > td.col-row {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+/* Buttons of a line: shown when the line is pointed at or edited. */
+.estimate-grid tbody .col-actions button {
+  opacity: 0;
+}
+
+.estimate-grid tbody tr:hover .col-actions button,
+.estimate-grid tbody tr:focus-within .col-actions button,
+.estimate-grid tbody .col-actions button[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.estimate-grid .col-actions {
+  width: 11rem;
+}
+
+.estimate-grid tfoot td {
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.estimate-grid tfoot .total-strong td {
+  font-weight: 700;
+  background: var(--table-header);
+}
+
+.estimate-grid .estimate-chapter td {
+  padding: 0.3rem 0.5rem;
+}
+
+/* Title of a group of the navigation; empty, it only separates. */
+.app-nav-group {
+  margin: 0.9rem 0 0.2rem;
+  padding: 0 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.app-nav-group:empty {
+  margin: 0.6rem 0.4rem 0.3rem;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Filters folded under « Filtres »: the count of active filters shows while closed. */
+.filter-bar.fold > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.filter-bar.fold > .fold-body {
+  margin-top: 0.9rem;
+}
+
+/* Settings: one folded card per setting, its title as large as a heading. */
+.settings-fold > summary {
+  cursor: pointer;
+}
+
+.settings-fold > summary .fold-title {
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.settings-fold > .fold-body {
+  margin-top: 1rem;
+}
+
+/* Work waiting in a section of the navigation. */
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Entreprise: its parts as tabs, lists as tables, short forms above them. */
+
+.company-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.5rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.company-nav a {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.company-nav a:hover {
+  color: var(--foreground);
+}
+
+.company-nav a[aria-current="page"] {
+  border-bottom-color: var(--primary);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.company-counts {
+  margin-bottom: 1rem;
+}
+
+.company-identity-head {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.company-identity-head h2 {
+  margin: 0;
+}
+
+.company-logo {
+  width: 7rem;
+  height: 4.5rem;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.company-logo.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.company-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem 2rem;
+}
+
+.company-groups h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+
+.record-form {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.record-form .wide,
+.company-page form .wide {
+  grid-column: span 2;
+}
+
+.record-form .checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: end;
+}
+
+.record-add {
+  margin-top: 0;
+}
+
+.record-detail > td {
+  padding: 0.75rem 1rem;
+  background: var(--surface-2);
+}
+
+.record-files li {
+  margin: 0.25rem 0;
+}
+
+.record-files li button {
+  margin-left: 0.5rem;
+  min-height: auto;
+  padding: 0.1rem 0.5rem;
+}
+
+.record-upload {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+.record-nested h4 {
+  margin: 0 0 0.5rem;
+}

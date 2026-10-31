@@ -13,6 +13,7 @@ import type { AwardedContract, AwardSearch } from "@/types/award";
 import type { AnalysisConfiguration, AnalysisQuality, TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
 import type { DceLink, DceSummary, DocumentHit, DocumentInfo, PieceType } from "@/types/document";
+import type { PricingSettings } from "@/types/estimate";
 import type { CollectJournal, CollectRun, CollectSource } from "@/types/settings";
 import type {
   FollowUpStatus,
@@ -768,6 +769,13 @@ const ANALYSIS_CONFIGURATION: AnalysisConfiguration = {
 
 const NO_QUALITY: AnalysisQuality = { done: 0, failed: 0, totalCost: null, averageCost: null, fields: [] };
 
+const PRICING_SETTINGS: PricingSettings = {
+  vatRate: 0.2,
+  coefficients: { SUPPLY: 1, LABOR: 1, SERVICE: 1, TRAVEL: 1, RENTAL: 1, SUBCONTRACT: 1, LUMP_SUM: 1, OTHER: 1 },
+  updatedBy: null,
+  updatedAt: "2026-10-01T08:00:00Z",
+};
+
 // --- Routing ----------------------------------------------------------------
 
 type Route = [method: string, path: RegExp, handle: (id: string, url: URL, body: unknown) => unknown];
@@ -808,6 +816,17 @@ const ROUTES: Route[] = [
   ["PUT", /^\/api\/alerts\/(\d+)$/, (id, _, body) => updateAlert(id, body)],
   ["DELETE", /^\/api\/alerts\/(\d+)$/, (id) => deleteAlert(id)],
   ["POST", /^\/api\/alerts\/(\d+)\/viewed$/, (id) => markAlertViewed(id)],
+  // Estimates: none in the demonstration; their changes answer « indisponible ».
+  ["GET", /^\/api\/tenders\/(\d+)\/estimates$/, (id) => find(id) && []],
+  ["GET", /^\/api\/estimates$/, () => []],
+  ["GET", /^\/api\/pricing-settings$/, () => PRICING_SETTINGS],
+  ["GET", /^\/api\/pricing-rates$/, () => []],
+  ["GET", /^\/api\/suppliers$/, () => []],
+  ["GET", /^\/api\/estimate-assistant$/, () => ({ available: false, message: NOT_ENABLED })],
+  // The company: empty in the demonstration; its changes answer « indisponible ».
+  ["GET", /^\/api\/company\/profile$/, () => ({ interventionDepartments: [], logo: null, updatedAt: "2026-10-01T08:00:00Z" })],
+  ["GET", /^\/api\/company\/overview$/, () => ({ counts: {}, expiries: [], warningDays: 60, documentsWithoutFile: 0 })],
+  ["GET", /^\/api\/company\/[a-z-]+$/, () => []],
 ];
 
 export async function mockApi<T>(method: string, path: string, body?: unknown): Promise<T> {

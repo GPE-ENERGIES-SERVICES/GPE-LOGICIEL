@@ -94,7 +94,7 @@ function TenderList() {
         </p>
       )}
 
-      <TenderFilters params={searchParams} onApply={navigate} fields={OPEN_FILTERS} />
+      <TenderFilters params={searchParams} onApply={navigate} fields={OPEN_FILTERS} collapsible />
 
       <div className="tabs" role="tablist">
         {TABS.map((value) => (
