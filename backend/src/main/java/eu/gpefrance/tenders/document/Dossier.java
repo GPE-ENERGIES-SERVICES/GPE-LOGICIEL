@@ -61,6 +61,10 @@ public class Dossier {
 	@Column(name = "uploaded_at", nullable = false, updatable = false)
 	private Instant uploadedAt;
 
+	/** Whether its analysis may start by itself once read; a user may stop it. */
+	@Column(name = "auto_analysis", nullable = false)
+	private boolean autoAnalysis = true;
+
 	@Column(name = "processed_at")
 	private Instant processedAt;
 
@@ -154,6 +158,17 @@ public class Dossier {
 
 	public Instant getUploadedAt() {
 		return uploadedAt;
+	}
+
+	public boolean isAutoAnalysis() {
+		return autoAnalysis;
+	}
+
+	/**
+	 * @param allowed whether its analysis may start by itself once read
+	 */
+	public void allowAutoAnalysis(boolean allowed) {
+		this.autoAnalysis = allowed;
 	}
 
 	public Instant getProcessedAt() {

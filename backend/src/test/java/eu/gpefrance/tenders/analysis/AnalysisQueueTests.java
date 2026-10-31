@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -243,6 +244,64 @@ class AnalysisQueueTests {
 			.bodyJson()
 			.extractingPath("$.history.length()")
 			.isEqualTo(1);
+	}
+
+	@Test
+	void keepsTheDecisionWithItsCheckedSourcesAndShowsItWithoutCallingAgain() throws InterruptedException {
+		given(client.complete(any(ExtractionRequest.class))).willAnswer(invocation -> {
+			ExtractionRequest request = invocation.getArgument(0);
+			Matcher matcher = DOCUMENT_ID.matcher(request.documents());
+			String documentId = matcher.find() ? matcher.group(1) : "0";
+			return new ModelAnswer("""
+					{"fields": [], "decision": {"verdict": "EXAMINE", "conclusion": "Délai de réponse court.",
+					 "strengths": [{"text": "Travaux recherchés", "basis": "DEDUCTION", "quote": null,
+					   "document_id": null, "page": null}],
+					 "obstacles": [
+					  {"text": "Remise rapide", "kind": "CONFIRMED", "basis": "DOCUMENT",
+					   "quote": "Les offres devront parvenir avant le 15/11/2026", "document_id": %1$s, "page": 1},
+					  {"text": "Garantie à première demande", "kind": "CONFIRMED", "basis": "DOCUMENT",
+					   "quote": "Une garantie à première demande est exigée", "document_id": %1$s, "page": 1}],
+					 "checks": [{"action": "Vérifier la charge des équipes", "why": "Délai court",
+					   "document_id": %1$s}],
+					 "limits": ["Capacités de l'entreprise inconnues"]}}""".formatted(documentId), 1000, 200);
+		});
+		Tender tender = tender("Travaux");
+		Dossier dossier = upload(tender, "RC.pdf");
+
+		Analysis analysis = waitFor(service.request(dossier.getId(), false, "Marie Durand"), AnalysisStatus.DONE);
+
+		ArgumentCaptor<ExtractionRequest> sent = ArgumentCaptor.forClass(ExtractionRequest.class);
+		verify(client, times(1)).complete(sent.capture());
+		assertThat(sent.getValue().documents()).startsWith("<entreprise>")
+			.contains("Aucune information n'est enregistrée sur ses qualifications");
+		assertThat(sent.getValue().outputSchema()).contains("\"decision\"");
+		for (int view = 0; view < 2; view++) {
+			var json = assertThat(mvc.get().uri("/api/tenders/{id}/analysis", tender.getId()).with(TestUsers.user()))
+				.bodyJson();
+			json.extractingPath("$.latest.decision.verdict").isEqualTo("EXAMINE");
+			json.extractingPath("$.latest.decision.obstacles[*].kind").asArray().containsExactly("CONFIRMED", "TO_CHECK");
+			json.extractingPath("$.latest.decision.obstacles[1].quote").isNull();
+			json.extractingPath("$.latest.decision.obstacles[0].verified").isEqualTo(true);
+			json.extractingPath("$.history[0].decision").isNull();
+		}
+		assertThat(analysis.getDecision().checks()).hasSize(1);
+		verify(client, times(1)).complete(any(ExtractionRequest.class));
+	}
+
+	@Test
+	void anAnalysisMadeBeforeTheDecisionHelpIsShownWithoutOneAndNotAnalysedAgain() throws InterruptedException {
+		Tender tender = tender("Travaux");
+		Dossier dossier = upload(tender, "RC.pdf");
+		Analysis older = new Analysis(dossier.getTenderId(), dossier.getId(), "test", "test-model", "grid-3/prompt-3",
+				documentIds(dossier), "c".repeat(64), null, Instant.now());
+		older.finish(100, 10, Instant.now());
+		analyses.save(older);
+
+		assertThat(mvc.get().uri("/api/tenders/{id}/analysis", tender.getId()).with(TestUsers.user()))
+			.bodyJson()
+			.extractingPath("$.latest.decision")
+			.isNull();
+		verify(client, never()).complete(any(ExtractionRequest.class));
 	}
 
 	@Test

@@ -107,7 +107,71 @@ Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramèt
    section « Suivi » de la fiche avec un commentaire. L'étoile ☆ sert à suivre un appel d'offres :
    ce suivi est personnel et retrouvé dans l'onglet « Mes suivis ».
 
+## L'aide à la décision
+
+Sur la page d'un appel d'offres, après les lots et avant les documents (DCE), le bloc « Analyse IA —
+Aide à la décision » est produit par la même analyse que la fiche de synthèse, sans appel
+supplémentaire. Il ne décrit pas le marché (le résumé de l'avis, au-dessus, le fait) : il donne
+
+- un **verdict** : À étudier en priorité, À examiner, Peu adapté a priori ou Informations
+  insuffisantes, avec une ou deux phrases d'explication ; aucun score ni pourcentage ;
+- au plus trois **raisons d'étudier** le marché ;
+- les **obstacles et risques**, marqués « Confirmé » (exigence écrite, extrait retrouvé dans le
+  document), « À vérifier » ou « Information manquante » ; « (déduction) » signale ce que l'IA
+  déduit sans que ce soit écrit tel quel ;
+- trois à cinq **vérifications à faire avant de décider** ;
+- ces parties sont repliées : leur titre donne le compte (par exemple « 1 confirmé · 1 à vérifier »),
+  un clic les déplie ;
+- les **limites**, en bref : au plus trois réserves et le nombre de pièces non analysées (leur liste
+  reste dans « Analyse du DCE ») ; le logiciel ne connaît que les critères de veille de GPE, pas
+  ses capacités (qualifications, chiffre d'affaires, moyens).
+
+Cliquer sur « Source vérifiée » affiche le document, la page et l'extrait. Une analyse faite
+avant l'ajout de ce bloc n'a pas de recommandation : elle s'obtient en relançant l'analyse
+(nouvel appel payant), jamais automatiquement.
+
+## L'analyse financière (DPGF, BPU, DQE)
+
+La section « Analyse financière », sous « Analyse du DCE », ne se lance qu'avec son bouton (appel
+payant à l'IA). Elle lit les pièces classées DPGF, BPU ou DQE, en tableur (XLS, XLSX, ODS, CSV) ou en
+PDF, et donne :
+
+- les **contrôles des montants**, faits par le logiciel sans IA, feuille par feuille : colonnes
+  reconnues, nombre de postes, prix renseignés ou cadre à remplir, somme des montants, totaux
+  écrits comparés aux lignes, TVA et TTC, incohérences avec leur cellule (par exemple « F6 :
+  quantité × prix unitaire = 4 200,00, montant écrit 4 300,00 ») ;
+- une **synthèse** par l'IA : postes principaux et points à vérifier, chacun avec sa source
+  (document, feuille, ligne) ; « Source vérifiée » signifie que le texte cité a été retrouvé dans
+  cette ligne.
+
+Dans un PDF numérique, les tableaux sont reconstruits à partir de la position des mots et contrôlés
+comme un tableur (« Tableau 1 (p. 2 à 3) ») ; un tableau dont la mise en page est ambiguë est marqué
+« structure ambiguë » et ses contrôles sont à confirmer.
+
+Les **pages scannées** (sans texte) des pièces écrites et financières sont lues par reconnaissance
+de caractères (OCR), sur le serveur : le document l'indique (« 1 page(s) lue(s) par
+reconnaissance de caractères (OCR), confiance moyenne 91 % : texte à vérifier »). Un tableau lu
+par OCR n'est jamais présenté comme fiable : ses valeurs sont à vérifier sur le document. Les
+plans ne sont pas lus.
+
+L'IA ne propose aucun prix et ne calcule aucune rentabilité. Une valeur de formule non enregistrée
+dans le fichier est signalée comme inconnue, jamais recalculée. Si une pièce de prix est mal
+classée, corriger son type dans « Documents (DCE) ».
+
+## Ce qui est envoyé à l'IA
+
+Dans « Documents (DCE) », la colonne « Envoi à l'IA » indique pour chaque fichier s'il est
+« Envoyé à l'IA », « Si la place le permet », réservé à l'« Analyse financière » ou « Non envoyé »,
+avec la raison (doublon, plan ou dessin, très peu de texte, documentation générale…). Les pièces
+essentielles (RC, avis, AE, CCAP, CCTP) passent d'abord, puis les documents utiles (diagnostic,
+rapport, étude, PGC…). Si le logiciel se trompe, « Forcer l'envoi » ou « Exclure » corrige la
+décision, et « Revenir au choix automatique » l'annule. Ce choix vaut pour la prochaine analyse : il
+n'en lance aucune.
+
 ## La fiche de synthèse
+
+Chaque partie se déplie au clic ; son titre indique ce qu'elle contient (par exemple « 5 sur 11
+renseignées », « 1 analysé sur 116 »).
 
 1. **En un coup d'œil** : date limite, visite, lots, montant, durée.
 2. **Points d'attention** : visite obligatoire, délai court, qualifications exigées, date
@@ -116,7 +180,8 @@ Mes suivis, Archives, Marchés attribués et, pour les administrateurs, Paramèt
 4. **Pour répondre** : critères d'attribution, pièces à fournir, qualifications, assurances,
    références, plateforme de dépôt, date limite des questions.
 5. **À vérifier** : tout ce qui n'est pas sûr, et les documents non analysés.
-6. **Documents analysés** : les pièces lues par l'analyse et celles qui ne l'ont pas été.
+6. **Documents** : le nombre de pièces analysées et la liste de celles qui ne l'ont pas été, avec
+   la raison.
 
 ## Signification des états
 
@@ -148,7 +213,8 @@ la fiche.
 - Le DCE est déposé à la main.
 - L'analyse par IA n'est pas encore activée (aucun fournisseur configuré).
 - Une fois activée, l'analyse lit le règlement de consultation, l'avis, l'acte d'engagement, le
-  CCAP, le CCTP et les autres pièces lues (PDF, Word, texte, HTML), dans une limite de volume.
-  Les tableurs (DPGF, BPU, DQE), les plans et les pages scannées ne sont pas analysés.
+  CCAP, le CCTP et les autres pièces lues (PDF, Word, texte, HTML, pages scannées lues par OCR),
+  dans une limite de volume. Les pièces de prix (DPGF, BPU, DQE) vont à l'analyse financière,
+  lancée à la demande. Les plans et les images ne sont pas analysés.
 - L'analyse est une aide à la lecture, pas une garantie : vérifier les informations
   importantes (date limite, visite, qualifications) à leur source avant de décider.

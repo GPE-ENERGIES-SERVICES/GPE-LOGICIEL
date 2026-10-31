@@ -1,10 +1,12 @@
 package eu.gpefrance.tenders.analysis;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import eu.gpefrance.tenders.document.PieceType;
+import eu.gpefrance.tenders.filter.FilterCriteria;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -17,7 +19,7 @@ import tools.jackson.databind.node.ObjectNode;
 final class ExtractionPrompt {
 
 	/** Changes whenever the grid or the wording of the instructions changes. */
-	static final String VERSION = ExtractionGrid.VERSION + "/prompt-3";
+	static final String VERSION = ExtractionGrid.VERSION + "/prompt-4";
 
 	static final List<String> STATUSES = List.of("FOUND", "NOT_INDICATED", "AMBIGUOUS", "CONTRADICTORY");
 
@@ -45,9 +47,59 @@ final class ExtractionPrompt {
 			properties.putObject(number).putArray("type").add("integer").add("null");
 		}
 		ObjectNode schema = JSON.createObjectNode().put("type", "object").put("additionalProperties", false);
-		schema.putArray("required").add("fields");
-		schema.putObject("properties").putObject("fields").put("type", "array").set("items", item);
+		schema.putArray("required").add("fields").add("decision");
+		ObjectNode root = schema.putObject("properties");
+		root.putObject("fields").put("type", "array").set("items", item);
+		root.set("decision", decisionSchema());
 		return JSON.writeValueAsString(schema);
+	}
+
+	/**
+	 * Every property is required, null when there is nothing to give: no
+	 * optional property to weigh on the structured output.
+	 */
+	private static ObjectNode decisionSchema() {
+		ObjectNode point = object("text", "basis", "quote", "document_id", "page");
+		ObjectNode pointProperties = (ObjectNode) point.path("properties");
+		pointProperties.putObject("text").put("type", "string");
+		pointProperties.putObject("basis").putArray("enum").add("DOCUMENT").add("DEDUCTION");
+		pointProperties.putObject("quote").putArray("type").add("string").add("null");
+		pointProperties.putObject("document_id").putArray("type").add("integer").add("null");
+		pointProperties.putObject("page").putArray("type").add("integer").add("null");
+
+		ObjectNode obstacle = point.deepCopy();
+		((ArrayNode) obstacle.path("required")).add("kind");
+		((ObjectNode) obstacle.path("properties")).putObject("kind")
+			.putArray("enum")
+			.add("CONFIRMED")
+			.add("TO_CHECK")
+			.add("MISSING");
+
+		ObjectNode check = object("action", "why", "document_id");
+		ObjectNode checkProperties = (ObjectNode) check.path("properties");
+		checkProperties.putObject("action").put("type", "string");
+		checkProperties.putObject("why").put("type", "string");
+		checkProperties.putObject("document_id").putArray("type").add("integer").add("null");
+
+		ObjectNode decision = object("verdict", "conclusion", "strengths", "obstacles", "checks", "limits");
+		ObjectNode properties = (ObjectNode) decision.path("properties");
+		properties.putObject("verdict").putArray("enum").add("PRIORITY").add("EXAMINE").add("POOR_FIT").add("INSUFFICIENT");
+		properties.putObject("conclusion").put("type", "string");
+		properties.putObject("strengths").put("type", "array").set("items", point);
+		properties.putObject("obstacles").put("type", "array").set("items", obstacle);
+		properties.putObject("checks").put("type", "array").set("items", check);
+		properties.putObject("limits").put("type", "array").putObject("items").put("type", "string");
+		return decision;
+	}
+
+	private static ObjectNode object(String... required) {
+		ObjectNode node = JSON.createObjectNode().put("type", "object").put("additionalProperties", false);
+		ArrayNode names = node.putArray("required");
+		for (String name : required) {
+			names.add(name);
+		}
+		node.putObject("properties");
+		return node;
 	}
 
 	static String instructions() {
@@ -55,7 +107,7 @@ final class ExtractionPrompt {
 		return """
 				Tu es l'assistant d'une entreprise du BTP qui décide si elle répond à une consultation de marché \
 				public de travaux. Tu lis les pièces de son dossier de consultation (DCE) et tu remplis une grille \
-				fixe, champ par champ. Tu ne rédiges rien d'autre. Une erreur peut faire perdre un marché ou rejeter \
+				fixe, champ par champ, puis tu donnes un avis court d'aide à la décision. Une erreur peut faire perdre un marché ou rejeter \
 				une offre : une réponse « non indiqué » vaut mieux qu'une réponse fausse.
 
 				Sources :
@@ -100,9 +152,46 @@ final class ExtractionPrompt {
 				Grille (clé, forme de la valeur, ce qui est demandé) :
 				%s
 
+				Aide à la décision (« decision ») :
+				Une fois la grille remplie, donne un avis court pour décider si l'entreprise doit étudier ce marché. \
+				Ce n'est pas un résumé : la grille et l'avis décrivent déjà le marché. Ne répète ni l'objet, ni \
+				l'acheteur, ni les dates, ni les montants, sauf quand l'un d'eux justifie une conclusion.
+				- Ce que le logiciel sait de l'entreprise est dans la balise <entreprise> : ses critères de veille, \
+				c'est-à-dire ce qu'elle recherche, jamais ses capacités. Un marché intéressant n'est pas un marché \
+				qu'elle peut remporter. N'affirme jamais qu'elle a ou n'a pas une qualification, un chiffre \
+				d'affaires, des références ou des moyens : c'est une vérification à faire.
+				- Aucun score, pourcentage, note ni probabilité.
+				- verdict : PRIORITY si le marché correspond nettement à ce que l'entreprise recherche et qu'aucun \
+				obstacle confirmé n'est connu ; EXAMINE s'il présente un intérêt réel mais des obstacles ou des points \
+				à vérifier ; POOR_FIT s'il est hors de ce qu'elle recherche ou qu'un obstacle confirmé est difficile à \
+				lever ; INSUFFICIENT si les documents ou les informations ne permettent pas de conclure.
+				- conclusion : une à deux phrases qui disent pourquoi.
+				- strengths : au plus 3 arguments qui justifient d'y consacrer du temps (travaux proches de ce que \
+				l'entreprise recherche, lot pertinent, opportunité technique ou commerciale). Aucun s'il n'y en a pas.
+				- obstacles : au plus 6, les plus importants d'abord (qualifications ou habilitations exigées, chiffre \
+				d'affaires, références, moyens exigés, délais, visite obligatoire, pénalités ou responsabilités \
+				lourdes, contradictions entre pièces, pièce importante absente). kind : CONFIRMED pour une exigence \
+				écrite dans un document, avec son extrait ; TO_CHECK pour un risque plausible à vérifier ; MISSING \
+				pour une information absente qui empêche de conclure, sans extrait. Une exigence n'est bloquante que \
+				si le document le dit. Pas d'inventaire de toutes les clauses.
+				- basis : DOCUMENT quand c'est écrit, DEDUCTION quand tu le déduis de plusieurs éléments.
+				- checks : 3 à 5 vérifications concrètes à faire avant de décider, les plus utiles d'abord, chacune \
+				avec why (pourquoi elle compte) et document_id du document concerné, ou null. Jamais une \
+				vérification que les documents règlent déjà.
+				- limits : ce qui peut changer le verdict (exigences ambiguës ou contradictoires, capacités de \
+				l'entreprise inconnues, rentabilité impossible à estimer sans DPGF ou BPU, texte partiel). Les pièces \
+				non transmises sont signalées par le logiciel : ne les devine pas.
+				- Mêmes règles d'extrait que pour la grille : recopié à l'identique, sur une seule page, vérifié \
+				automatiquement. Sans extrait, quote, document_id et page sont null. N'invente jamais une \
+				citation, une page ni une exigence.
+
 				Réponds par un objet JSON seul, sans texte autour, de la forme :
 				{"fields": [{"key": "deadline", "status": "FOUND", "value": "2026-11-15T12:00", \
-				"quote": "Les offres devront parvenir avant le 15 novembre 2026 à 12h00", "document_id": 12, "page": 4}]}
+				"quote": "Les offres devront parvenir avant le 15 novembre 2026 à 12h00", "document_id": 12, "page": 4}], \
+				"decision": {"verdict": "EXAMINE", "conclusion": "…", "strengths": [{"text": "…", "basis": \
+				"DOCUMENT", "quote": "…", "document_id": 12, "page": 2}], "obstacles": [{"text": "…", "kind": \
+				"CONFIRMED", "basis": "DOCUMENT", "quote": "…", "document_id": 12, "page": 5}], "checks": \
+				[{"action": "…", "why": "…", "document_id": 12}], "limits": ["…"]}}
 				Chaque clé de la grille apparaît au moins une fois, NOT_INDICATED si rien n'est trouvé.
 				""".formatted(grid);
 	}
@@ -116,6 +205,58 @@ final class ExtractionPrompt {
 			case TEXT -> field.multiple() ? "liste" : "texte";
 		};
 		return "- " + field.key() + " (" + form + ") : " + field.question();
+	}
+
+	/**
+	 * What the application knows of the company: its search criteria only,
+	 * said as such so that they are never read as capabilities.
+	 * @param criteria the criteria of the company, null when there are none
+	 */
+	static String company(FilterCriteria criteria) {
+		List<String> lines = new ArrayList<>();
+		if (criteria != null) {
+			if (!criteria.getMarketTypes().isEmpty()) {
+				lines.add("Types de marché recherchés : " + criteria.getMarketTypes()
+					.stream()
+					.map(type -> switch (type) {
+						case WORKS -> "travaux";
+						case SERVICES -> "services";
+						case SUPPLIES -> "fournitures";
+					})
+					.collect(Collectors.joining(", ")));
+			}
+			if (!criteria.getDepartments().isEmpty()) {
+				lines.add("Départements recherchés : " + String.join(", ", criteria.getDepartments()));
+			}
+			if (!criteria.getCpvPrefixes().isEmpty()) {
+				lines.add("Codes CPV recherchés (début de code) : " + String.join(", ", criteria.getCpvPrefixes()));
+			}
+			if (!criteria.getKeywords().isEmpty()) {
+				lines.add("Mots-clés recherchés : " + String.join(", ", criteria.getKeywords()));
+			}
+			if (!criteria.getExcludedKeywords().isEmpty()) {
+				lines.add("Mots-clés écartés : " + String.join(", ", criteria.getExcludedKeywords()));
+			}
+			if (criteria.getMinAmount() != null || criteria.getMaxAmount() != null) {
+				lines.add("Montants recherchés (euros HT) : "
+						+ (criteria.getMinAmount() == null ? "" : "à partir de " + criteria.getMinAmount().toPlainString())
+						+ (criteria.getMinAmount() != null && criteria.getMaxAmount() != null ? ", " : "")
+						+ (criteria.getMaxAmount() == null ? "" : "jusqu'à " + criteria.getMaxAmount().toPlainString()));
+			}
+		}
+		StringBuilder text = new StringBuilder("<entreprise>\n");
+		if (lines.isEmpty()) {
+			text.append("Aucun critère de veille n'est enregistré : les activités recherchées ne sont pas connues.\n");
+		}
+		else {
+			text.append("Critères de veille de l'entreprise (ce qu'elle recherche, pas ce qu'elle sait faire) :\n");
+			lines.forEach(line -> text.append("- ").append(line).append('\n'));
+		}
+		return text.append("""
+				Aucune information n'est enregistrée sur ses qualifications, certifications, chiffre d'affaires, \
+				effectifs, matériel ou références.
+				</entreprise>
+				""").toString();
 	}
 
 	static String documents(List<SourceDocument> documents) {

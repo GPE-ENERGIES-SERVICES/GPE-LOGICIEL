@@ -81,10 +81,43 @@ public class DocumentController {
 		}
 	}
 
+	/**
+	 * Lets the analysis of a dossier start by itself once read, or stops it
+	 * while the dossier is read: nothing is then sent until a user asks.
+	 */
+	@PutMapping("/api/dossiers/{dossierId}/auto-analysis")
+	public DossierResponse allowAutoAnalysis(@PathVariable Long dossierId, @RequestBody AutoAnalysisRequest request) {
+		return documentService.allowAutoAnalysis(dossierId, request.enabled());
+	}
+
+	public record AutoAnalysisRequest(boolean enabled) {
+	}
+
 	@PutMapping("/api/documents/{documentId}/piece-type")
 	public DossierResponse.DocumentResponse correctPieceType(@PathVariable Long documentId,
 			@Valid @RequestBody PieceTypeRequest request) {
 		return documentService.correctPieceType(documentId, request.pieceType());
+	}
+
+	/**
+	 * Sends a document to the AI or keeps it out, whatever the rules; a null
+	 * choice lets the rules decide again. A scanned document added is read
+	 * again with OCR, without starting any analysis.
+	 */
+	@PutMapping("/api/documents/{documentId}/ai-choice")
+	public DossierResponse.DocumentResponse chooseForAi(@PathVariable Long documentId,
+			@RequestBody AiChoiceRequest request) {
+		DocumentService.AiChoiceResult result = documentService.chooseForAi(documentId, request.choice());
+		if (result.rereadDossier() != null) {
+			processor.rereadInBackground(result.rereadDossier());
+		}
+		return result.document();
+	}
+
+	/**
+	 * @param choice INCLUDE, EXCLUDE, or null to let the rules decide
+	 */
+	public record AiChoiceRequest(AiChoice choice) {
 	}
 
 	/**

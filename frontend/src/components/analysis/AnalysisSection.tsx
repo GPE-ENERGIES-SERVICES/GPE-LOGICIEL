@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { FieldItem } from "@/components/analysis/FieldItem";
+import { ProgressBar } from "@/components/ProgressBar";
+import { Fold } from "@/components/Fold";
 import {
   ANALYSIS_STATUS_LABELS,
   attentionPoints,
@@ -12,8 +14,15 @@ import {
   NOT_IN_DOCUMENTS,
 } from "@/lib/analysis";
 import { DOCUMENT_STATE_LABELS, formatDateTime, PIECE_TYPE_LABELS } from "@/lib/format";
+import { analysisProgress, readingProgress } from "@/lib/progress";
 import { useLoader } from "@/lib/useLoader";
-import { cancelAnalysis, getTenderAnalysis, startAnalysis, validateAnalysis } from "@/services/analysisApi";
+import {
+  cancelAnalysis,
+  getTenderAnalysis,
+  sendAnalysisNow,
+  startAnalysis,
+  validateAnalysis,
+} from "@/services/analysisApi";
 import { getDossiers } from "@/services/documentApi";
 import type { Analysis, GridField, SummarySection, TenderAnalysis } from "@/types/analysis";
 
@@ -107,6 +116,16 @@ function SummarySheet({
     </div>
   );
 
+  /** How many questions of a part found an answer in the documents. */
+  const found = (name: SummarySection) => {
+    const grids = data.grid.filter((grid) => grid.section === name);
+    const answered = grids.filter((grid) =>
+      (groups.get(grid.key) ?? []).some((field) => field.state !== "NOT_INDICATED" || field.decision !== null),
+    ).length;
+    return `${answered} sur ${grids.length} renseignée${grids.length > 1 ? "s" : ""}`;
+  };
+  const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? "s" : ""}`;
+
   return (
     <div className="summary">
       <div className="sheet-state">
@@ -129,74 +148,100 @@ function SummarySheet({
         dans le document : l&apos;interprétation reste à confirmer en le lisant.
       </p>
 
-      <h3>{SECTION_TITLES.AT_A_GLANCE}</h3>
-      {section("AT_A_GLANCE")}
+      <Fold title={SECTION_TITLES.AT_A_GLANCE} count={found("AT_A_GLANCE")}>
+        {section("AT_A_GLANCE")}
+      </Fold>
 
-      <h3>{SECTION_TITLES.ATTENTION}</h3>
-      {points.length > 0 && (
-        <ul className="attention">
-          {points.map((point) => (
-            <li key={point}>{point}</li>
-          ))}
-        </ul>
-      )}
-      {section("ATTENTION")}
-
-      <h3>{SECTION_TITLES.REQUESTED}</h3>
-      {section("REQUESTED")}
-
-      <h3>{SECTION_TITLES.TO_ANSWER}</h3>
-      {section("TO_ANSWER")}
-
-      <h3>5. À vérifier</h3>
-      {toCheck.length === 0 && notAnalysed.length === 0 ? (
-        <p className="muted">Rien à signaler.</p>
-      ) : (
-        <ul className="to-check">
-          {toCheck.map((item) => (
-            <li key={item.id}>
-              {item.text} — {item.reason}
-            </li>
-          ))}
-          {notAnalysed.length > 0 && (
-            <li>
-              {notAnalysed.length} document{notAnalysed.length > 1 ? "s" : ""} non analysé
-              {notAnalysed.length > 1 ? "s" : ""} : une information indiquée « non indiquée » peut s&apos;y trouver.
-            </li>
-          )}
-        </ul>
-      )}
-
-      <h3>6. Documents analysés</h3>
-      <ul className="documents-read">
-        {analysed.map((document) => (
-          <li key={document.id}>
-            {document.fileName} <span className="muted">({PIECE_TYPE_LABELS[document.pieceType]})</span>
-          </li>
-        ))}
-      </ul>
-      {notAnalysed.length > 0 && (
-        <>
-          <p className="hint">Non analysés :</p>
-          <ul className="documents-read muted">
-            {notAnalysed.map((document) => (
-              <li key={document.id}>
-                {document.fileName} — {notAnalysedReason(document)}
-              </li>
+      <Fold
+        title={SECTION_TITLES.ATTENTION}
+        count={points.length > 0 ? plural(points.length, "point") + " à surveiller" : found("ATTENTION")}
+      >
+        {points.length > 0 && (
+          <ul className="attention">
+            {points.map((point) => (
+              <li key={point}>{point}</li>
             ))}
           </ul>
-        </>
-      )}
+        )}
+        {section("ATTENTION")}
+      </Fold>
+
+      <Fold title={SECTION_TITLES.REQUESTED} count={found("REQUESTED")}>
+        {section("REQUESTED")}
+      </Fold>
+
+      <Fold title={SECTION_TITLES.TO_ANSWER} count={found("TO_ANSWER")}>
+        {section("TO_ANSWER")}
+      </Fold>
+
+      <Fold
+        title="5. À vérifier"
+        count={toCheck.length === 0 && notAnalysed.length === 0 ? "rien à signaler" : plural(toCheck.length, "point")}
+      >
+        {toCheck.length === 0 && notAnalysed.length === 0 ? (
+          <p className="muted">Rien à signaler.</p>
+        ) : (
+          <ul className="to-check">
+            {toCheck.map((item) => (
+              <li key={item.id}>
+                {item.text} — {item.reason}
+              </li>
+            ))}
+            {notAnalysed.length > 0 && (
+              <li>
+                {notAnalysed.length} document{notAnalysed.length > 1 ? "s" : ""} non analysé
+                {notAnalysed.length > 1 ? "s" : ""} : une information indiquée « non indiquée » peut s&apos;y trouver.
+              </li>
+            )}
+          </ul>
+        )}
+      </Fold>
+
+      <Fold
+        title="6. Documents"
+        count={`${analysed.length} analysé${analysed.length > 1 ? "s" : ""} sur ${analysis.documents.length}`}
+      >
+        {notAnalysed.length === 0 ? (
+          <p className="muted">Tous les documents du dossier ont été analysés.</p>
+        ) : (
+          <>
+            <p className="hint">
+              Non analysés : une information indiquée « non indiquée » peut s&apos;y trouver.
+            </p>
+            <ul className="documents-read muted">
+              {notAnalysed.map((document) => (
+                <li key={document.id}>
+                  {document.fileName} — {notAnalysedReason(document)}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </Fold>
     </div>
   );
 }
 
 function notAnalysedReason(document: Analysis["documents"][number]): string {
+  // Why the rules kept it out; a piece meant to be sent but missing was left out for lack of room.
+  if (
+    document.aiReason &&
+    !["DPGF", "BPU", "DQE"].includes(document.pieceType) &&
+    !/^(Pièce essentielle|Document utile|Ajouté à la main)/.test(document.aiReason)
+  ) {
+    return document.aiReason;
+  }
   if (document.state !== "READ" && document.state !== "SCANNED") {
     return document.stateDetail ?? DOCUMENT_STATE_LABELS[document.state];
   }
-  if (["DPGF", "BPU", "DQE", "PLAN"].includes(document.pieceType)) {
-    return `${PIECE_TYPE_LABELS[document.pieceType]} non analysé dans cette version`;
+  if (["DPGF", "BPU", "DQE"].includes(document.pieceType)) {
+    return `${PIECE_TYPE_LABELS[document.pieceType]} : lu par l'analyse financière`;
+  }
+  if (document.pieceType === "PLAN") {
+    return "plan non analysé dans cette version";
+  }
+  if (/\.(xlsx?|xlsm|ods|csv)$/i.test(document.fileName)) {
+    return "tableur lu : utilisé par l'analyse financière s'il est classé DPGF, BPU ou DQE";
   }
   return "volume ou nombre de documents trop important pour une seule analyse";
 }
@@ -213,6 +258,8 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
   const [starting, setStarting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  // The time shown with an analysis in progress, refreshed with the data.
+  const [now, setNow] = useState(() => Date.now());
   const data = saved ?? loaded.data;
   const analysis = data?.latest ?? null;
   const latestDossier = dossiers.data?.[0] ?? null;
@@ -230,6 +277,7 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
     }
     const timer = window.setInterval(() => {
       setSaved(null);
+      setNow(Date.now());
       reloadAnalysis();
       reloadDossiers();
     }, 3000);
@@ -276,6 +324,8 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
   if (!data) {
     return <p className="muted">Chargement…</p>;
   }
+  const readingNow = reading && latestDossier ? readingProgress(latestDossier) : null;
+  const analysisNow = analysis ? analysisProgress(analysis, data.history, now) : null;
 
   return (
     <div>
@@ -287,7 +337,7 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
       )}
 
       {!latestDossier && <p className="muted">Déposez le DCE ci-dessus pour obtenir la fiche de synthèse.</p>}
-      {reading && <p className="muted">Lecture du dossier en cours…</p>}
+      {readingNow && <ProgressBar {...readingNow} />}
 
       {analysis && (
         <p className="analysis-meta">
@@ -311,6 +361,7 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
           )}
         </p>
       )}
+      {analysisNow && <ProgressBar {...analysisNow} />}
       {analysis?.errorMessage && (
         <p className={analysis.status === "CANCELLED" ? "muted" : "error"}>{analysis.errorMessage}</p>
       )}
@@ -322,6 +373,22 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
       )}
       {waiting && (
         <div className="form-actions">
+          {analysis?.nextAttemptAt && new Date(analysis.nextAttemptAt).getTime() > now && (
+            <button
+              type="button"
+              className="primary"
+              onClick={async () => {
+                setStartError(null);
+                try {
+                  setSaved(await sendAnalysisNow(analysis.id));
+                } catch (err) {
+                  setStartError(err instanceof Error ? err.message : "Envoi impossible.");
+                }
+              }}
+            >
+              Lancer maintenant
+            </button>
+          )}
           <button type="button" className="secondary" onClick={cancel} disabled={cancelling}>
             Annuler l&apos;analyse
           </button>

@@ -7,8 +7,12 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
@@ -76,8 +80,12 @@ public class ArchiveExtractor {
 				if (!target.normalize().startsWith(targetDirectory.normalize())) {
 					throw new ArchiveRejectedException("Chemin interdit dans l'archive " + displayName);
 				}
-				try (InputStream in = zip.getInputStream(entry); OutputStream out = Files.newOutputStream(target)) {
-					copy(in, out, budget, displayName);
+				// The fingerprint is taken while writing: the file is never read again for it.
+				MessageDigest sha256 = sha256();
+				long size;
+				try (InputStream in = zip.getInputStream(entry);
+						OutputStream out = new DigestOutputStream(Files.newOutputStream(target), sha256)) {
+					size = copy(in, out, budget, displayName);
 				}
 				String name = displayName + "/" + String.join("/", segments);
 				if (isZip(target.getFileName().toString())) {
@@ -86,7 +94,7 @@ public class ArchiveExtractor {
 					Files.delete(target);
 				}
 				else {
-					files.add(new ExtractedFile(name, target));
+					files.add(new ExtractedFile(name, target, size, HexFormat.of().formatHex(sha256.digest())));
 				}
 			}
 		}
@@ -120,17 +128,35 @@ public class ArchiveExtractor {
 				|| segments.getLast().equalsIgnoreCase("desktop.ini");
 	}
 
-	private static void copy(InputStream in, OutputStream out, Budget budget, String displayName)
+	/**
+	 * @return the bytes copied
+	 */
+	private static long copy(InputStream in, OutputStream out, Budget budget, String displayName)
 			throws IOException {
 		byte[] buffer = new byte[BUFFER_SIZE];
+		long size = 0;
 		int read;
 		while ((read = in.read(buffer)) != -1) {
 			budget.countBytes(read, displayName);
 			out.write(buffer, 0, read);
+			size += read;
+		}
+		return size;
+	}
+
+	static MessageDigest sha256() {
+		try {
+			return MessageDigest.getInstance("SHA-256");
+		}
+		catch (NoSuchAlgorithmException ex) {
+			throw new IllegalStateException(ex);
 		}
 	}
 
-	public record ExtractedFile(String displayName, Path path) {
+	/**
+	 * @param sha256 the fingerprint of its content, in hexadecimal
+	 */
+	public record ExtractedFile(String displayName, Path path, long size, String sha256) {
 	}
 
 	/**

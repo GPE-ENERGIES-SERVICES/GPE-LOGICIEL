@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.document;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -15,6 +16,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 
 /**
  * Builds PDF and ZIP files for tests.
@@ -35,6 +37,37 @@ public final class TestFiles {
 				document.addPage(page);
 				if (!text.isEmpty()) {
 					try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+						content.beginText();
+						content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+						content.newLineAtOffset(72, 700);
+						content.showText(text);
+						content.endText();
+					}
+				}
+			}
+			document.save(out);
+			return out.toByteArray();
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
+
+	/**
+	 * A PDF with one page per text, like {@link #pdf}, but an empty text gives
+	 * a scanned page: an image, without text.
+	 */
+	public static byte[] scannedPdf(String... pageTexts) {
+		try (PDDocument document = new PDDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+			for (String text : pageTexts) {
+				PDPage page = new PDPage();
+				document.addPage(page);
+				try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+					if (text.isEmpty()) {
+						BufferedImage scan = new BufferedImage(200, 260, BufferedImage.TYPE_BYTE_GRAY);
+						content.drawImage(LosslessFactory.createFromImage(document, scan), 0, 0, 612, 792);
+					}
+					else {
 						content.beginText();
 						content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
 						content.newLineAtOffset(72, 700);

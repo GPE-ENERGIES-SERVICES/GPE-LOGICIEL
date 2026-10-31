@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -30,7 +32,10 @@ import eu.gpefrance.tenders.document.DocumentState;
 import eu.gpefrance.tenders.document.Dossier;
 import eu.gpefrance.tenders.document.DossierReadEvent;
 import eu.gpefrance.tenders.document.DossierRepository;
+import eu.gpefrance.tenders.document.DocumentTriage;
+import eu.gpefrance.tenders.document.DocumentTriage.Decision;
 import eu.gpefrance.tenders.document.DossierStatus;
+import eu.gpefrance.tenders.document.PageMethod;
 import eu.gpefrance.tenders.document.PieceType;
 import eu.gpefrance.tenders.tender.Tender;
 import eu.gpefrance.tenders.tender.TenderRepository;
@@ -46,16 +51,24 @@ import eu.gpefrance.tenders.tender.TenderRepository;
 public class AnalysisService {
 
 	/**
-	 * Pieces sent to the model, in this order, as long as they fit.
-	 * Spreadsheets (DPGF, BPU, DQE) and plans are not read.
+	 * Pieces sent to the model for the summary, in this order, as long as they
+	 * fit. Price schedules (DPGF, BPU, DQE) go to the analysis of the prices,
+	 * plans and spreadsheets are not sent.
 	 */
 	static final List<PieceType> ANALYSED_PIECES = List.of(PieceType.RC, PieceType.NOTICE, PieceType.AE,
 			PieceType.CCAP, PieceType.CCTP, PieceType.OTHER);
+
+	/** Pieces sent for the analysis of the prices, in this order. */
+	static final List<PieceType> FINANCIAL_PIECES = List.of(PieceType.DPGF, PieceType.BPU, PieceType.DQE);
 
 	static final List<AnalysisStatus> UNFINISHED = List.of(AnalysisStatus.PENDING, AnalysisStatus.PROCESSING,
 			AnalysisStatus.RETRY_WAITING);
 
 	private static final Logger log = LoggerFactory.getLogger(AnalysisService.class);
+
+	/** Put before the text of a page read by OCR, for the model. */
+	static final String OCR_PAGE = "[Page lue par reconnaissance de caractères (OCR) : le texte peut contenir des "
+			+ "erreurs, surtout sur les chiffres, virgules et montants ; toute valeur de cette page est à vérifier]";
 
 	private final AnalysisRepository analyses;
 
@@ -71,13 +84,18 @@ public class AnalysisService {
 
 	private final AnalysisProperties properties;
 
+	/** Wait before an analysis started by itself is sent: a user may still cancel it. */
+	private final Duration autoStartDelay;
+
 	private final TransactionTemplate transaction;
 
 	private final Clock clock;
 
 	public AnalysisService(AnalysisRepository analyses, DossierRepository dossiers, DocumentPageRepository pages,
 			TenderRepository tenders, AnalysisGate gate, AnalysisWorker worker, AnalysisProperties properties,
-			TransactionTemplate transaction, Clock clock) {
+			TransactionTemplate transaction, Clock clock,
+			@Value("${analysis.auto-start-delay:2m}") Duration autoStartDelay) {
+		this.autoStartDelay = autoStartDelay;
 		this.analyses = analyses;
 		this.dossiers = dossiers;
 		this.pages = pages;
@@ -98,6 +116,19 @@ public class AnalysisService {
 	 * @return the id of the analysis to follow: the new one or the existing one
 	 */
 	public Long request(Long dossierId, boolean force, String requestedBy) {
+		return request(AnalysisKind.DCE_SUMMARY, dossierId, force, requestedBy);
+	}
+
+	/**
+	 * Queues the analysis of the price schedules (DPGF, BPU, DQE) of a
+	 * dossier: only on the request of a user, never by itself.
+	 * @see #request(Long, boolean, String)
+	 */
+	public Long requestFinancial(Long dossierId, boolean force, String requestedBy) {
+		return request(AnalysisKind.FINANCIAL, dossierId, force, requestedBy);
+	}
+
+	private Long request(AnalysisKind kind, Long dossierId, boolean force, String requestedBy) {
 		Status status = gate.status();
 		if (!status.ready()) {
 			throw new AnalysisRejectedException(status.message());
@@ -105,13 +136,13 @@ public class AnalysisService {
 		ExtractionClient client = status.client();
 		Requested requested;
 		try {
-			requested = transaction.execute(tx -> queue(dossierId, force, requestedBy, client));
+			requested = transaction.execute(tx -> queue(kind, dossierId, force, requestedBy, client));
 		}
 		catch (DataIntegrityViolationException ex) {
 			// Another request of the same tender was queued at the same time.
 			requested = transaction.execute(tx -> dossiers.findById(dossierId)
-				.flatMap(dossier -> analyses.findFirstByTenderIdAndStatusInOrderByIdDesc(dossier.getTenderId(),
-						UNFINISHED))
+				.flatMap(dossier -> analyses.findFirstByTenderIdAndKindAndStatusInOrderByIdDesc(dossier.getTenderId(),
+						kind, UNFINISHED))
 				.map(running -> new Requested(running.getId(), false))
 				.orElseThrow(() -> ex));
 		}
@@ -121,27 +152,33 @@ public class AnalysisService {
 		return requested.id();
 	}
 
-	private Requested queue(Long dossierId, boolean force, String requestedBy, ExtractionClient client) {
+	private Requested queue(AnalysisKind kind, Long dossierId, boolean force, String requestedBy,
+			ExtractionClient client) {
 		Dossier dossier = dossiers.findById(dossierId).orElseThrow(() -> new DocumentNotFoundException(dossierId));
 		if (dossier.getStatus() != DossierStatus.DONE) {
 			throw new AnalysisRejectedException(
 					"La lecture du dossier n'est pas terminée : l'analyse sera possible ensuite.");
 		}
-		Optional<Analysis> running = analyses.findFirstByTenderIdAndStatusInOrderByIdDesc(dossier.getTenderId(),
-				UNFINISHED);
+		Optional<Analysis> running = analyses.findFirstByTenderIdAndKindAndStatusInOrderByIdDesc(dossier.getTenderId(),
+				kind, UNFINISHED);
 		if (running.isPresent()) {
 			return new Requested(running.get().getId(), false);
 		}
-		Selection selection = select(dossier);
+		boolean financial = kind == AnalysisKind.FINANCIAL;
+		Selection selection = financial ? selectFinancial(dossier) : select(dossier);
 		if (selection.documents().isEmpty()) {
-			throw new AnalysisRejectedException("Aucun document analysable : il faut au moins un règlement de "
-					+ "consultation, un avis, un acte d'engagement, un CCAP, un CCTP ou une autre pièce dont le texte "
-					+ "a été lu. Vérifiez le type des pièces.");
+			throw new AnalysisRejectedException(financial
+					? "Aucune pièce financière lisible : il faut un DPGF, un BPU ou un DQE (tableur ou PDF) dont le "
+							+ "contenu a été lu. Vérifiez le type des pièces."
+					: "Aucun document analysable : il faut au moins un règlement de consultation, un avis, un acte "
+							+ "d'engagement, un CCAP, un CCTP ou une autre pièce dont le texte a été lu. Vérifiez le "
+							+ "type des pièces.");
 		}
-		String fingerprint = fingerprint(selection.documents(), client.provider() + "/" + client.model());
+		String version = financial ? FinancialPrompt.VERSION : ExtractionPrompt.VERSION;
+		String fingerprint = fingerprint(selection.documents(), client.provider() + "/" + client.model(), version);
 		if (!force) {
-			Optional<Analysis> done = analyses.findFirstByTenderIdAndInputFingerprintAndStatusOrderByIdDesc(
-					dossier.getTenderId(), fingerprint, AnalysisStatus.DONE);
+			Optional<Analysis> done = analyses.findFirstByTenderIdAndKindAndInputFingerprintAndStatusOrderByIdDesc(
+					dossier.getTenderId(), kind, fingerprint, AnalysisStatus.DONE);
 			if (done.isPresent()) {
 				return new Requested(done.get().getId(), false);
 			}
@@ -150,11 +187,15 @@ public class AnalysisService {
 			throw new AnalysisRejectedException("Le plafond mensuel de dépense ne permet pas cette analyse "
 					+ "(estimation locale) : elle n'est pas lancée.");
 		}
-		Analysis analysis = analyses.saveAndFlush(new Analysis(dossier.getTenderId(), dossierId, client.provider(),
-				client.model(), ExtractionPrompt.VERSION, selection.documents().stream().map(Document::getId).toList(),
-				fingerprint, requestedBy, clock.instant()));
-		log.info("Analysis {} of dossier {} queued ({} documents, {} characters)", analysis.getId(), dossierId,
-				selection.documents().size(), selection.characters());
+		Analysis created = new Analysis(kind, dossier.getTenderId(), dossierId, client.provider(), client.model(),
+				version, selection.documents().stream().map(Document::getId).toList(), fingerprint, requestedBy,
+				clock.instant());
+		if (requestedBy == null) {
+			created.delayUntil(clock.instant().plus(autoStartDelay));
+		}
+		Analysis analysis = analyses.saveAndFlush(created);
+		log.info("Analysis {} ({}) of dossier {} queued ({} documents, {} characters)", analysis.getId(), kind,
+				dossierId, selection.documents().size(), selection.characters());
 		return new Requested(analysis.getId(), true);
 	}
 
@@ -170,6 +211,8 @@ public class AnalysisService {
 			return;
 		}
 		Boolean retained = transaction.execute(status -> dossiers.findById(event.dossierId())
+			// A user may have stopped it while the dossier was read.
+			.filter(Dossier::isAutoAnalysis)
 			.flatMap(dossier -> tenders.findById(dossier.getTenderId()))
 			.map(Tender::getRetained)
 			.orElse(null));
@@ -182,6 +225,22 @@ public class AnalysisService {
 		catch (AnalysisRejectedException ex) {
 			log.info("Dossier {} not analysed: {}", event.dossierId(), ex.getBody().getDetail());
 		}
+	}
+
+	/**
+	 * Sends at once an analysis waiting to be sent (started by itself, or
+	 * waiting for a new attempt), instead of waiting for its time.
+	 * @return the tender of the analysis
+	 */
+	public Long sendNow(Long analysisId) {
+		Long tenderId = transaction.execute(status -> {
+			Analysis analysis = analyses.findById(analysisId)
+				.orElseThrow(() -> new AnalysisNotFoundException(analysisId));
+			analysis.sendNow(clock.instant());
+			return analysis.getTenderId();
+		});
+		worker.wakeUp();
+		return tenderId;
 	}
 
 	/**
@@ -203,12 +262,41 @@ public class AnalysisService {
 	 * not fit is left out whole, never cut.
 	 */
 	private Selection select(Dossier dossier) {
-		List<Document> candidates = sorted(dossier.getDocuments()
+		// The rules of DocumentTriage: duplicates once, choices of the users, no plan nor
+		// drawing, most useful first.
+		Map<Long, Decision> decisions = DocumentTriage.decide(dossier.getDocuments(), pages);
+		List<Document> candidates = dossier.getDocuments()
 			.stream()
+			.filter(document -> decisions.get(document.getId()).sentForSummary())
+			.sorted(Comparator.comparingInt((Document document) -> decisions.get(document.getId()).rank())
+				.thenComparing(Document::getFileName))
+			.toList();
+		return fit(candidates);
+	}
+
+	/**
+	 * Readable price schedules, spreadsheets or PDF, as long as they fit:
+	 * they never compete with the pieces of the summary.
+	 */
+	private Selection selectFinancial(Dossier dossier) {
+		Map<Long, Decision> decisions = DocumentTriage.decide(dossier.getDocuments(), pages);
+		return fit(financialPieces(dossier.getDocuments()
+			.stream()
+			.filter(document -> decisions.get(document.getId()).use() == DocumentTriage.Use.FINANCIAL)
+			.toList()));
+	}
+
+	static List<Document> financialPieces(List<Document> documents) {
+		return documents.stream()
 			.filter(document -> document.getState() == DocumentState.READ
 					|| document.getState() == DocumentState.SCANNED)
-			.filter(document -> ANALYSED_PIECES.contains(document.getPieceType()))
-			.toList());
+			.filter(document -> FINANCIAL_PIECES.contains(document.getPieceType()))
+			.sorted(Comparator.comparingInt((Document document) -> FINANCIAL_PIECES.indexOf(document.getPieceType()))
+				.thenComparing(Document::getFileName))
+			.toList();
+	}
+
+	private Selection fit(List<Document> candidates) {
 		List<Document> selected = new ArrayList<>();
 		int length = 0;
 		for (Document document : candidates) {
@@ -235,7 +323,9 @@ public class AnalysisService {
 		Map<Integer, String> texts = new LinkedHashMap<>();
 		for (DocumentPage page : pages.findByDocumentIdOrderByPageNumber(document.getId())) {
 			if (!page.getText().isBlank()) {
-				texts.put(page.getPageNumber(), page.getText());
+				// The model is told which text was read by OCR, so that it never gives its values as sure.
+				texts.put(page.getPageNumber(),
+						page.getMethod() == PageMethod.OCR ? OCR_PAGE + "\n" + page.getText() : page.getText());
 			}
 		}
 		return new SourceDocument(document.getId(), document.getFileName(), document.getPieceType(), texts);
@@ -247,10 +337,14 @@ public class AnalysisService {
 	 * instructions, or another model, gives another fingerprint.
 	 */
 	static String fingerprint(List<Document> documents, String model) {
+		return fingerprint(documents, model, ExtractionPrompt.VERSION);
+	}
+
+	static String fingerprint(List<Document> documents, String model, String version) {
 		String input = documents.stream()
 			.map(document -> document.getSha256() + ":" + document.getPieceType())
 			.sorted()
-			.collect(Collectors.joining("\n", ExtractionPrompt.VERSION + "\n" + model + "\n", ""));
+			.collect(Collectors.joining("\n", version + "\n" + model + "\n", ""));
 		try {
 			return HexFormat.of()
 				.formatHex(MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8)));

@@ -17,6 +17,8 @@
 		<pdfbox.version>3.0.8</pdfbox.version>
 		<jsoup.version>1.23.2</jsoup.version>
 		<anthropic.version>2.34.0</anthropic.version>
+		<poi.version>5.4.1</poi.version>
+		<jbig2.version>3.0.4</jbig2.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -48,6 +50,18 @@
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>
 			<version>${jsoup.version}</version>
+		</dependency>
+		<!-- Scanned pages compressed in JBIG2, very common in scanners: drawn for the OCR (Apache License 2.0) -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>jbig2-imageio</artifactId>
+			<version>${jbig2.version}</version>
+		</dependency>
+		<!-- Spreadsheets of the consultation files (DPGF, BPU, DQE): XLS and XLSX, Apache License 2.0 -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>${poi.version}</version>
 		</dependency>
 		<!-- AI analysis with Claude: used by analysis/anthropic only -->
 		<dependency>

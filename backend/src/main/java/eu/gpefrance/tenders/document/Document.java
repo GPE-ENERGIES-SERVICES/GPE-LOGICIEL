@@ -52,6 +52,11 @@ public class Document {
 	@Column(name = "piece_type_corrected", nullable = false)
 	private boolean pieceTypeCorrected;
 
+	/** Choice of a user on sending it to the AI; null, the rules decide. */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "ai_choice")
+	private AiChoice aiChoice;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private DocumentState state;
@@ -107,9 +112,59 @@ public class Document {
 		}
 	}
 
+	/**
+	 * Some pages without text were read by optical character recognition:
+	 * said with the state, as their text may hold reading errors.
+	 * @param confidence mean confidence of their words, from 0 to 100
+	 */
+	public void noteRecognised(int pages, double confidence) {
+		noteDetail(pages + " page(s) lue(s) par reconnaissance de caractères (OCR), confiance moyenne "
+				+ Math.round(confidence) + " % : texte à vérifier");
+	}
+
+	/**
+	 * The same content was read in full before: its reading is taken.
+	 * @param pdfPath where the readable PDF of this document is
+	 */
+	public void markReadLike(Document read, String pdfPath) {
+		this.pageCount = read.pageCount;
+		this.pdfPath = pdfPath;
+		this.state = read.state;
+		this.stateDetail = read.stateDetail;
+	}
+
+	/**
+	 * Adds what the user should know of the reading to the state.
+	 */
+	public void noteDetail(String note) {
+		String detail = stateDetail == null ? note : stateDetail + " ; " + note;
+		this.stateDetail = detail.length() <= MAX_DETAIL_LENGTH ? detail : detail.substring(0, MAX_DETAIL_LENGTH);
+	}
+
+	/**
+	 * A spreadsheet read, its sheets written as pages of rows and cells.
+	 * @param detail what could not be read in full, or null
+	 */
+	public void markSheetsRead(int pageCount, String detail) {
+		this.pageCount = pageCount;
+		this.pdfPath = null;
+		this.state = DocumentState.READ;
+		this.stateDetail = detail == null || detail.length() <= MAX_DETAIL_LENGTH ? detail
+				: detail.substring(0, MAX_DETAIL_LENGTH);
+	}
+
 	public void resetForRetry() {
 		this.state = DocumentState.PENDING;
 		this.stateDetail = null;
+	}
+
+	/**
+	 * Kept without being read, but still opened as a PDF.
+	 * @param pdfPath the file itself for a PDF, null otherwise
+	 */
+	public void setAside(String reason, String pdfPath) {
+		markNotAnalyzed(reason);
+		this.pdfPath = pdfPath;
 	}
 
 	public void markNotAnalyzed(String reason) {
@@ -157,6 +212,17 @@ public class Document {
 
 	public boolean isPieceTypeCorrected() {
 		return pieceTypeCorrected;
+	}
+
+	public AiChoice getAiChoice() {
+		return aiChoice;
+	}
+
+	/**
+	 * @param choice null to let the rules decide again
+	 */
+	public void chooseForAi(AiChoice choice) {
+		this.aiChoice = choice;
 	}
 
 	public DocumentState getState() {

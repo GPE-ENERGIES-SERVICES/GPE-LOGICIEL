@@ -10,15 +10,75 @@ import {
   formatSize,
   PIECE_TYPE_LABELS,
 } from "@/lib/format";
+import { readingProgress } from "@/lib/progress";
 import { useLoader } from "@/lib/useLoader";
-import { changePieceType, getDossiers, retryDossier, uploadDossier } from "@/services/documentApi";
+import { changeAiChoice, changePieceType, getDossiers, retryDossier, uploadDossier } from "@/services/documentApi";
 import { available, DEMO_DATA } from "@/services/http";
-import type { DocumentInfo, Dossier, PieceType } from "@/types/document";
+import type { AiChoice, AiUse, DocumentInfo, Dossier, PieceType } from "@/types/document";
 
+import { Fold } from "./Fold";
+import { ProgressBar } from "./ProgressBar";
 import { DceLinks } from "./DceLinks";
 import { DocumentSearch } from "./DocumentSearch";
 
-const ACCEPTED = ".zip,.pdf,.doc,.docx,.odt,.rtf,.xls,.xlsx,.xlsm,.ods,.csv,.dwg,.dxf,.jpg,.jpeg,.png,.tif,.tiff";
+const ACCEPTED = ".zip,.pdf,.doc,.docx,.odt,.rtf,.xls,.xlsx,.xlsm,.ods,.csv,.dwg,.dxf,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.gif,.heic,.heif";
+
+const AI_USE_LABELS: Record<AiUse, string> = {
+  SUMMARY: "Envoyé à l'IA",
+  IF_ROOM: "Si la place le permet",
+  FINANCIAL: "Analyse financière",
+  EXCLUDED: "Non envoyé",
+};
+
+/** What is sent to the AI, why, and the choice of the user that prevails over the rules. */
+function AiCell({ document, onChanged }: { document: DocumentInfo; onChanged: () => void }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!document.aiUse) {
+    return <>–</>;
+  }
+
+  const choose = async (choice: AiChoice | null) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await changeAiChoice(document.id, choice);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Modification impossible.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sent = document.aiUse !== "EXCLUDED";
+  return (
+    <>
+      <span className={document.aiUse === "SUMMARY" ? "badge verified" : sent ? "badge" : "badge muted-badge"}>
+        {AI_USE_LABELS[document.aiUse]}
+      </span>
+      {document.aiReason && <p className="hint">{document.aiReason}</p>}
+      {!DEMO_DATA && (
+        <div className="field-actions">
+          {document.aiChoice ? (
+            <button type="button" className="link-button" onClick={() => choose(null)} disabled={saving}>
+              Revenir au choix automatique
+            </button>
+          ) : sent ? (
+            <button type="button" className="link-button" onClick={() => choose("EXCLUDE")} disabled={saving}>
+              Exclure
+            </button>
+          ) : (
+            <button type="button" className="link-button" onClick={() => choose("INCLUDE")} disabled={saving}>
+              Forcer l&apos;envoi
+            </button>
+          )}
+        </div>
+      )}
+      {error && <p className="error">{error}</p>}
+    </>
+  );
+}
 
 function DocumentRow({ document, onChanged }: { document: DocumentInfo; onChanged: () => void }) {
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +116,9 @@ function DocumentRow({ document, onChanged }: { document: DocumentInfo; onChange
         <span className={analysed ? "badge" : "badge urgent"}>{DOCUMENT_STATE_LABELS[document.state]}</span>
         {document.stateDetail && <p className="hint">{document.stateDetail}</p>}
       </td>
+      <td className="ai-cell">
+        <AiCell document={document} onChanged={onChanged} />
+      </td>
       <td>{document.pageCount ?? "–"}</td>
       <td>{formatSize(document.sizeBytes)}</td>
       <td className="actions">
@@ -80,6 +143,7 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
   const notAnalysed = dossier.documents.filter(
     (document) => document.state === "FAILED" || document.state === "NOT_ANALYZED",
   ).length;
+  const read = dossier.documents.filter((document) => document.state === "READ" || document.state === "SCANNED").length;
 
   const retry = async () => {
     setRetrying(true);
@@ -91,8 +155,11 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
     }
   };
 
+  const progress = readingProgress(dossier);
+
   return (
     <div className="dossier">
+      {progress && <ProgressBar {...progress} />}
       <p>
         <strong>Version {dossier.version}</strong>{" "}
         {dossier.origin === "RETRIEVED"
@@ -120,24 +187,31 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
           Relancer la lecture des documents en échec
         </button>
       )}
-      <table>
-        <thead>
-          <tr>
-            <th>Fichier</th>
-            <th>Format</th>
-            <th>Type de pièce</th>
-            <th>État</th>
-            <th>Pages</th>
-            <th>Taille</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {dossier.documents.map((document) => (
-            <DocumentRow key={document.id} document={document} onChanged={onChanged} />
-          ))}
-        </tbody>
-      </table>
+      <Fold
+        title="Fichiers du dossier"
+        count={`${read} lu${read > 1 ? "s" : ""} sur ${dossier.documents.length}`}
+        className="dossier-files"
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>Fichier</th>
+              <th>Format</th>
+              <th>Type de pièce</th>
+              <th>État</th>
+              <th>Envoi à l&apos;IA</th>
+              <th>Pages</th>
+              <th>Taille</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {dossier.documents.map((document) => (
+              <DocumentRow key={document.id} document={document} onChanged={onChanged} />
+            ))}
+          </tbody>
+        </table>
+      </Fold>
     </div>
   );
 }
@@ -151,6 +225,9 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // What is about to be uploaded, shown before sending; files dropped on the zone count too.
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
   const reading = data?.some((dossier) => dossier.status === "PENDING" || dossier.status === "PROCESSING") ?? false;
 
   // Documents are read in the background: refresh until it is over.
@@ -176,6 +253,7 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
       if (fileInput.current) {
         fileInput.current.value = "";
       }
+      setChosen([]);
       reload();
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Dépôt impossible.");
@@ -186,20 +264,57 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
 
   return (
     <div>
-      <h3>Accès au DCE</h3>
+      <h3>1. Récupérer le DCE sur la plateforme de l&apos;acheteur</h3>
       <DceLinks tenderId={tenderId} />
-      <h3>Dossiers déposés</h3>
-      <form className="upload" onSubmit={submit}>
+      <h3>2. Le déposer ici</h3>
+      <form
+        className={dragging ? "upload dropping" : "upload"}
+        onSubmit={submit}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          if (fileInput.current && event.dataTransfer.files.length) {
+            fileInput.current.files = event.dataTransfer.files;
+            setChosen(Array.from(event.dataTransfer.files, (file) => file.name));
+          }
+        }}
+      >
+        <p className="upload-title">Glissez le DCE ici (archive ZIP ou fichiers), ou choisissez-le</p>
         <p className="hint">
-          Téléchargez le DCE sur la plateforme de l&apos;acheteur puis déposez-le ici (archive ZIP ou fichiers). Chaque
-          dépôt crée une nouvelle version du dossier.
+          Chaque dépôt crée une nouvelle version du dossier ; les versions précédentes sont conservées.
         </p>
-        <input ref={fileInput} type="file" multiple accept={ACCEPTED} aria-label="Fichiers du DCE" />
-        <button type="submit" className="primary" disabled={uploading}>
-          {uploading ? "Dépôt en cours…" : "Déposer le dossier"}
-        </button>
+        <div className="upload-row">
+          <input
+            ref={fileInput}
+            id="dce-files"
+            className="file-input"
+            type="file"
+            multiple
+            accept={ACCEPTED}
+            onChange={(event) => setChosen(Array.from(event.target.files ?? [], (file) => file.name))}
+          />
+          <label htmlFor="dce-files" className="button">
+            Choisir des fichiers
+          </label>
+          <span className="hint">
+            {chosen.length === 0
+              ? "Aucun fichier choisi"
+              : chosen.length === 1
+                ? chosen[0]
+                : `${chosen.length} fichiers choisis`}
+          </span>
+          <button type="submit" className="primary" disabled={uploading || chosen.length === 0}>
+            {uploading ? "Dépôt en cours…" : "Déposer le dossier"}
+          </button>
+        </div>
         {uploadError && <p className="error">{uploadError}</p>}
       </form>
+      <h3>3. Dossier déposé et ses fichiers</h3>
       {error && <p className="error">{error}</p>}
       {data && data.length === 0 && <p className="muted">Aucun dossier déposé.</p>}
       {data?.[0]?.status === "DONE" && available("documentSearch") && <DocumentSearch tenderId={tenderId} />}

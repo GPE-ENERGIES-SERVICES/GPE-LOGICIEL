@@ -7,9 +7,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -38,6 +40,10 @@ class ArchiveExtractorTests {
 		assertThat(files).extracting(ExtractedFile::displayName)
 			.containsExactly("DCE.zip/RC.pdf", "DCE.zip/Pieces/CCTP.pdf");
 		assertThat(Files.readString(files.get(1).path())).isEqualTo("cctp");
+		// Size and fingerprint taken while writing, without reading the file again.
+		assertThat(files.get(1).size()).isEqualTo(4);
+		assertThat(files.get(1).sha256())
+			.isEqualTo(HexFormat.of().formatHex(ArchiveExtractor.sha256().digest("cctp".getBytes(StandardCharsets.UTF_8))));
 	}
 
 	@Test

@@ -16,13 +16,17 @@ import eu.gpefrance.tenders.document.PieceType;
  * @param validatedBy who validated the whole sheet, or null
  * @param errorKind why it failed or waits for a new attempt
  * @param nextAttemptAt when it is tried again, while waiting
+ * @param startedAt when it was last sent to the AI, null before
  * @param requestedBy who asked for it, null when automatic
+ * @param decision the decision help, null in the history and for the analyses made
+ * before it existed
  */
 public record AnalysisResponse(Long id, Long dossierId, int dossierVersion, AnalysisStatus status, String provider,
-		String model, String promptVersion, FailureKind errorKind, int attempts, Instant nextAttemptAt, String requestedBy,
-		Instant createdAt, Instant finishedAt, String errorMessage, Integer inputTokens, Integer outputTokens,
-		BigDecimal cost, Instant noticeDeadline, String validatedBy, Instant validatedAt, List<FieldResponse> fields,
-		List<DocumentResponse> documents) {
+		String model, String promptVersion, FailureKind errorKind, int attempts, Instant nextAttemptAt,
+		Instant startedAt, String requestedBy, Instant createdAt, Instant finishedAt, String errorMessage,
+		Integer inputTokens, Integer outputTokens,
+		BigDecimal cost, Instant noticeDeadline, String validatedBy, Instant validatedAt, Decision decision,
+		List<FieldResponse> fields, List<DocumentResponse> documents) {
 
 	/**
 	 * @param value the value of the model, kept even when corrected
@@ -37,9 +41,10 @@ public record AnalysisResponse(Long id, Long dossierId, int dossierVersion, Anal
 	/**
 	 * @param analysed whether the document was given to the model
 	 * @param readable whether a PDF version can be opened at a given page
+	 * @param aiReason why the rules send it to the AI or not
 	 */
 	public record DocumentResponse(Long id, String fileName, PieceType pieceType, DocumentState state,
-			String stateDetail, boolean analysed, boolean readable) {
+			String stateDetail, boolean analysed, boolean readable, String aiReason) {
 	}
 
 	/**
@@ -48,9 +53,27 @@ public record AnalysisResponse(Long id, Long dossierId, int dossierVersion, Anal
 	 * @param unavailableReason why not, when not configured
 	 * @param latest the latest analysis, or null
 	 * @param history every analysis of the tender, latest first
+	 * @param typicalSeconds how long an analysis of this kind usually takes once
+	 * sent, null before any
 	 */
 	public record TenderAnalysis(boolean configured, String unavailableReason, List<GridField> grid,
-			AnalysisResponse latest, List<AnalysisResponse> history) {
+			AnalysisResponse latest, List<AnalysisResponse> history, Long typicalSeconds) {
+	}
+
+	/**
+	 * The analysis of the price schedules of a tender.
+	 * @param configured whether an analysis can be started now
+	 * @param unavailableReason why not, when not configured
+	 * @param pieces the DPGF, BPU and DQE of the latest dossier, read or not;
+	 * analysed tells whether the latest analysis used them
+	 * @param latest the latest analysis of the prices, or null
+	 * @param result its result, once done
+	 * @param previous earlier analyses of the prices, kept
+	 * @param typicalSeconds how long an analysis of the prices usually takes once
+	 * sent, null before any
+	 */
+	public record FinancialAnalysis(boolean configured, String unavailableReason, List<DocumentResponse> pieces,
+			AnalysisResponse latest, FinancialResult result, int previous, Long typicalSeconds) {
 	}
 
 }

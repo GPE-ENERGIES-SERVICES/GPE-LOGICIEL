@@ -59,7 +59,7 @@ class DocumentApiTests {
 
 	@Test
 	void readsAnUploadedArchiveAndReportsEachDocument() throws InterruptedException {
-		byte[] archive = TestFiles.zip(entries("RC.pdf", TestFiles.pdf("Date limite : 15/11/2026", ""),
+		byte[] archive = TestFiles.zip(entries("RC.pdf", TestFiles.scannedPdf("Date limite : 15/11/2026", ""),
 				"DPGF lot 1.xlsx", "tableur", "CCTP.docx", "word"));
 
 		assertThat(upload(new MockMultipartFile("files", "DCE.zip", "application/zip", archive)))
@@ -79,7 +79,9 @@ class DocumentApiTests {
 
 		DossierResponse.DocumentResponse dpgf = dossier.documents().get(1);
 		assertThat(dpgf.pieceType()).isEqualTo(PieceType.DPGF);
-		assertThat(dpgf.state()).isEqualTo(DocumentState.NOT_ANALYZED);
+		// Its content is not a spreadsheet, whatever its name.
+		assertThat(dpgf.state()).isEqualTo(DocumentState.FAILED);
+		assertThat(dpgf.stateDetail()).contains("ne correspond pas à l'extension");
 
 		DossierResponse.DocumentResponse rc = dossier.documents().get(2);
 		assertThat(rc.pieceType()).isEqualTo(PieceType.RC);

@@ -33,6 +33,10 @@ public class DocumentPage {
 	@Column(nullable = false, updatable = false)
 	private PageMethod method;
 
+	/** Words read by OCR, with position and confidence, as JSON; null for the other pages. */
+	@Column(updatable = false)
+	private String words;
+
 	protected DocumentPage() {
 	}
 
@@ -41,6 +45,23 @@ public class DocumentPage {
 		this.pageNumber = pageNumber;
 		this.text = text;
 		this.method = method;
+	}
+
+	/**
+	 * A page read by OCR, with its words.
+	 */
+	public DocumentPage(Long documentId, int pageNumber, String text, String words) {
+		this(documentId, pageNumber, text, PageMethod.OCR);
+		this.words = words;
+	}
+
+	/**
+	 * The same page for another document of the same content.
+	 */
+	public DocumentPage copyFor(Long otherDocumentId) {
+		DocumentPage copy = new DocumentPage(otherDocumentId, pageNumber, text, method);
+		copy.words = words;
+		return copy;
 	}
 
 	public Long getId() {
@@ -61,6 +82,10 @@ public class DocumentPage {
 
 	public PageMethod getMethod() {
 		return method;
+	}
+
+	public String getWords() {
+		return words;
 	}
 
 }

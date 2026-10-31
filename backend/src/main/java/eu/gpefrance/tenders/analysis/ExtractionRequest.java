@@ -7,7 +7,7 @@ import java.time.Duration;
  * decides (instructions, expected format, limits) is here; the provider only
  * adapts it to its API: a provider without structured output may ignore the
  * schema, the answer is checked anyway.
- * @param analysisType kind of analysis, {@link #DCE_SUMMARY} only today
+ * @param analysisType kind of analysis, {@link #DCE_SUMMARY} or {@link #FINANCIAL}
  * @param promptVersion version of the grid and of the instructions
  * @param instructions system instructions: what to extract and how to answer
  * @param documents text of the documents, page by page, each tagged with its
@@ -21,5 +21,7 @@ public record ExtractionRequest(String analysisType, String promptVersion, Strin
 		String outputSchema, int maxOutputTokens, double temperature, Duration timeout) {
 
 	public static final String DCE_SUMMARY = "DCE_SUMMARY";
+
+	public static final String FINANCIAL = "FINANCIAL";
 
 }

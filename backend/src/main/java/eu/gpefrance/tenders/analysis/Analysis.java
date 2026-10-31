@@ -22,6 +22,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * One extraction run on a dossier, kept with the model and the version of the
@@ -32,6 +34,8 @@ import jakarta.persistence.Table;
 public class Analysis {
 
 	private static final int MAX_ERROR_LENGTH = 2000;
+
+	private static final JsonMapper JSON = JsonMapper.builder().build();
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -105,6 +109,22 @@ public class Analysis {
 	@Column(name = "locked_by")
 	private String lockedBy;
 
+	/** When it was last sent to the AI, to tell how long analyses take. */
+	@Column(name = "started_at")
+	private Instant startedAt;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, updatable = false)
+	private AnalysisKind kind = AnalysisKind.DCE_SUMMARY;
+
+	/** The result of an analysis of the prices, as JSON. */
+	@Column(name = "financial")
+	private String financial;
+
+	/** The decision as checked JSON, null for the analyses made before it existed. */
+	@Column(name = "decision")
+	private String decision;
+
 	@OneToMany(mappedBy = "analysis", cascade = CascadeType.ALL)
 	@OrderBy("id")
 	private List<ExtractedField> fields = new ArrayList<>();
@@ -127,6 +147,17 @@ public class Analysis {
 	 */
 	public Analysis(Long tenderId, Long dossierId, String provider, String model, String promptVersion,
 			Collection<Long> documentIds, String inputFingerprint, String requestedBy, Instant now) {
+		this(AnalysisKind.DCE_SUMMARY, tenderId, dossierId, provider, model, promptVersion, documentIds,
+				inputFingerprint, requestedBy, now);
+	}
+
+	/**
+	 * A queued analysis of the given kind.
+	 */
+	public Analysis(AnalysisKind kind, Long tenderId, Long dossierId, String provider, String model,
+			String promptVersion, Collection<Long> documentIds, String inputFingerprint, String requestedBy,
+			Instant now) {
+		this.kind = kind;
 		this.tenderId = tenderId;
 		this.dossierId = dossierId;
 		this.provider = provider;
@@ -147,11 +178,77 @@ public class Analysis {
 		return field;
 	}
 
+	void recordFinancial(FinancialResult result) {
+		financial = result == null ? null : JSON.writeValueAsString(result);
+	}
+
+	/**
+	 * @return the result of an analysis of the prices, or null when there is
+	 * none or it cannot be read
+	 */
+	public FinancialResult getFinancial() {
+		if (financial == null) {
+			return null;
+		}
+		try {
+			return JSON.readValue(financial, FinancialResult.class);
+		}
+		catch (JacksonException ex) {
+			return null;
+		}
+	}
+
+	public AnalysisKind getKind() {
+		return kind;
+	}
+
+	void recordDecision(Decision newDecision) {
+		decision = newDecision == null ? null : JSON.writeValueAsString(newDecision);
+	}
+
+	/**
+	 * @return the decision, or null when there is none or it cannot be read
+	 */
+	public Decision getDecision() {
+		if (decision == null) {
+			return null;
+		}
+		try {
+			return JSON.readValue(decision, Decision.class);
+		}
+		catch (JacksonException ex) {
+			return null;
+		}
+	}
+
+	/**
+	 * An analysis started by itself waits a little, so that a user may still
+	 * cancel it before anything is sent.
+	 */
+	void delayUntil(Instant time) {
+		nextAttemptAt = time;
+	}
+
+	/**
+	 * A user does not want to wait: it is due now.
+	 */
+	void sendNow(Instant now) {
+		if (status != AnalysisStatus.PENDING && status != AnalysisStatus.RETRY_WAITING) {
+			throw new AnalysisRejectedException("Seule une analyse en attente peut être envoyée tout de suite.");
+		}
+		nextAttemptAt = now;
+	}
+
+	public Instant getStartedAt() {
+		return startedAt;
+	}
+
 	/**
 	 * Taken by a worker, just before the call to the provider.
 	 */
 	void claim(String worker, Instant now) {
 		status = AnalysisStatus.PROCESSING;
+		startedAt = now;
 		attempts++;
 		lockedBy = worker;
 		lockedAt = now;

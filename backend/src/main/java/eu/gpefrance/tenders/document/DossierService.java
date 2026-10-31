@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -74,7 +73,9 @@ public class DossierService {
 		Path dossierDirectory = storage.resolve(directory);
 		try {
 			List<StoredFile> stored = store(nonEmpty.stream()
-				.map(file -> new Source(file.getOriginalFilename(), file::getInputStream))
+				// The file received is moved where it is kept (transferTo with a File renames it), not copied.
+				.map(file -> new Source(file.getOriginalFilename(), file::getInputStream,
+						target -> file.transferTo(target.toFile())))
 				.toList(), dossierDirectory, new ArrayList<>());
 			return transaction.execute(status -> {
 				Dossier dossier = new Dossier(tenderId, version, uploadedBy, clock.instant());
@@ -104,17 +105,20 @@ public class DossierService {
 		List<StoredFile> stored = new ArrayList<>();
 		for (Source file : files) {
 			String name = FileStorage.safeName(file.name());
-			try (InputStream in = file.content().open()) {
+			try {
 				if (ArchiveExtractor.isZip(name)) {
-					Path archive = storage.store(in, archivesDirectory, name);
+					Path archive = keep(file, archivesDirectory, name, null);
 					archives.add(archive);
 					Path target = FileStorage.uniquePath(filesDirectory, name.substring(0, name.length() - 4));
 					for (ExtractedFile extracted : archiveExtractor.extract(archive, name, target)) {
-						stored.add(describe(extracted.displayName(), extracted.path()));
+						stored.add(new StoredFile(extracted.displayName(), extracted.path(), extracted.size(),
+								extracted.sha256()));
 					}
 				}
 				else {
-					stored.add(describe(name, storage.store(in, filesDirectory, name)));
+					MessageDigest sha256 = ArchiveExtractor.sha256();
+					Path path = keep(file, filesDirectory, name, sha256);
+					stored.add(new StoredFile(name, path, Files.size(path), HexFormat.of().formatHex(sha256.digest())));
 				}
 			}
 			catch (IOException ex) {
@@ -127,21 +131,25 @@ public class DossierService {
 		return stored;
 	}
 
-	private static StoredFile describe(String displayName, Path path) throws IOException {
-		return new StoredFile(displayName, path, Files.size(path), sha256(path));
-	}
-
 	/**
-	 * Fingerprint of the content: the same file uploaded twice is recognised.
+	 * Keeps a file in the directory: moved when it can be (a file the server
+	 * has just received), copied otherwise, its fingerprint taken on the way.
+	 * @param sha256 receives its content, or null
 	 */
-	static String sha256(Path path) throws IOException {
-		try (DigestInputStream in = new DigestInputStream(Files.newInputStream(path),
-				MessageDigest.getInstance("SHA-256"))) {
-			in.transferTo(OutputStream.nullOutputStream());
-			return HexFormat.of().formatHex(in.getMessageDigest().digest());
+	private Path keep(Source file, Path directory, String name, MessageDigest sha256) throws IOException {
+		if (file.mover() != null) {
+			Files.createDirectories(directory);
+			Path target = FileStorage.uniquePath(directory, name);
+			file.mover().moveTo(target);
+			if (sha256 != null) {
+				try (InputStream in = new DigestInputStream(Files.newInputStream(target), sha256)) {
+					in.transferTo(OutputStream.nullOutputStream());
+				}
+			}
+			return target;
 		}
-		catch (NoSuchAlgorithmException ex) {
-			throw new IllegalStateException(ex);
+		try (InputStream in = file.content().open()) {
+			return storage.store(sha256 == null ? in : new DigestInputStream(in, sha256), directory, name);
 		}
 	}
 
@@ -177,7 +185,7 @@ public class DossierService {
 		try {
 			List<Path> archives = new ArrayList<>();
 			List<StoredFile> stored = store(files.stream()
-				.map(file -> new Source(file.fileName(), () -> Files.newInputStream(file.path())))
+				.map(file -> new Source(file.fileName(), () -> Files.newInputStream(file.path()), null))
 				.toList(), dossierDirectory, archives);
 			Previous previous = transaction.execute(status -> dossiers.findByTenderIdOrderByVersionDesc(tenderId)
 				.stream()
@@ -223,8 +231,19 @@ public class DossierService {
 	private record Previous(int version, List<String> sha256) {
 	}
 
-	/** A file to keep: its name and how to read it. */
-	private record Source(String name, Opener content) {
+	/**
+	 * A file to keep: its name and how to read it.
+	 * @param mover moves it where it is kept, faster than a copy; null when it
+	 * must be copied
+	 */
+	private record Source(String name, Opener content, Mover mover) {
+	}
+
+	@FunctionalInterface
+	private interface Mover {
+
+		void moveTo(Path target) throws IOException;
+
 	}
 
 	@FunctionalInterface

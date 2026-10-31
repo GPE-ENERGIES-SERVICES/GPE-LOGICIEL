@@ -14,7 +14,17 @@ export type DocumentInfo = {
   stateDetail: string | null;
   pageCount: number | null;
   readable: boolean;
+  /** Whether the document is sent to the AI, and for what; absent in the demonstration data. */
+  aiUse?: AiUse | null;
+  /** Why, as decided by the rules or by a user. */
+  aiReason?: string | null;
+  /** Choice of a user, which prevails over the rules; null: the rules decide. */
+  aiChoice?: AiChoice | null;
 };
+
+export type AiUse = "SUMMARY" | "IF_ROOM" | "FINANCIAL" | "EXCLUDED";
+
+export type AiChoice = "INCLUDE" | "EXCLUDE";
 
 export type Dossier = {
   id: number;
@@ -27,6 +37,8 @@ export type Dossier = {
   uploadedBy: string | null;
   uploadedAt: string;
   processedAt: string | null;
+  /** Whether its analysis may start by itself once read; absent in the demonstration data. */
+  autoAnalysis?: boolean;
   documents: DocumentInfo[];
 };
 

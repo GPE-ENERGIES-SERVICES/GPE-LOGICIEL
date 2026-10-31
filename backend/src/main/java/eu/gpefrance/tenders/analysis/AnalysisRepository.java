@@ -21,12 +21,19 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 
 	List<Analysis> findByStatusIn(Collection<AnalysisStatus> statuses);
 
-	Optional<Analysis> findFirstByTenderIdAndStatusInOrderByIdDesc(Long tenderId, Collection<AnalysisStatus> statuses);
+	List<Analysis> findByTenderIdAndKindOrderByIdDesc(Long tenderId, AnalysisKind kind);
 
-	Optional<Analysis> findFirstByTenderIdAndInputFingerprintAndStatusOrderByIdDesc(Long tenderId, String fingerprint,
-			AnalysisStatus status);
+	Optional<Analysis> findFirstByTenderIdAndKindAndStatusInOrderByIdDesc(Long tenderId, AnalysisKind kind,
+			Collection<AnalysisStatus> statuses);
+
+	Optional<Analysis> findFirstByTenderIdAndKindAndInputFingerprintAndStatusOrderByIdDesc(Long tenderId,
+			AnalysisKind kind, String fingerprint, AnalysisStatus status);
 
 	List<Analysis> findAllByOrderByIdDesc(Pageable pageable);
+
+	/** The latest finished analyses of a kind, to tell how long they take. */
+	List<Analysis> findTop20ByKindAndStatusAndStartedAtNotNullOrderByIdDesc(AnalysisKind kind,
+			AnalysisStatus status);
 
 	long countByStatus(AnalysisStatus status);
 

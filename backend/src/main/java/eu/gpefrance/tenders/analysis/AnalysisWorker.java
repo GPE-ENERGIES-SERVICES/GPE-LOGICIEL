@@ -25,9 +25,11 @@ import eu.gpefrance.tenders.analysis.AnswerReader.Proposal;
 import eu.gpefrance.tenders.analysis.AnswerReader.UnreadableAnswerException;
 import eu.gpefrance.tenders.analysis.ExtractionClient.ModelAnswer;
 import eu.gpefrance.tenders.analysis.ExtractionPrompt.SourceDocument;
+import eu.gpefrance.tenders.document.Document;
 import eu.gpefrance.tenders.document.DocumentPageRepository;
 import eu.gpefrance.tenders.document.Dossier;
 import eu.gpefrance.tenders.document.DossierRepository;
+import eu.gpefrance.tenders.filter.FilterCriteriaRepository;
 import eu.gpefrance.tenders.tender.Tender;
 import eu.gpefrance.tenders.tender.TenderRepository;
 import jakarta.annotation.PreDestroy;
@@ -59,6 +61,10 @@ public class AnalysisWorker {
 
 	private final TenderRepository tenders;
 
+	private final FilterCriteriaRepository criteria;
+
+	private final PriceSchedules priceSchedules;
+
 	private final AnalysisGate gate;
 
 	private final AnalysisProperties properties;
@@ -77,12 +83,15 @@ public class AnalysisWorker {
 	private final AtomicInteger active = new AtomicInteger();
 
 	public AnalysisWorker(AnalysisRepository analyses, DossierRepository dossiers, DocumentPageRepository pages,
-			TenderRepository tenders, AnalysisGate gate, AnalysisProperties properties, JdbcTemplate jdbc,
-			TransactionTemplate transaction, Clock clock) {
+			TenderRepository tenders, FilterCriteriaRepository criteria, PriceSchedules priceSchedules,
+			AnalysisGate gate, AnalysisProperties properties, JdbcTemplate jdbc, TransactionTemplate transaction,
+			Clock clock) {
 		this.analyses = analyses;
 		this.dossiers = dossiers;
 		this.pages = pages;
 		this.tenders = tenders;
+		this.criteria = criteria;
+		this.priceSchedules = priceSchedules;
 		this.gate = gate;
 		this.properties = properties;
 		this.jdbc = jdbc;
@@ -212,19 +221,32 @@ public class AnalysisWorker {
 		ExtractionClient client = status.client();
 		ModelAnswer answer = null;
 		try {
-			answer = client.complete(new ExtractionRequest(ExtractionRequest.DCE_SUMMARY, ExtractionPrompt.VERSION,
-					ExtractionPrompt.instructions(), ExtractionPrompt.documents(prepared.sources()),
-					ExtractionPrompt.outputSchema(), properties.maxOutputTokens(), 0, properties.requestTimeout()));
+			answer = client.complete(request(prepared));
 			Map<Long, Map<Integer, String>> texts = prepared.sources()
 				.stream()
 				.collect(Collectors.toMap(SourceDocument::id, SourceDocument::pages));
+			if (prepared.kind() == AnalysisKind.FINANCIAL) {
+				FinancialResult result = FinancialReader.read(answer.text(), texts, prepared.checks(),
+						prepared.notSent());
+				ModelAnswer usage = answer;
+				transaction.executeWithoutResult(tx -> {
+					Analysis analysis = analyses.findById(analysisId).orElseThrow();
+					analysis.recordFinancial(result);
+					analysis.finish(usage.inputTokens(), usage.outputTokens(), clock.instant());
+				});
+				log.info("Analysis {} of the prices done ({} items, {} points, {} / {} tokens)", analysisId,
+						result.items().size(), result.points().size(), usage.inputTokens(), usage.outputTokens());
+				return;
+			}
 			List<Proposal> proposals = AnswerChecker.check(AnswerReader.read(answer.text(), texts.keySet()), texts,
 					prepared.noticeDeadline());
+			Decision decision = readDecision(analysisId, answer.text(), texts);
 			ModelAnswer usage = answer;
 			transaction.executeWithoutResult(tx -> {
 				Analysis analysis = analyses.findById(analysisId).orElseThrow();
 				proposals.forEach(proposal -> analysis.addField(proposal.key(), proposal.value(), proposal.quote(),
 						proposal.documentId(), proposal.page(), proposal.state()));
+				analysis.recordDecision(decision);
 				analysis.finish(usage.inputTokens(), usage.outputTokens(), clock.instant());
 			});
 			log.info("Analysis {} done ({} fields, {} / {} tokens)", analysisId, proposals.size(), usage.inputTokens(),
@@ -243,6 +265,20 @@ public class AnalysisWorker {
 		}
 	}
 
+	/**
+	 * The decision is an addition to the grid: an answer without a readable
+	 * one keeps its grid, and the sheet says the decision is missing.
+	 */
+	private static Decision readDecision(Long analysisId, String answer, Map<Long, Map<Integer, String>> texts) {
+		try {
+			return DecisionReader.read(answer, texts);
+		}
+		catch (RuntimeException ex) {
+			log.warn("Analysis {}: decision not readable ({})", analysisId, ex.getClass().getSimpleName());
+			return null;
+		}
+	}
+
 	private Prepared prepare(Long analysisId) {
 		Analysis analysis = analyses.findById(analysisId).orElse(null);
 		if (analysis == null || analysis.getStatus() != AnalysisStatus.PROCESSING
@@ -250,12 +286,55 @@ public class AnalysisWorker {
 			return null;
 		}
 		Dossier dossier = dossiers.findById(analysis.getDossierId()).orElseThrow();
-		List<SourceDocument> sources = AnalysisService.sorted(dossier.getDocuments()
+		List<Document> sent = dossier.getDocuments()
 			.stream()
 			.filter(document -> analysis.getDocumentIds().contains(document.getId()))
-			.toList()).stream().map(document -> AnalysisService.load(document, pages)).toList();
+			.toList();
+		if (analysis.getKind() == AnalysisKind.FINANCIAL) {
+			return prepareFinancial(dossier, sent);
+		}
+		List<SourceDocument> sources = AnalysisService.sorted(sent)
+			.stream()
+			.map(document -> AnalysisService.load(document, pages))
+			.toList();
 		Instant noticeDeadline = tenders.findById(analysis.getTenderId()).map(Tender::getDeadline).orElse(null);
-		return new Prepared(sources, sources.stream().mapToLong(SourceDocument::length).sum(), noticeDeadline);
+		String company = ExtractionPrompt.company(criteria.findAll().stream().findFirst().orElse(null));
+		return new Prepared(AnalysisKind.DCE_SUMMARY, sources,
+				sources.stream().mapToLong(SourceDocument::length).sum() + company.length(), noticeDeadline, company,
+				List.of(), List.of());
+	}
+
+	/**
+	 * The price schedules sent, the checks of their sheets made by code, and
+	 * the financial pieces of the dossier left out, with why.
+	 */
+	private Prepared prepareFinancial(Dossier dossier, List<Document> sent) {
+		List<Document> ordered = AnalysisService.financialPieces(sent);
+		List<SourceDocument> sources = ordered.stream().map(document -> AnalysisService.load(document, pages)).toList();
+		PriceSchedules.Checked checked = priceSchedules.check(ordered);
+		List<PriceCheck> checks = checked.checks();
+		List<String> notSent = dossier.getDocuments()
+			.stream()
+			.filter(document -> AnalysisService.FINANCIAL_PIECES.contains(document.getPieceType()))
+			.filter(document -> !sent.contains(document))
+			.map(document -> document.getFileName() + " : " + (document.getStateDetail() != null
+					? document.getStateDetail() : "trop volumineux pour une seule analyse"))
+			.toList();
+		String controls = FinancialPrompt.controls(checks, notSent) + checked.tables();
+		return new Prepared(AnalysisKind.FINANCIAL, sources,
+				sources.stream().mapToLong(SourceDocument::length).sum() + controls.length(), null, controls, checks,
+				notSent);
+	}
+
+	private ExtractionRequest request(Prepared prepared) {
+		if (prepared.kind() == AnalysisKind.FINANCIAL) {
+			return new ExtractionRequest(ExtractionRequest.FINANCIAL, FinancialPrompt.VERSION,
+					FinancialPrompt.instructions(), prepared.preamble() + ExtractionPrompt.documents(prepared.sources()),
+					FinancialPrompt.outputSchema(), properties.maxOutputTokens(), 0, properties.requestTimeout());
+		}
+		return new ExtractionRequest(ExtractionRequest.DCE_SUMMARY, ExtractionPrompt.VERSION,
+				ExtractionPrompt.instructions(), prepared.preamble() + ExtractionPrompt.documents(prepared.sources()),
+				ExtractionPrompt.outputSchema(), properties.maxOutputTokens(), 0, properties.requestTimeout());
 	}
 
 	/**
@@ -352,7 +431,14 @@ public class AnalysisWorker {
 		return count == null ? 0 : count;
 	}
 
-	private record Prepared(List<SourceDocument> sources, long characters, Instant noticeDeadline) {
+	/**
+	 * @param preamble what comes before the documents: what is known of the
+	 * company for a summary, the checks made by code for the prices
+	 * @param checks checks of the price schedules, empty for a summary
+	 * @param notSent financial pieces left out, empty for a summary
+	 */
+	private record Prepared(AnalysisKind kind, List<SourceDocument> sources, long characters,
+			Instant noticeDeadline, String preamble, List<PriceCheck> checks, List<String> notSent) {
 	}
 
 }

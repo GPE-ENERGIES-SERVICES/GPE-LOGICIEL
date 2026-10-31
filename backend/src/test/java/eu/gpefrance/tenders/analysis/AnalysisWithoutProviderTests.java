@@ -106,7 +106,7 @@ class AnalysisWithoutProviderTests {
 			.isLenientlyEqualTo("""
 					{"state": "DISABLED", "enabled": false, "provider": "none", "model": null,
 					 "externalTransmissionAllowed": false, "availableProviders": ["anthropic"], "problems": [],
-					 "limits": {"maxCharacters": 400000, "maxDocumentsPerTender": 10, "maxConcurrentRequests": 1,
+					 "limits": {"maxCharacters": 400000, "maxDocumentsPerTender": 30, "maxConcurrentRequests": 1,
 					   "maxAttempts": 3, "monthlyBudget": null, "pricesSet": false},
 					 "queue": {"PENDING": 0, "DONE": 0}, "monthToDate": {"inputTokens": 0, "estimatedCost": null}}""");
 	}

@@ -1,4 +1,13 @@
-import type { DceEvent, DceLink, DceSummary, DocumentHit, DocumentInfo, Dossier, PieceType } from "@/types/document";
+import type {
+  AiChoice,
+  DceEvent,
+  DceLink,
+  DceSummary,
+  DocumentHit,
+  DocumentInfo,
+  Dossier,
+  PieceType,
+} from "@/types/document";
 
 import { api, upload } from "./http";
 
@@ -24,8 +33,18 @@ export function retryDossier(dossierId: number): Promise<void> {
   return api(`/api/dossiers/${dossierId}/retry`, { method: "POST" });
 }
 
+/** Lets the analysis of a dossier start by itself once read, or not. */
+export function allowAutoAnalysis(dossierId: number, enabled: boolean): Promise<Dossier> {
+  return api(`/api/dossiers/${dossierId}/auto-analysis`, { method: "PUT", body: { enabled } });
+}
+
 export function changePieceType(documentId: number, pieceType: PieceType): Promise<DocumentInfo> {
   return api(`/api/documents/${documentId}/piece-type`, { method: "PUT", body: { pieceType } });
+}
+
+/** Sends a document to the AI or keeps it out whatever the rules; null lets the rules decide again. */
+export function changeAiChoice(documentId: number, choice: AiChoice | null): Promise<DocumentInfo> {
+  return api(`/api/documents/${documentId}/ai-choice`, { method: "PUT", body: { choice } });
 }
 
 /**

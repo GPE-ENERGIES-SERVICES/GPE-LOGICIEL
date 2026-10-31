@@ -59,6 +59,8 @@ export type AnalysisDocument = {
   stateDetail: string | null;
   analysed: boolean;
   readable: boolean;
+  /** Why the rules send it to the AI or not. */
+  aiReason?: string | null;
 };
 
 export type Analysis = {
@@ -72,6 +74,8 @@ export type Analysis = {
   errorKind: FailureKind | null;
   attempts: number;
   nextAttemptAt: string | null;
+  /** When it was last sent to the AI. */
+  startedAt?: string | null;
   requestedBy: string | null;
   createdAt: string;
   finishedAt: string | null;
@@ -82,8 +86,43 @@ export type Analysis = {
   noticeDeadline: string | null;
   validatedBy: string | null;
   validatedAt: string | null;
+  /** Decision help; null in the history and for the analyses made before it existed. */
+  decision: Decision | null;
   fields: ExtractedField[];
   documents: AnalysisDocument[];
+};
+
+export type Verdict = "PRIORITY" | "EXAMINE" | "POOR_FIT" | "INSUFFICIENT";
+
+/** CONFIRMED only when the quote was found in the document; TO_CHECK is plausible; MISSING prevents concluding. */
+export type ObstacleKind = "CONFIRMED" | "TO_CHECK" | "MISSING";
+
+export type DecisionPoint = {
+  text: string;
+  /** Null for an argument. */
+  kind: ObstacleKind | null;
+  /** Inferred from several elements rather than written as such. */
+  deduced: boolean;
+  /** Kept only when found in the document. */
+  quote: string | null;
+  documentId: number | null;
+  page: number | null;
+  verified: boolean;
+};
+
+export type DecisionCheck = {
+  action: string;
+  reason: string | null;
+  documentId: number | null;
+};
+
+export type Decision = {
+  verdict: Verdict;
+  conclusion: string | null;
+  strengths: DecisionPoint[];
+  obstacles: DecisionPoint[];
+  checks: DecisionCheck[];
+  limits: string[];
 };
 
 export type AnalysisJournalEntry = {
@@ -130,6 +169,8 @@ export type TenderAnalysis = {
   grid: GridField[];
   latest: Analysis | null;
   history: Analysis[];
+  /** How long an analysis usually takes once sent, in seconds; null before any. */
+  typicalSeconds?: number | null;
 };
 
 export type AnalysisState =
@@ -163,4 +204,64 @@ export type AnalysisConfiguration = {
   queue: Record<AnalysisStatus, number>;
   /** Tokens counted by GPE; the cost is an estimate, not the invoice of the provider. */
   monthToDate: { inputTokens: number; outputTokens: number; estimatedCost: number | null };
+};
+
+/** Checks of one sheet of a price schedule, made by the software without AI. */
+export type PriceCheck = {
+  documentId: number;
+  fileName: string;
+  sheet: string;
+  columns: { role: "REFERENCE" | "DESIGNATION" | "UNIT" | "QUANTITY" | "UNIT_PRICE" | "AMOUNT"; ref: string; header: string }[];
+  headerRow: number | null;
+  items: number;
+  withQuantity: number;
+  withUnitPrice: number;
+  withAmount: number;
+  textPrices: number;
+  computedTotal: number | null;
+  amountBasis: "HT" | "TTC" | null;
+  blankPrices: boolean;
+  totals: {
+    kind: "HT" | "VAT" | "TTC";
+    label: string;
+    ref: string;
+    row: number;
+    declared: number;
+    computed: number | null;
+    consistent: boolean | null;
+  }[];
+  issues: { kind: string; message: string; ref: string | null; row: number | null }[];
+  moreIssues: number;
+};
+
+/** A point of the synthesis, with the place it comes from (row of a sheet, or page of a PDF). */
+export type FinancialPoint = {
+  text: string;
+  documentId: number | null;
+  page: number | null;
+  row: number | null;
+  sheet: string | null;
+  /** Kept only when found at that place. */
+  quote: string | null;
+  verified: boolean;
+};
+
+export type FinancialResult = {
+  overview: string | null;
+  items: FinancialPoint[];
+  points: FinancialPoint[];
+  limits: string[];
+  checks: PriceCheck[];
+  notSent: string[];
+};
+
+export type FinancialAnalysis = {
+  configured: boolean;
+  unavailableReason: string | null;
+  /** DPGF, BPU and DQE of the latest dossier; analysed tells whether the latest analysis used them. */
+  pieces: AnalysisDocument[];
+  latest: Analysis | null;
+  result: FinancialResult | null;
+  previous: number;
+  typicalSeconds?: number | null;
 };

@@ -30,19 +30,65 @@ public class DocumentService {
 
 	@Transactional(readOnly = true)
 	public List<DossierResponse> dossiersOf(Long tenderId) {
-		return dossiers.findByTenderIdOrderByVersionDesc(tenderId).stream().map(DossierResponse::from).toList();
+		return dossiers.findByTenderIdOrderByVersionDesc(tenderId).stream().map(this::response).toList();
 	}
 
 	@Transactional(readOnly = true)
 	public DossierResponse dossier(Long dossierId) {
-		return DossierResponse.from(findDossier(dossierId));
+		return response(findDossier(dossierId));
+	}
+
+	private DossierResponse response(Dossier dossier) {
+		return DossierResponse.from(dossier, DocumentTriage.decide(dossier.getDocuments(), pages));
+	}
+
+	private DossierResponse.DocumentResponse response(Document document) {
+		return DossierResponse.DocumentResponse.from(document,
+				DocumentTriage.decide(document.getDossier().getDocuments(), pages).get(document.getId()));
 	}
 
 	@Transactional
 	public DossierResponse.DocumentResponse correctPieceType(Long documentId, PieceType pieceType) {
 		Document document = find(documentId);
 		document.correctPieceType(pieceType);
-		return DossierResponse.DocumentResponse.from(document);
+		return response(document);
+	}
+
+	/**
+	 * Sends a document to the AI or keeps it out, whatever the rules, or lets
+	 * the rules decide again (null). A document added whose scanned pages were
+	 * not read is put back to be read, with OCR.
+	 * @return the document, and whether its dossier must be read again
+	 */
+	@Transactional
+	public AiChoiceResult chooseForAi(Long documentId, AiChoice choice) {
+		Document document = find(documentId);
+		document.chooseForAi(choice);
+		// Scanned pages, or an image or a plan kept aside, are read once a user wants them.
+		boolean reread = choice == AiChoice.INCLUDE
+				&& (document.getState() == DocumentState.SCANNED && document.getPdfPath() != null
+						|| document.getState() == DocumentState.NOT_ANALYZED
+								&& DocumentProcessor.readable(document.getFileName()));
+		if (reread) {
+			document.resetForRetry();
+		}
+		return new AiChoiceResult(response(document), reread ? document.getDossier().getId() : null);
+	}
+
+	/**
+	 * @param rereadDossier the dossier to read again, or null
+	 */
+	public record AiChoiceResult(DossierResponse.DocumentResponse document, Long rereadDossier) {
+	}
+
+	/**
+	 * Lets the analysis of a dossier start by itself once read, or not.
+	 */
+	@Transactional
+	public DossierResponse allowAutoAnalysis(Long dossierId, boolean allowed) {
+		Dossier dossier = findDossier(dossierId);
+		dossier.allowAutoAnalysis(allowed);
+		return response(dossier);
 	}
 
 	/**

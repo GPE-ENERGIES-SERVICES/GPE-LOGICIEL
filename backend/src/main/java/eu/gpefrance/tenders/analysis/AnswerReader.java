@@ -71,7 +71,7 @@ final class AnswerReader {
 		}
 	}
 
-	private static JsonNode parse(String answer) {
+	static JsonNode parse(String answer) {
 		int start = answer == null ? -1 : answer.indexOf('{');
 		int end = answer == null ? -1 : answer.lastIndexOf('}');
 		if (start < 0 || end < start) {

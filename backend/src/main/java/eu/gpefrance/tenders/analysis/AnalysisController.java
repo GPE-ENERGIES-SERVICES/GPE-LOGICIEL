@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import eu.gpefrance.tenders.analysis.AnalysisReport.Configuration;
 import eu.gpefrance.tenders.analysis.AnalysisReport.JournalEntry;
 import eu.gpefrance.tenders.analysis.AnalysisReport.Quality;
+import eu.gpefrance.tenders.analysis.AnalysisResponse.FinancialAnalysis;
 import eu.gpefrance.tenders.analysis.AnalysisResponse.TenderAnalysis;
 import eu.gpefrance.tenders.user.AppUserPrincipal;
 import jakarta.validation.Valid;
@@ -91,6 +92,31 @@ public class AnalysisController {
 	public AnalysisResponse request(@PathVariable Long dossierId,
 			@RequestParam(defaultValue = "false") boolean force, @AuthenticationPrincipal AppUserPrincipal user) {
 		return queries.summary(service.request(dossierId, force, user.displayName()));
+	}
+
+	@GetMapping("/api/tenders/{tenderId}/financial-analysis")
+	public FinancialAnalysis financialOfTender(@PathVariable Long tenderId) {
+		return queries.financialOfTender(tenderId);
+	}
+
+	/**
+	 * Queues the analysis of the price schedules (DPGF, BPU, DQE) of a dossier,
+	 * on the request of a user only: it is never started by itself.
+	 * @param force analyse again content already analysed
+	 */
+	@PostMapping("/api/dossiers/{dossierId}/financial-analyses")
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	public AnalysisResponse requestFinancial(@PathVariable Long dossierId,
+			@RequestParam(defaultValue = "false") boolean force, @AuthenticationPrincipal AppUserPrincipal user) {
+		return queries.summary(service.requestFinancial(dossierId, force, user.displayName()));
+	}
+
+	/**
+	 * Sends at once an analysis waiting to be sent.
+	 */
+	@PostMapping("/api/analyses/{analysisId}/send-now")
+	public TenderAnalysis sendNow(@PathVariable Long analysisId) {
+		return queries.ofTender(service.sendNow(analysisId));
 	}
 
 	/**

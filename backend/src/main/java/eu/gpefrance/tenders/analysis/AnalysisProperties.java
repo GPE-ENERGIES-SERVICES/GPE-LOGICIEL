@@ -43,7 +43,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("analysis")
 public record AnalysisProperties(@DefaultValue("false") boolean enabled, @DefaultValue("none") String provider,
 		@DefaultValue("false") boolean externalTransmissionAllowed, @DefaultValue("400000") int maxCharacters,
-		@DefaultValue("10") int maxDocumentsPerTender, @DefaultValue("8000") int maxOutputTokens,
+		@DefaultValue("30") int maxDocumentsPerTender, @DefaultValue("8000") int maxOutputTokens,
 		@DefaultValue("1") int maxConcurrentRequests, @DefaultValue("3") int maxAttempts,
 		@DefaultValue("2m") Duration retryDelay, @DefaultValue("1h") Duration maxRetryDelay,
 		@DefaultValue("5m") Duration requestTimeout, @DefaultValue("15m") Duration lease,

@@ -44,6 +44,8 @@ Documentation :
   fournir pour remplacer les données de démonstration.
 - [Audit de la récupération des DCE](docs/audit-recuperation-dce.md) : liens vers les DCE et
   téléchargement automatique, plateforme par plateforme (CAPTCHA, CGU, accords à obtenir).
+- [Audit des formats lus par l'analyse IA](docs/audit-formats-analyse-ia.md) : pièces du DCE non
+  lues (scans, tableurs, photos, plans…) et solutions possibles.
 
 ## Interface
 
