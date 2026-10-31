@@ -29,7 +29,7 @@ import eu.gpefrance.tenders.tender.Regions;
 public class AlertService {
 
 	/** Types of works known by the interface (ACTIVITY_LABELS). */
-	static final Set<String> ACTIVITIES = Set.of("ELECTRICITY", "PHOTOVOLTAIC", "EV_CHARGING", "HEATING",
+	public static final Set<String> ACTIVITIES = Set.of("ELECTRICITY", "PHOTOVOLTAIC", "EV_CHARGING", "HEATING",
 			"AIR_CONDITIONING", "ENERGY_RENOVATION", "PUBLIC_LIGHTING", "NETWORKS", "VRD", "MAINTENANCE", "STUDIES");
 
 	private static final Logger log = LoggerFactory.getLogger(AlertService.class);
