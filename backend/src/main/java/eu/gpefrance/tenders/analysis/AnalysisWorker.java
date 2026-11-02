@@ -253,7 +253,7 @@ public class AnalysisWorker {
 					usage.outputTokens());
 		}
 		catch (ProviderException ex) {
-			failed(analysisId, ex.kind(), SecretRedactor.redact(ex.getMessage()), answer);
+			failed(analysisId, ex.kind(), SecretRedactor.redact(ex.getMessage()), answer != null ? answer : ex.usage());
 		}
 		catch (UnreadableAnswerException ex) {
 			fail(analysisId, FailureKind.INVALID_RESPONSE, ex.getMessage(), answer);
@@ -297,7 +297,9 @@ public class AnalysisWorker {
 			.stream()
 			.map(document -> AnalysisService.load(document, pages))
 			.toList();
-		Instant noticeDeadline = tenders.findById(analysis.getTenderId()).map(Tender::getDeadline).orElse(null);
+		// Without tender, no notice to compare the deadline with.
+		Instant noticeDeadline = analysis.getTenderId() == null ? null
+				: tenders.findById(analysis.getTenderId()).map(Tender::getDeadline).orElse(null);
 		String company = ExtractionPrompt.company(criteria.findAll().stream().findFirst().orElse(null));
 		return new Prepared(AnalysisKind.DCE_SUMMARY, sources,
 				sources.stream().mapToLong(SourceDocument::length).sum() + company.length(), noticeDeadline, company,

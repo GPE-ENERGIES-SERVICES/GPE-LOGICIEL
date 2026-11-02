@@ -188,8 +188,8 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
  * arguments, obstacles, checks and limits. It only shows what was stored:
  * displaying it never starts an analysis.
  */
-export function DecisionSection({ tenderId }: { tenderId: number }) {
-  const loaded = useLoader(() => getTenderAnalysis(tenderId), String(tenderId));
+export function DecisionSection({ owner }: { owner: string }) {
+  const loaded = useLoader(() => getTenderAnalysis(owner), owner);
   const analysis = loaded.data?.latest ?? null;
   const running =
     analysis?.status === "PENDING" || analysis?.status === "PROCESSING" || analysis?.status === "RETRY_WAITING";

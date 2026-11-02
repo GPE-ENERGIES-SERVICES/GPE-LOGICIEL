@@ -15,7 +15,13 @@ public final class AnalysisReport {
 	private AnalysisReport() {
 	}
 
-	public record JournalEntry(Long id, Long tenderId, String tenderTitle, int dossierVersion, AnalysisStatus status,
+	/**
+	 * @param tenderId null for an analysis without tender
+	 * @param reviewId null for the analysis of a tender
+	 * @param tenderTitle the title of the tender, or the name of the review
+	 */
+	public record JournalEntry(Long id, Long tenderId, Long reviewId, String tenderTitle, int dossierVersion,
+			AnalysisStatus status,
 			String provider, String model, String promptVersion, FailureKind errorKind, int attempts,
 			Instant createdAt, Instant finishedAt, String errorMessage, Integer inputTokens, Integer outputTokens,
 			BigDecimal cost) {

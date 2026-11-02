@@ -150,10 +150,10 @@ function analysisStep(
  * of the prices, each with its progress and the time left when it can be
  * estimated. Folds into one line once everything is over.
  */
-export function ProcessingPanel({ tenderId, retained }: { tenderId: number; retained: boolean | null }) {
-  const dossiers = useLoader(() => getDossiers(tenderId), String(tenderId));
-  const summary = useLoader(() => getTenderAnalysis(tenderId), String(tenderId));
-  const financial = useLoader(() => getFinancialAnalysis(tenderId), String(tenderId));
+export function ProcessingPanel({ owner, retained }: { owner: string; retained: boolean | null }) {
+  const dossiers = useLoader(() => getDossiers(owner), owner);
+  const summary = useLoader(() => getTenderAnalysis(owner), owner);
+  const financial = useLoader(() => getFinancialAnalysis(owner), owner);
   const [now, setNow] = useState(() => Date.now());
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);

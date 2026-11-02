@@ -14,10 +14,13 @@ import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.function.LongPredicate;
+import java.util.function.Supplier;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import eu.gpefrance.tenders.document.ArchiveExtractor.ArchiveRejectedException;
 import eu.gpefrance.tenders.document.ArchiveExtractor.ExtractedFile;
@@ -35,6 +38,8 @@ public class DossierService {
 
 	private final TenderRepository tenders;
 
+	private final DceReviewRepository reviews;
+
 	private final FileStorage storage;
 
 	private final ArchiveExtractor archiveExtractor;
@@ -43,10 +48,11 @@ public class DossierService {
 
 	private final Clock clock;
 
-	public DossierService(DossierRepository dossiers, TenderRepository tenders, FileStorage storage,
-			ArchiveExtractor archiveExtractor, TransactionTemplate transaction, Clock clock) {
+	public DossierService(DossierRepository dossiers, TenderRepository tenders, DceReviewRepository reviews,
+			FileStorage storage, ArchiveExtractor archiveExtractor, TransactionTemplate transaction, Clock clock) {
 		this.dossiers = dossiers;
 		this.tenders = tenders;
+		this.reviews = reviews;
 		this.storage = storage;
 		this.archiveExtractor = archiveExtractor;
 		this.transaction = transaction;
@@ -62,14 +68,30 @@ public class DossierService {
 		if (!tenders.existsById(tenderId)) {
 			throw new TenderNotFoundException(tenderId);
 		}
+		int version = dossiers.findLastVersion(tenderId) + 1;
+		return upload(files, "tenders/" + tenderId + "/v" + version,
+				() -> new Dossier(tenderId, version, uploadedBy, clock.instant()));
+	}
+
+	/**
+	 * The same for a consultation file analysed without any tender.
+	 * @return the id of the new dossier
+	 */
+	public synchronized Long uploadForReview(Long reviewId, List<MultipartFile> files, String uploadedBy) {
+		if (!reviews.existsById(reviewId)) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Analyse de DCE introuvable.");
+		}
+		int version = dossiers.findLastReviewVersion(reviewId) + 1;
+		return upload(files, "reviews/" + reviewId + "/v" + version,
+				() -> Dossier.ofReview(reviewId, version, uploadedBy, clock.instant()));
+	}
+
+	private Long upload(List<MultipartFile> files, String directory, Supplier<Dossier> newDossier) {
 		List<MultipartFile> nonEmpty = files == null ? List.of()
 				: files.stream().filter(file -> !file.isEmpty()).toList();
 		if (nonEmpty.isEmpty()) {
 			throw new UploadRejectedException("Aucun fichier reçu");
 		}
-
-		int version = dossiers.findLastVersion(tenderId) + 1;
-		String directory = "tenders/" + tenderId + "/v" + version;
 		Path dossierDirectory = storage.resolve(directory);
 		try {
 			List<StoredFile> stored = store(nonEmpty.stream()
@@ -78,7 +100,7 @@ public class DossierService {
 						target -> file.transferTo(target.toFile())))
 				.toList(), dossierDirectory, new ArrayList<>());
 			return transaction.execute(status -> {
-				Dossier dossier = new Dossier(tenderId, version, uploadedBy, clock.instant());
+				Dossier dossier = newDossier.get();
 				for (StoredFile file : stored) {
 					dossier.addDocument(file.displayName(), storage.relativize(file.path()), file.size(), file.sha256(),
 							PieceClassifier.classify(file.displayName()));
@@ -153,7 +175,7 @@ public class DossierService {
 		}
 	}
 
-	private static void deleteQuietly(Path directory) {
+	static void deleteQuietly(Path directory) {
 		if (!Files.exists(directory)) {
 			return;
 		}

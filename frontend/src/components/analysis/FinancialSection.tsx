@@ -234,9 +234,9 @@ function Result({ result, documents }: { result: FinancialResult; documents: Ana
  * checks of the amounts made by the software, then the synthesis of the AI
  * with the source of each point. Displaying it never starts an analysis.
  */
-export function FinancialSection({ tenderId }: { tenderId: number }) {
-  const loaded = useLoader(() => getFinancialAnalysis(tenderId), String(tenderId));
-  const dossiers = useLoader(() => getDossiers(tenderId), String(tenderId));
+export function FinancialSection({ owner }: { owner: string }) {
+  const loaded = useLoader(() => getFinancialAnalysis(owner), owner);
+  const dossiers = useLoader(() => getDossiers(owner), owner);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const data = loaded.data;

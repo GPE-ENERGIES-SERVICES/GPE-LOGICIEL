@@ -10,6 +10,7 @@ import { FinancialSection } from "@/components/analysis/FinancialSection";
 import { DeadlineBadge } from "@/components/DeadlineBadge";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { EstimatesSection } from "@/components/estimate/EstimatesSection";
+import { MemoirsSection } from "@/components/memoir/MemoirsSection";
 import { NoticeHistory } from "@/components/NoticeHistory";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { Tabs } from "@/components/Tabs";
@@ -31,6 +32,7 @@ import { consultationUrl } from "@/lib/dceUrl";
 import { backLink } from "@/lib/navigation";
 import { useLoader } from "@/lib/useLoader";
 import { getTenderAwards } from "@/services/awardApi";
+import { tenderOwner } from "@/services/documentApi";
 import { available } from "@/services/http";
 import { getTender } from "@/services/tenderApi";
 import type { AwardedContract } from "@/types/award";
@@ -215,9 +217,9 @@ function TenderDetails() {
         </dl>
       </header>
 
-      <ProcessingPanel tenderId={tender.id} retained={tender.retained ?? null} />
+      <ProcessingPanel owner={tenderOwner(tender.id)} retained={tender.retained ?? null} />
 
-      <DecisionSection tenderId={tender.id} />
+      <DecisionSection owner={tenderOwner(tender.id)} />
 
       <Tabs
         label="Sections de l'appel d'offres"
@@ -371,7 +373,7 @@ function TenderDetails() {
             content: (
                 <section className="card">
                   <h2>Documents (DCE)</h2>
-                  <DocumentsSection tenderId={tender.id} />
+                  <DocumentsSection owner={tenderOwner(tender.id)} tenderId={tender.id} />
                 </section>
             ),
           },
@@ -386,7 +388,7 @@ function TenderDetails() {
                     vigilance, pièces à fournir, qualifications et échéances, chacune avec sa source (document et page), à
                     vérifier avant usage.
                   </p>
-                  <AnalysisSection tenderId={tender.id} />
+                  <AnalysisSection owner={tenderOwner(tender.id)} />
                 </section>
             ),
           },
@@ -400,7 +402,7 @@ function TenderDetails() {
                     À la demande : les montants des tableurs sont contrôlés par le logiciel (sommes, totaux, TVA), puis l&apos;IA
                     résume les postes principaux et les points à vérifier, chacun avec sa source (document, feuille, ligne).
                   </p>
-                  <FinancialSection tenderId={tender.id} />
+                  <FinancialSection owner={tenderOwner(tender.id)} />
                 </section>
             ),
           },
@@ -411,6 +413,16 @@ function TenderDetails() {
               <section className="card">
                 <h2>Chiffrage</h2>
                 <EstimatesSection tender={tender} />
+              </section>
+            ),
+          },
+          {
+            id: "memoire",
+            label: "Mémoire",
+            content: (
+              <section className="card">
+                <h2>Mémoire technique</h2>
+                <MemoirsSection tender={tender} />
               </section>
             ),
           },

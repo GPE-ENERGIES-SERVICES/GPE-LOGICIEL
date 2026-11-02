@@ -250,9 +250,9 @@ function notAnalysedReason(document: Analysis["documents"][number]): string {
  * Summary sheet of the consultation file: state of the AI analysis, the
  * extracted information with their sources, and the human validation.
  */
-export function AnalysisSection({ tenderId }: { tenderId: number }) {
-  const loaded = useLoader(() => getTenderAnalysis(tenderId), String(tenderId));
-  const dossiers = useLoader(() => getDossiers(tenderId), String(tenderId));
+export function AnalysisSection({ owner }: { owner: string }) {
+  const loaded = useLoader(() => getTenderAnalysis(owner), owner);
+  const dossiers = useLoader(() => getDossiers(owner), owner);
   // The analysis as returned by the last decision, until the next reload.
   const [saved, setSaved] = useState<TenderAnalysis | null>(null);
   const [starting, setStarting] = useState(false);

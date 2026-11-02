@@ -461,8 +461,86 @@ p {
 
 .menu-open-button,
 .menu-close,
+.menu-toggle,
 .app-backdrop {
   display: none;
+}
+
+/* Large screens: the menu can be reduced to its icons (the drawer of small screens stays whole). */
+@media (min-width: 961px) {
+  .app-shell {
+    transition: grid-template-columns 180ms ease;
+  }
+
+  .app-sidebar {
+    overflow-x: hidden;
+  }
+
+  .menu-toggle {
+    display: inline-grid;
+    flex-shrink: 0;
+  }
+
+  .app-brand {
+    justify-content: flex-start;
+  }
+
+  .nav-collapsed {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+
+  .nav-collapsed .app-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .nav-collapsed .app-title,
+  .nav-collapsed .app-user-name {
+    display: none;
+  }
+
+  .nav-collapsed .app-nav a {
+    position: relative;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  /* Out of sight only: it remains the name of the link for a screen reader. */
+  .nav-collapsed .nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .nav-collapsed .nav-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 1rem;
+    padding: 0 0.2rem;
+    font-size: 0.65rem;
+  }
+
+  /* The title of a group becomes a line between its entries and the others. */
+  .nav-collapsed .app-nav-group {
+    margin: 0.6rem 0.4rem 0.3rem;
+    padding: 0;
+    border-top: 1px solid var(--border);
+    font-size: 0;
+  }
+
+  .nav-collapsed .app-user {
+    flex-direction: column;
+    padding-inline: 0;
+  }
+}
+
+@media (min-width: 961px) and (prefers-reduced-motion: reduce) {
+  .app-shell {
+    transition: none;
+  }
 }
 
 .theme-toggle {
@@ -2976,4 +3054,539 @@ th.number {
 
 .record-nested h4 {
   margin: 0 0 0.5rem;
+}
+
+/* Technical memoir: preparation on the left, the document on the right, dominant. */
+
+.memoir-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.memoir-header h1 {
+  margin: 0.25rem 0 0;
+  font-size: 1.3rem;
+}
+
+.memoir-header p {
+  margin: 0.2rem 0 0;
+}
+
+.memoir-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.memoir-columns {
+  display: grid;
+  grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.memoir-columns.no-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 900px) {
+  .memoir-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.memoir-panel {
+  position: sticky;
+  top: calc(var(--topbar-height, 3.5rem) + 0.5rem);
+  max-height: calc(100vh - var(--topbar-height, 3.5rem) - 1.5rem);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.memoir-panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.memoir-panel-tabs button {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  gap: 0.35rem;
+}
+
+.memoir-panel-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--primary);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.memoir-panel-tabs .nav-badge {
+  margin-left: 0;
+}
+
+.memoir-panel-block,
+.memoir-panel-body {
+  padding: 0.75rem;
+}
+
+.memoir-panel-block + .memoir-panel-body {
+  padding-top: 0;
+}
+
+.memoir-panel-block .hint {
+  margin: 0.4rem 0 0;
+}
+
+.memoir-panel .primary {
+  width: 100%;
+}
+
+.memoir-outline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.memoir-outline li {
+  padding: 0.35rem 0.25rem;
+  border-radius: var(--radius);
+}
+
+.memoir-outline li:hover {
+  background: var(--surface-2);
+}
+
+.memoir-outline li.level-2 { padding-left: 1rem; }
+.memoir-outline li.level-3 { padding-left: 2rem; }
+.memoir-outline li.level-4 { padding-left: 3rem; }
+
+.memoir-outline li.level-1 > .memoir-outline-line {
+  font-weight: 600;
+}
+
+.memoir-outline li.proposed {
+  border: 1px dashed var(--info-border);
+  background: var(--primary-soft);
+  margin: 0.2rem 0;
+}
+
+.memoir-outline-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.memoir-outline-title {
+  text-align: left;
+  color: var(--foreground);
+}
+
+.memoir-number {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.memoir-outline-description {
+  margin: 0.15rem 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.memoir-outline-actions {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin: 0.3rem 0 0 1rem;
+}
+
+.memoir-outline li:hover .memoir-outline-actions,
+.memoir-outline li:focus-within .memoir-outline-actions,
+.memoir-outline-actions.visible {
+  display: flex;
+}
+
+.memoir-outline-actions button {
+  min-height: auto;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.8rem;
+}
+
+.memoir-dot {
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+}
+
+.memoir-dot.written {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.memoir-dot.proposal {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+.memoir-add {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-style: dashed;
+}
+
+.memoir-section-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+
+.memoir-section-form fieldset {
+  gap: 0.3rem;
+  padding: 0.5rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.memoir-check {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-weight: 400;
+  font-size: 0.82rem;
+}
+
+.memoir-requirements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.memoir-requirements li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.memoir-requirements p {
+  margin: 0.3rem 0;
+}
+
+.memoir-requirements blockquote {
+  margin: 0.3rem 0;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.memoir-requirements button {
+  min-height: auto;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.memoir-message {
+  white-space: pre-line;
+}
+
+/* The document */
+
+.memoir-editor {
+  min-width: 0;
+}
+
+.memoir-toolbar {
+  position: sticky;
+  top: calc(var(--topbar-height, 3.5rem) + 0.5rem);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface-2);
+}
+
+.memoir-toolbar button,
+.memoir-toolbar select {
+  min-height: 2rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.memoir-toolbar select {
+  width: auto;
+}
+
+.memoir-toolbar-separator {
+  width: 1px;
+  height: 1.4rem;
+  margin: 0 0.2rem;
+  background: var(--border-strong);
+}
+
+.memoir-writing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: var(--surface);
+  font-size: 0.88rem;
+}
+
+.memoir-writing progress {
+  flex: 1;
+  min-width: 6rem;
+}
+
+.memoir-job-message summary {
+  cursor: pointer;
+}
+
+.memoir-spinner {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: memoir-spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes memoir-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A sheet of paper, the same in the light and dark themes. */
+.memoir-page {
+  max-width: 52rem;
+  margin: 1rem auto 3rem;
+  padding: 3.5rem 4rem;
+  background: #ffffff;
+  color: #1f2430;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12), 0 8px 24px rgba(15, 23, 42, 0.08);
+  border-radius: 2px;
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 700px) {
+  .memoir-page {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+.memoir-page-title {
+  margin: 0;
+  font-size: 1.7rem;
+  color: #17469c;
+}
+
+.memoir-page-subtitle {
+  margin: 0.3rem 0 2rem;
+  color: #5b6474;
+}
+
+.memoir-section {
+  margin-top: 1.75rem;
+  scroll-margin-top: 7rem;
+}
+
+.memoir-section.level-1 {
+  margin-top: 2.5rem;
+}
+
+.memoir-heading {
+  margin: 0 0 0.5rem;
+  color: #17469c;
+}
+
+h2.memoir-heading { font-size: 1.35rem; border-bottom: 1px solid #dfe3ea; padding-bottom: 0.3rem; }
+h3.memoir-heading { font-size: 1.15rem; }
+h4.memoir-heading, h5.memoir-heading { font-size: 1.02rem; }
+
+.memoir-heading .memoir-number {
+  color: #8a93a3;
+  margin-right: 0.3rem;
+}
+
+.memoir-body {
+  min-height: 2.2rem;
+  padding: 0.3rem 0.4rem;
+  margin: 0 -0.4rem;
+  border-radius: 3px;
+  outline: none;
+}
+
+.memoir-body:hover {
+  background: #f7f9fc;
+}
+
+.memoir-body:focus {
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #c9d6ee;
+}
+
+.memoir-body:empty::before {
+  content: attr(data-placeholder);
+  color: #9aa3b2;
+  font-style: italic;
+}
+
+.memoir-body h3,
+.memoir-proposal-body h3 { font-size: 1.08rem; margin: 1rem 0 0.4rem; color: #17469c; }
+.memoir-body h4,
+.memoir-proposal-body h4 { font-size: 1rem; margin: 0.8rem 0 0.3rem; }
+.memoir-body p,
+.memoir-proposal-body p { margin: 0 0 0.6rem; }
+.memoir-body table,
+.memoir-proposal-body table { width: 100%; border-collapse: collapse; margin: 0.6rem 0; font-size: 0.9rem; }
+.memoir-body th,
+.memoir-body td,
+.memoir-proposal-body th,
+.memoir-proposal-body td { border: 1px solid #d6dbe4; padding: 0.3rem 0.5rem; text-align: left; vertical-align: top; }
+.memoir-body th,
+.memoir-proposal-body th { background: #f1f4f9; }
+
+.memoir-body figure,
+.memoir-proposal-body figure {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.memoir-body img,
+.memoir-proposal-body img {
+  max-width: 100%;
+  height: auto;
+  cursor: pointer;
+}
+
+.memoir-body figcaption,
+.memoir-proposal-body figcaption {
+  font-size: 0.85rem;
+  color: #5b6474;
+  font-style: italic;
+}
+
+.memoir-body figure.placeholder,
+.memoir-proposal-body figure.placeholder {
+  padding: 1.5rem;
+  border: 2px dashed #b8c3d6;
+  border-radius: 4px;
+  background: #f7f9fc;
+}
+
+.memoir-section-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+  opacity: 0.35;
+  transition: opacity var(--transition);
+  font-size: 0.8rem;
+}
+
+.memoir-section:hover .memoir-section-tools,
+.memoir-section:focus-within .memoir-section-tools {
+  opacity: 1;
+}
+
+.memoir-section-tools select,
+.memoir-section-tools button {
+  width: auto;
+  min-height: 1.8rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.8rem;
+  background: #ffffff;
+  color: #1f2430;
+  border-color: #d6dbe4;
+}
+
+.memoir-save {
+  min-width: 6rem;
+  color: #8a93a3;
+}
+
+.memoir-save.dirty,
+.memoir-save.saving {
+  color: #b45309;
+}
+
+.memoir-proposal {
+  margin: 0.4rem 0 0.8rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #f0c674;
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: #fffbeb;
+}
+
+.memoir-proposal-head {
+  margin-bottom: 0.5rem;
+  font-size: 0.88rem;
+}
+
+.memoir-proposal .form-actions button {
+  min-height: 1.9rem;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.memoir-generating {
+  color: #17469c;
+  font-size: 0.9rem;
+}
+
+.memoir-section.generating .memoir-heading {
+  color: #0f766e;
+}
+
+.memoir-revisions {
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: #f7f9fc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.memoir-tender-search {
+  margin: 0;
+}
+
+.memoir-tender-search input {
+  flex: 1;
+}
+
+.memoir-tender-chosen {
+  font-weight: 600;
+}
+
+.memoir-tender-results li {
+  margin: 0.25rem 0;
 }

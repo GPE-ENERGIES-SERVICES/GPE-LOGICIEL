@@ -217,11 +217,13 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
 }
 
 /**
- * Consultation file (DCE) of a tender: upload, versions and reading state
- * of each document.
+ * Consultation file (DCE): upload, versions and reading state of each document.
+ *
+ * @param owner the tender or the analysis without tender it belongs to
+ * @param tenderId for a tender: where to get the file and the search in its text
  */
-export function DocumentsSection({ tenderId }: { tenderId: number }) {
-  const { data, error, reload } = useLoader(() => getDossiers(tenderId), String(tenderId));
+export function DocumentsSection({ owner, tenderId }: { owner: string; tenderId?: number }) {
+  const { data, error, reload } = useLoader(() => getDossiers(owner), owner);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -249,7 +251,7 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
     setUploading(true);
     setUploadError(null);
     try {
-      await uploadDossier(tenderId, files);
+      await uploadDossier(owner, files);
       if (fileInput.current) {
         fileInput.current.value = "";
       }
@@ -264,9 +266,13 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
 
   return (
     <div>
-      <h3>1. Récupérer le DCE sur la plateforme de l&apos;acheteur</h3>
-      <DceLinks tenderId={tenderId} />
-      <h3>2. Le déposer ici</h3>
+      {tenderId !== undefined && (
+        <>
+          <h3>1. Récupérer le DCE sur la plateforme de l&apos;acheteur</h3>
+          <DceLinks tenderId={tenderId} />
+        </>
+      )}
+      <h3>{tenderId !== undefined ? "2. Le déposer ici" : "Déposer le DCE"}</h3>
       <form
         className={dragging ? "upload dropping" : "upload"}
         onSubmit={submit}
@@ -314,10 +320,12 @@ export function DocumentsSection({ tenderId }: { tenderId: number }) {
         </div>
         {uploadError && <p className="error">{uploadError}</p>}
       </form>
-      <h3>3. Dossier déposé et ses fichiers</h3>
+      <h3>{tenderId !== undefined ? "3. Dossier déposé et ses fichiers" : "Dossier déposé et ses fichiers"}</h3>
       {error && <p className="error">{error}</p>}
       {data && data.length === 0 && <p className="muted">Aucun dossier déposé.</p>}
-      {data?.[0]?.status === "DONE" && available("documentSearch") && <DocumentSearch tenderId={tenderId} />}
+      {tenderId !== undefined && data?.[0]?.status === "DONE" && available("documentSearch") && (
+        <DocumentSearch tenderId={tenderId} />
+      )}
       {data?.map((dossier, index) =>
         index === 0 ? (
           <DossierView key={dossier.id} dossier={dossier} onChanged={reload} />

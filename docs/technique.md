@@ -419,6 +419,47 @@ valides à une date, échéances). Les coûts horaires et coefficients utilisés
 `pricing_settings` et `pricing_rate` (V32) : ils sont la partie économique de l'entreprise, affichée
 dans Entreprise › Économie, pas une copie. Migration V37.
 
+## Mémoire technique
+
+Paquet `memoir` (accès JDBC, `MemoirStore`). Tout utilisateur connecté crée et rédige des mémoires,
+comme les chiffrages. Migration V38.
+
+| Table | Rôle |
+|---|---|
+| `memoir` | Le mémoire : appel d'offres (facultatif), numéro de lot, titre, état (`DRAFT`, `OUTLINE_TO_VALIDATE`, `READY_TO_WRITE`, `WRITING`, `TO_REVIEW`, `DONE`), validation du sommaire |
+| `memoir_requirement` | Exigences du DCE (catégorie, texte, pondération, document, page, citation vérifiée, origine `AI`/`USER`) |
+| `memoir_section` | Arbre du sommaire (`parent_id`, `position`), contenu HTML nettoyé, `proposed` (partie proposée par l'IA), `proposal` (contenu en attente de l'utilisateur) |
+| `memoir_section_requirement` | Couverture des exigences par les parties |
+| `memoir_section_revision` | Contenu remplacé : rien n'est perdu |
+| `memoir_file` | Images insérées (PNG, JPEG) |
+| `memoir_job` | Travail de l'IA (analyse, rédaction) : progression, arrêt demandé, message ; un seul en cours par mémoire |
+| `memoir_library` | Anciens mémoires (PDF, Word), texte lu à l'import (PDFBox, POI), « utilisable par l'IA » |
+
+**Règles.** Le contenu est du HTML restreint, nettoyé côté serveur (`MemoirHtml`, jsoup) : titres,
+paragraphes, listes, emphase, tableaux, figures avec image du mémoire ou emplacement réservé ;
+scripts, attributs, liens et images externes supprimés. Un texte de l'IA ou de l'Entreprise ne
+remplace jamais un contenu : il le remplit s'il est vide (mise à jour conditionnelle en une
+requête), sinon il attend en proposition (`Remplacer`, `Ajouter à la suite`, `Ignorer`). Tout
+contenu remplacé est gardé en révision et peut être proposé à nouveau. Modifier le sommaire après sa
+validation le remet « à valider ».
+
+**IA.** Par `analysis.AiAssistant` (même garde-fou, même plafond mensuel, tokens dans `ai_call`) :
+analyse du DCE (une requête : exigences avec citation vérifiée sur la page, sommaire par niveaux,
+manques signalés), rédaction des sections vides du sommaire validé (une requête par section, avec
+les exigences liées, l'instantané `CompanyDirectory.snapshot` et des extraits des anciens mémoires
+choisis), et actions sur une section (rédiger, réécrire, développer, raccourcir, améliorer, corriger,
+préciser, adapter à une exigence). Les travaux longs tournent en arrière-plan sur un seul fil
+(`MemoirJobs`, `memoir.async`), l'interface lit leur progression toutes les 2 s et peut les arrêter
+entre deux sections ; au redémarrage, un travail resté en cours est marqué interrompu. La
+progression est **par section** : le client d'IA actuel rend sa réponse en une fois, l'affichage mot
+à mot demanderait d'ajouter le flux (streaming) à `ExtractionClient`.
+
+**Sans IA**, tout fonctionne à la main : sommaire type, exigences saisies, rédaction, blocs écrits
+depuis l'Entreprise (présentation, moyens humains, matériels, certifications, références).
+
+Paramètres : `memoir.max-dce-characters` (150 000), `memoir.library-excerpts` (3),
+`memoir.excerpt-length` (6 000), `memoir.max-file-size` (50 Mo).
+
 ## Ajouter ou modifier une information de la grille
 
 1. Ajouter ou modifier l'entrée dans `analysis.ExtractionGrid.FIELDS` : clé (50 caractères
@@ -756,6 +797,23 @@ Retour arrière de V19 : annuler toutes les fusions depuis l'écran, puis
 `DROP TABLE duplicate_decision; ALTER TABLE tender DROP COLUMN merged_into_id;`. Sans cela, l'ancien
 code fonctionne aussi sur un schéma en V19 (colonnes ajoutées seulement), mais montrerait de
 nouveau les doublons fusionnés.
+
+## DCE analysé sans appel d'offres
+
+Table `dce_review` (V39) : un nom libre, sans ligne dans `tender`, donc absent des listes, filtres,
+veilles et doublons. `dossier` et `analysis` appartiennent soit à un appel d'offres (`tender_id`), soit
+à une analyse libre (`review_id`) : contrainte `CHECK` sur les deux tables. Lecture, file d'analyse,
+tri des pièces, plafonds et décisions sont ceux des appels d'offres, seule la recherche du propriétaire
+change. Routes : `GET|POST /api/dce-reviews`, `GET /api/dce-reviews/{id}`, puis comme pour un appel
+d'offres `/dossiers`, `/analysis` et `/financial-analysis`. Les fichiers vont dans
+`reviews/{id}/v{version}`. `auto_analysis` vaut faux : l'analyse ne part qu'à la demande (RM8).
+
+`PUT /api/dce-reviews/{id}` renomme. `DELETE` efface lignes et fichiers, après avoir recopié les tokens
+dans `ai_call` (kind `DELETED_DCE_REVIEW`) pour que le plafond mensuel ne baisse pas ; le total de la
+page qualité (`sumTokens`), lui, ne compte que `analysis`. `POST .../attachment {tenderId}` transfère
+dossiers et analyses à l'appel d'offres (versions décalées après les siennes) et efface la ligne
+`dce_review` ; les fichiers restent sous `reviews/{id}/`, les chemins étant stockés. Ces deux opérations
+répondent 409 tant qu'une lecture ou une analyse est en cours.
 
 ## DCE : liens, fichiers et récupération future
 

@@ -9,8 +9,9 @@ import type {
 
 import { api } from "./http";
 
-export function getTenderAnalysis(tenderId: number): Promise<TenderAnalysis> {
-  return api(`/api/tenders/${tenderId}/analysis`);
+/** @param owner see tenderOwner and reviewOwner in documentApi */
+export function getTenderAnalysis(owner: string): Promise<TenderAnalysis> {
+  return api(`${owner}/analysis`);
 }
 
 /** Starts the analysis of a dossier; force analyses again content already analysed. */
@@ -18,8 +19,8 @@ export function startAnalysis(dossierId: number, force: boolean): Promise<void> 
   return api(`/api/dossiers/${dossierId}/analyses?force=${force}`, { method: "POST" });
 }
 
-export function getFinancialAnalysis(tenderId: number): Promise<FinancialAnalysis> {
-  return api(`/api/tenders/${tenderId}/financial-analysis`);
+export function getFinancialAnalysis(owner: string): Promise<FinancialAnalysis> {
+  return api(`${owner}/financial-analysis`);
 }
 
 /** Starts the analysis of the price schedules of a dossier, on request only; force analyses them again. */

@@ -8,7 +8,8 @@ aide à décider ; la décision reste humaine.
 
 Le menu de gauche donne accès au Tableau de bord, puis à deux sections : **Appels d'offres** (Tous
 les appels d'offres, Mes suivis, Mes veilles, Marchés attribués, Archives) et **Chiffrage**
-(Chiffrages, Tarifs fournisseurs), puis **Entreprise**. Pour les administrateurs s'ajoutent
+(Chiffrages, Tarifs fournisseurs) et **Mémoire technique** (Mémoires, Bibliothèque), puis
+**Entreprise**. Pour les administrateurs s'ajoutent
 **Supervision** (doublons à vérifier, en premier, avec leur nombre dans le menu ; journal de collecte ;
 récupération des DCE ; journal et qualité des analyses IA) et **Paramètres** (comptes utilisateurs,
 critères de filtrage, configuration de l'IA).
@@ -118,6 +119,21 @@ historique.
    préparation, Réponse envoyée ou Écarté. Il se change directement dans la liste, ou dans la
    section « Suivi » de la fiche avec un commentaire. L'étoile ☆ sert à suivre un appel d'offres :
    ce suivi est personnel et retrouvé dans l'onglet « Mes suivis ».
+
+## Analyser un DCE sans appel d'offres
+
+Le menu « Analyser un DCE » (rubrique Appels d'offres) sert pour un DCE qui n'est pas dans la veille.
+Donnez un nom libre (pour quel appel d'offres), déposez le DCE, puis lancez la fiche de synthèse ou
+l'analyse financière : mêmes lectures, mêmes contrôles et mêmes plafonds de dépense que sur un appel
+d'offres, et un nouveau dépôt crée une nouvelle version. L'analyse ne part jamais toute seule, et
+sans avis publié, la date limite lue dans le DCE n'est comparée à rien. Ces analyses n'apparaissent
+ni dans les listes d'appels d'offres ni dans les veilles.
+
+Le bloc « Renommer, rattacher, supprimer » de sa page permet de changer le nom, de supprimer l'analyse
+et ses fichiers (la dépense déjà faite reste comptée dans le plafond du mois), ou de la rattacher à un
+appel d'offres : le DCE devient sa dernière version, ses analyses le suivent, et le chiffrage et le
+mémoire sont alors disponibles. Le rattachement ne se défait pas. Suppression et rattachement sont
+refusés tant qu'une lecture ou une analyse est en cours.
 
 ## L'aide à la décision
 
@@ -230,6 +246,43 @@ acceptée ajoute un coût au prix du tarif ; la validation reste toujours humain
 Les **paramètres de chiffrage** (TVA et coefficients par défaut, coûts horaires) se gèrent dans
 « Entreprise › Économie » ; les **fournisseurs** (création, import d'un fichier de prix CSV ou XLSX) dans
 « Chiffrage › Tarifs fournisseurs ». Les deux sont réservés aux administrateurs.
+
+## Le mémoire technique
+
+« Mémoire technique › Mémoires » liste les mémoires et en crée un, rattaché à un appel d'offres (et
+à un lot) ou non. L'espace de travail a deux panneaux :
+
+- **à gauche, la préparation** :
+  - l'onglet **Exigences du DCE** liste les critères, sous-critères, éléments obligatoires,
+    contraintes de forme, moyens, délais et méthodes attendus, avec le document et la page où ils
+    sont écrits ; une exigence rattachée à aucune partie est marquée « Non couverte » ;
+  - l'onglet **Sommaire** : parties, sous-parties et sections, avec leur description. On les
+    ajoute, renomme, déplace (↑ ↓, → pour en faire une sous-partie, ← pour la remonter) et
+    supprime ; « Partir du sommaire type » donne un premier plan ;
+  - **« Analyser le DCE et proposer un sommaire »** (si l'IA est activée) relève les exigences et
+    propose des parties, en pointillés : les accepter ou les refuser une à une. Une citation qui
+    n'a pas été retrouvée dans le DCE est signalée. Le sommaire n'est jamais définitif tant qu'il
+    n'est pas validé ; le modifier ensuite demande de le valider à nouveau ;
+- **à droite, le document** : une page blanche où chaque section se tape directement et
+  s'enregistre seule (« Enregistré »). La barre d'outils donne titres, gras, italique, souligné,
+  listes, images (cliquer sur une image pour la remplacer ou la supprimer ; sa légende se modifie
+  dans le texte) et emplacements réservés pour une photo, un schéma, un tableau ou un plan.
+
+Sous chaque section : **Insérer depuis l'Entreprise** (présentation, moyens humains, moyens
+matériels, certifications, références : les données réelles de GPE), **Demander à l'IA** (rédiger,
+réécrire, développer, raccourcir, améliorer, corriger, préciser, adapter à une exigence choisie) et
+**Versions précédentes**. Un texte de l'IA ou de l'Entreprise ne remplace jamais le vôtre : il
+apparaît dans un encadré, avec « Remplacer mon texte », « Ajouter à la suite » ou « Ignorer ».
+Rien n'est perdu : chaque texte remplacé reste dans les versions précédentes.
+
+Une fois le sommaire validé, **« Rédiger les sections vides avec l'IA »** les rédige l'une après
+l'autre : la section en cours et l'avancement s'affichent, « Arrêter » interrompt après la section
+en cours. L'IA n'utilise que les données de l'Entreprise et du DCE, et liste ce qui manque au lieu de
+l'inventer.
+
+« Mémoire technique › Bibliothèque » reçoit les anciens mémoires de GPE (PDF avec texte ou Word).
+Ceux marqués « Référence pour l'IA » l'aident pour le style et la présentation ; elle n'en reprend
+aucun chantier ni aucune information qui ne figure pas dans les données actuelles de l'Entreprise.
 
 ## Ce qui est envoyé à l'IA
 

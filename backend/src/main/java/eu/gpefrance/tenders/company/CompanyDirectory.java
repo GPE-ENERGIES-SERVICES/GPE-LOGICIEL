@@ -46,10 +46,13 @@ public class CompanyDirectory {
 
 	private final Clock clock;
 
+	private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+
 	public CompanyDirectory(CompanyProfileRepository profiles, CompanyActivityRepository activities,
 			EmployeeRepository employees, EmployeeCredentialRepository credentials, EquipmentRepository equipment,
 			CompanyCertificationRepository certifications, CompanyReferenceRepository references,
-			CompanyDocumentRepository documents, CompanyFiles files, CompanyProperties properties, Clock clock) {
+			CompanyDocumentRepository documents, CompanyFiles files, CompanyProperties properties, Clock clock,
+			org.springframework.jdbc.core.JdbcTemplate jdbc) {
 		this.profiles = profiles;
 		this.activities = activities;
 		this.employees = employees;
@@ -61,6 +64,7 @@ public class CompanyDirectory {
 		this.files = files;
 		this.properties = properties;
 		this.clock = clock;
+		this.jdbc = jdbc;
 	}
 
 	@Transactional(readOnly = true)
@@ -127,6 +131,76 @@ public class CompanyDirectory {
 				"equipment", equipment.count(), "certifications", certifications.count(), "references",
 				references.count(), "documents", documents.count());
 		return new Overview(counts, List.copyOf(expiries), days, withoutFile);
+	}
+
+	/** The company as a bid presents it, on a day: what is valid then, read from its sources. */
+	public record Snapshot(Identity identity, List<Activity> activities, List<Person> staff, List<Item> equipment,
+			List<Certification> certifications, List<Work> references) {
+
+		/** Nothing entered yet in the company. */
+		public boolean isEmpty() {
+			return identity.legalName() == null && activities.isEmpty() && staff.isEmpty() && equipment.isEmpty()
+					&& certifications.isEmpty() && references.isEmpty();
+		}
+
+	}
+
+	public record Identity(String legalName, String tradeName, String legalForm, String siret, String city,
+			List<String> interventionDepartments, String interventionNote) {
+	}
+
+	public record Activity(String kind, String label, String description) {
+	}
+
+	/** @param credentials the qualifications and habilitations valid on the day */
+	public record Person(String name, String jobTitle, String skills, List<String> credentials) {
+	}
+
+	public record Item(String category, String label, String model, int quantity) {
+	}
+
+	public record Certification(String kind, String name, String organism, String scope, LocalDate expiresOn) {
+	}
+
+	public record Work(String projectName, String client, String location, String nature, java.math.BigDecimal amount,
+			LocalDate finishedOn, String description, String skills) {
+	}
+
+	@Transactional(readOnly = true)
+	public Snapshot snapshot(LocalDate day) {
+		Identity identity = jdbc.query("SELECT * FROM company_profile WHERE id = 1", (row, n) -> new Identity(
+				row.getString("legal_name"), row.getString("trade_name"), row.getString("legal_form"),
+				row.getString("siret"), row.getString("city"),
+				List.of((String[]) row.getArray("intervention_departments").getArray()),
+				row.getString("intervention_note"))).stream().findFirst()
+			.orElse(new Identity(null, null, null, null, null, List.of(), null));
+		List<Activity> activities = jdbc.query("SELECT kind, label, description FROM company_activity ORDER BY kind, label",
+				(row, n) -> new Activity(row.getString(1), row.getString(2), row.getString(3)));
+		Map<Long, List<String>> credentials = new java.util.HashMap<>();
+		jdbc.query("""
+				SELECT employee_id, label FROM employee_credential WHERE expires_on IS NULL OR expires_on >= ?
+				ORDER BY label""", row -> {
+			credentials.computeIfAbsent(row.getLong(1), id -> new ArrayList<>()).add(row.getString(2));
+		}, day);
+		List<Person> staff = jdbc.query("""
+				SELECT id, first_name || ' ' || last_name, job_title, skills FROM employee WHERE active
+				ORDER BY last_name, first_name""", (row, n) -> new Person(row.getString(2), row.getString(3),
+				row.getString(4), credentials.getOrDefault(row.getLong(1), List.of())));
+		List<Item> equipment = jdbc.query("""
+				SELECT category, label, model, quantity FROM equipment WHERE status <> 'OUT_OF_SERVICE'
+				ORDER BY category, label""", (row, n) -> new Item(row.getString(1), row.getString(2), row.getString(3),
+				row.getInt(4)));
+		List<Certification> certifications = jdbc.query("""
+				SELECT kind, name, organism, scope, expires_on FROM company_certification
+				WHERE expires_on IS NULL OR expires_on >= ? ORDER BY name""", (row, n) -> new Certification(
+				row.getString(1), row.getString(2), row.getString(3), row.getString(4),
+				row.getObject(5, LocalDate.class)), day);
+		List<Work> references = jdbc.query("""
+				SELECT project_name, client, location, nature, amount, finished_on, description, skills
+				FROM company_reference ORDER BY finished_on DESC NULLS LAST, project_name""", (row, n) -> new Work(
+				row.getString(1), row.getString(2), row.getString(3), row.getString(4), row.getBigDecimal(5),
+				row.getObject(6, LocalDate.class), row.getString(7), row.getString(8)));
+		return new Snapshot(identity, activities, staff, equipment, certifications, references);
 	}
 
 	private static <E extends CompanyRecord<?>> void add(List<Expiry> expiries, String kind, List<E> records,

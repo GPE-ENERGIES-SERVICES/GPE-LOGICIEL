@@ -141,8 +141,7 @@ public class AnalysisService {
 		catch (DataIntegrityViolationException ex) {
 			// Another request of the same tender was queued at the same time.
 			requested = transaction.execute(tx -> dossiers.findById(dossierId)
-				.flatMap(dossier -> analyses.findFirstByTenderIdAndKindAndStatusInOrderByIdDesc(dossier.getTenderId(),
-						kind, UNFINISHED))
+				.flatMap(dossier -> unfinished(dossier, kind))
 				.map(running -> new Requested(running.getId(), false))
 				.orElseThrow(() -> ex));
 		}
@@ -159,8 +158,7 @@ public class AnalysisService {
 			throw new AnalysisRejectedException(
 					"La lecture du dossier n'est pas terminée : l'analyse sera possible ensuite.");
 		}
-		Optional<Analysis> running = analyses.findFirstByTenderIdAndKindAndStatusInOrderByIdDesc(dossier.getTenderId(),
-				kind, UNFINISHED);
+		Optional<Analysis> running = unfinished(dossier, kind);
 		if (running.isPresent()) {
 			return new Requested(running.get().getId(), false);
 		}
@@ -177,8 +175,11 @@ public class AnalysisService {
 		String version = financial ? FinancialPrompt.VERSION : ExtractionPrompt.VERSION;
 		String fingerprint = fingerprint(selection.documents(), client.provider() + "/" + client.model(), version);
 		if (!force) {
-			Optional<Analysis> done = analyses.findFirstByTenderIdAndKindAndInputFingerprintAndStatusOrderByIdDesc(
-					dossier.getTenderId(), kind, fingerprint, AnalysisStatus.DONE);
+			Optional<Analysis> done = dossier.getReviewId() != null
+					? analyses.findFirstByReviewIdAndKindAndInputFingerprintAndStatusOrderByIdDesc(dossier.getReviewId(),
+							kind, fingerprint, AnalysisStatus.DONE)
+					: analyses.findFirstByTenderIdAndKindAndInputFingerprintAndStatusOrderByIdDesc(dossier.getTenderId(),
+							kind, fingerprint, AnalysisStatus.DONE);
 			if (done.isPresent()) {
 				return new Requested(done.get().getId(), false);
 			}
@@ -190,6 +191,7 @@ public class AnalysisService {
 		Analysis created = new Analysis(kind, dossier.getTenderId(), dossierId, client.provider(), client.model(),
 				version, selection.documents().stream().map(Document::getId).toList(), fingerprint, requestedBy,
 				clock.instant());
+		created.belongTo(dossier.getReviewId());
 		if (requestedBy == null) {
 			created.delayUntil(clock.instant().plus(autoStartDelay));
 		}
@@ -197,6 +199,12 @@ public class AnalysisService {
 		log.info("Analysis {} ({}) of dossier {} queued ({} documents, {} characters)", analysis.getId(), kind,
 				dossierId, selection.documents().size(), selection.characters());
 		return new Requested(analysis.getId(), true);
+	}
+
+	private Optional<Analysis> unfinished(Dossier dossier, AnalysisKind kind) {
+		return dossier.getReviewId() != null
+				? analyses.findFirstByReviewIdAndKindAndStatusInOrderByIdDesc(dossier.getReviewId(), kind, UNFINISHED)
+				: analyses.findFirstByTenderIdAndKindAndStatusInOrderByIdDesc(dossier.getTenderId(), kind, UNFINISHED);
 	}
 
 	/**
@@ -213,6 +221,8 @@ public class AnalysisService {
 		Boolean retained = transaction.execute(status -> dossiers.findById(event.dossierId())
 			// A user may have stopped it while the dossier was read.
 			.filter(Dossier::isAutoAnalysis)
+			// A dossier without tender is analysed on request only, even if the setting was changed.
+			.filter(dossier -> dossier.getTenderId() != null)
 			.flatMap(dossier -> tenders.findById(dossier.getTenderId()))
 			.map(Tender::getRetained)
 			.orElse(null));
@@ -230,30 +240,25 @@ public class AnalysisService {
 	/**
 	 * Sends at once an analysis waiting to be sent (started by itself, or
 	 * waiting for a new attempt), instead of waiting for its time.
-	 * @return the tender of the analysis
 	 */
-	public Long sendNow(Long analysisId) {
-		Long tenderId = transaction.execute(status -> {
+	public void sendNow(Long analysisId) {
+		transaction.executeWithoutResult(status -> {
 			Analysis analysis = analyses.findById(analysisId)
 				.orElseThrow(() -> new AnalysisNotFoundException(analysisId));
 			analysis.sendNow(clock.instant());
-			return analysis.getTenderId();
 		});
 		worker.wakeUp();
-		return tenderId;
 	}
 
 	/**
 	 * Cancels an analysis not sent yet.
-	 * @return the tender of the analysis
 	 */
-	public Long cancel(Long analysisId, String user) {
-		return transaction.execute(status -> {
+	public void cancel(Long analysisId, String user) {
+		transaction.executeWithoutResult(status -> {
 			Analysis analysis = analyses.findById(analysisId)
 				.orElseThrow(() -> new AnalysisNotFoundException(analysisId));
 			analysis.cancel(user, clock.instant());
 			log.info("Analysis {} cancelled by a user", analysisId);
-			return analysis.getTenderId();
 		});
 	}
 

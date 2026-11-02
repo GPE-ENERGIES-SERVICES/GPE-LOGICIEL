@@ -101,12 +101,15 @@ public class AnthropicExtractionClient implements ExtractionClient {
 					"Anthropic : " + (timeout ? "pas de réponse dans le délai" : "connexion impossible"));
 		}
 		StopReason stop = message.stopReason().orElse(null);
+		// A refused or cut answer is billed all the same: its tokens go with the failure.
+		ModelAnswer billed = new ModelAnswer("", Math.toIntExact(message.usage().inputTokens()),
+				Math.toIntExact(message.usage().outputTokens()));
 		if (StopReason.REFUSAL.equals(stop)) {
-			throw new ProviderException(FailureKind.REFUSED, "Anthropic : analyse refusée par le modèle");
+			throw new ProviderException(FailureKind.REFUSED, "Anthropic : analyse refusée par le modèle", billed);
 		}
 		if (StopReason.MAX_TOKENS.equals(stop)) {
 			throw new ProviderException(FailureKind.INVALID_RESPONSE,
-					"Anthropic : réponse coupée, limite de " + maxTokens(request) + " tokens atteinte");
+					"Anthropic : réponse coupée, limite de " + maxTokens(request) + " tokens atteinte", billed);
 		}
 		String text = message.content()
 			.stream()

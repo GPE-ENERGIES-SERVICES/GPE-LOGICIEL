@@ -122,6 +122,21 @@ class AnalysisQueueTests {
 		verify(client, times(2)).complete(any(ExtractionRequest.class));
 	}
 
+	/** A cut answer is billed by the provider: its tokens count in the monthly ceiling. */
+	@Test
+	void countsTheTokensOfACutAnswer() throws InterruptedException {
+		given(client.complete(any(ExtractionRequest.class))).willThrow(new ProviderException(FailureKind.INVALID_RESPONSE,
+				"Anthropic : réponse coupée, limite de 32000 tokens atteinte", new ModelAnswer("", 120_000, 32_000)));
+		Dossier dossier = upload(tender("Travaux"), "RC.pdf");
+
+		Analysis failed = waitFor(service.request(dossier.getId(), false, "Marie Durand"), AnalysisStatus.FAILED);
+
+		assertThat(failed.getErrorKind()).isEqualTo(FailureKind.INVALID_RESPONSE);
+		assertThat(failed.getInputTokens()).isEqualTo(120_000);
+		assertThat(failed.getOutputTokens()).isEqualTo(32_000);
+		verify(client, times(1)).complete(any(ExtractionRequest.class));
+	}
+
 	@Test
 	void neverTriesARefusedKeyAgainNorShowsIt(CapturedOutput output) throws InterruptedException {
 		given(client.complete(any(ExtractionRequest.class)))

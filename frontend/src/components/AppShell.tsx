@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Fragment, Suspense, useRef, useState, type ReactNode } from "react";
+import { Fragment, Suspense, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { useLoader } from "@/lib/useLoader";
 import { getDuplicateGroups } from "@/services/duplicateApi";
@@ -25,19 +25,53 @@ const SECTIONS: Section[] = [
   { href: "/tenders", label: "Tous les appels d'offres", icon: "tenders", group: "Appels d'offres" },
   { href: "/follows", label: "Mes suivis", icon: "star", group: "Appels d'offres" },
   { href: "/alerts", label: "Mes veilles", icon: "alerts", group: "Appels d'offres" },
+  { href: "/dce-reviews", label: "Analyser un DCE", icon: "file", group: "Appels d'offres" },
   { href: "/awards", label: "Marchés attribués", icon: "award", group: "Appels d'offres" },
   { href: "/archives", label: "Archives", icon: "archive", group: "Appels d'offres" },
   { href: "/estimates", label: "Chiffrages", icon: "calculator", group: "Chiffrage" },
   { href: "/suppliers", label: "Tarifs fournisseurs", icon: "tag", group: "Chiffrage", admin: true },
+  { href: "/memoirs", label: "Mémoires", icon: "file", group: "Mémoire technique" },
+  { href: "/memoirs/library", label: "Bibliothèque", icon: "archive", group: "Mémoire technique" },
   { href: "/company", label: "Entreprise", icon: "building", separator: true },
   { href: "/supervision", label: "Supervision", icon: "eye", admin: true, separator: true },
   { href: "/settings", label: "Paramètres", icon: "settings", admin: true },
 ];
 
+const NAV_COLLAPSED_KEY = "gpe-nav-collapsed";
+const NAV_COLLAPSED_EVENT = "gpe-nav-collapsed-change";
+
+function subscribeNavCollapsed(onChange: () => void) {
+  window.addEventListener(NAV_COLLAPSED_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(NAV_COLLAPSED_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function readNavCollapsed(): boolean {
+  try {
+    return localStorage.getItem(NAV_COLLAPSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** The menu reduced to its icons, kept in this browser. */
+function chooseNavCollapsed(collapsed: boolean) {
+  try {
+    localStorage.setItem(NAV_COLLAPSED_KEY, String(collapsed));
+  } catch {
+    // not kept: the menu stays as it is
+  }
+  window.dispatchEvent(new Event(NAV_COLLAPSED_EVENT));
+}
+
 /** The section of the current page, or of the page a tender was opened from. */
 function activeSection(sections: Section[], current: string): Section | undefined {
   const isActive = (href: string) => (href === "/" ? current === "/" : current.startsWith(href));
-  return sections.find(({ href }) => isActive(href));
+  // The most precise entry: /memoirs/library before /memoirs.
+  return sections.filter(({ href }) => isActive(href)).sort((a, b) => b.href.length - a.href.length)[0];
 }
 
 function SectionNav({
@@ -45,12 +79,15 @@ function SectionNav({
   origin,
   onNavigate,
   badges = {},
+  collapsed,
 }: {
   sections: Section[];
   origin: string | null;
   onNavigate: () => void;
   /** A count shown beside an entry, by its href: work waiting there. */
   badges?: Record<string, number>;
+  /** Only the icons show: the label comes as a tooltip. */
+  collapsed: boolean;
 }) {
   const pathname = usePathname();
   const active = activeSection(sections, origin ?? pathname);
@@ -65,9 +102,10 @@ function SectionNav({
             className={active?.href === href ? "active" : ""}
             aria-current={active?.href === href ? "page" : undefined}
             onClick={onNavigate}
+            title={collapsed ? label : undefined}
           >
             <Icon name={icon} />
-            <span>{label}</span>
+            <span className="nav-label">{label}</span>
             {Boolean(badges[href]) && (
               <span className="nav-badge" aria-label={`${badges[href]} à traiter`}>
                 {badges[href]}
@@ -96,12 +134,16 @@ function SectionNavWithOrigin({
   sections,
   onNavigate,
   badges,
+  collapsed,
 }: {
   sections: Section[];
   onNavigate: () => void;
   badges: Record<string, number>;
+  collapsed: boolean;
 }) {
-  return <SectionNav sections={sections} origin={useOrigin(sections)} onNavigate={onNavigate} badges={badges} />;
+  return (
+    <SectionNav sections={sections} origin={useOrigin(sections)} onNavigate={onNavigate} badges={badges} collapsed={collapsed} />
+  );
 }
 
 function SectionTitleWithOrigin({ sections }: { sections: Section[] }) {
@@ -122,6 +164,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const badges = { "/supervision": duplicates.data?.length ?? 0 };
   // The navigation is a drawer on small screens only.
   const [menuOpen, setMenuOpen] = useState(false);
+  // On large screens: the menu reduced to its icons, or unfolded.
+  const collapsed = useSyncExternalStore(subscribeNavCollapsed, readNavCollapsed, () => false);
   const closeButton = useRef<HTMLButtonElement>(null);
   const closeMenu = () => setMenuOpen(false);
   const openMenu = () => {
@@ -132,7 +176,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className={menuOpen ? "app-shell menu-open" : "app-shell"}
+      className={`app-shell${menuOpen ? " menu-open" : ""}${collapsed ? " nav-collapsed" : ""}`}
       onKeyDown={(e) => {
         if (menuOpen && e.key === "Escape") {
           closeMenu();
@@ -141,6 +185,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     >
       <aside id="app-sidebar" className="app-sidebar">
         <div className="app-brand">
+          <button
+            type="button"
+            className="icon-button menu-toggle"
+            aria-label={collapsed ? "Déplier le menu" : "Réduire le menu"}
+            title={collapsed ? "Déplier le menu" : "Réduire le menu"}
+            aria-controls="app-sidebar"
+            aria-expanded={!collapsed}
+            onClick={() => chooseNavCollapsed(!collapsed)}
+          >
+            <Icon name="menu" />
+          </button>
           <Link href="/" className="app-title" onClick={closeMenu}>
             Logiciel GPE
           </Link>
@@ -154,8 +209,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Icon name="close" />
           </button>
         </div>
-        <Suspense fallback={<SectionNav sections={sections} origin={null} onNavigate={closeMenu} badges={badges} />}>
-          <SectionNavWithOrigin sections={sections} onNavigate={closeMenu} badges={badges} />
+        <Suspense
+          fallback={<SectionNav sections={sections} origin={null} onNavigate={closeMenu} badges={badges} collapsed={collapsed} />}
+        >
+          <SectionNavWithOrigin sections={sections} onNavigate={closeMenu} badges={badges} collapsed={collapsed} />
         </Suspense>
         <div className="app-user">
           <span className="avatar" aria-hidden="true">

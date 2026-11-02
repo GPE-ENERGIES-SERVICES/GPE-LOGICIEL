@@ -73,16 +73,24 @@ public class AiAssistant {
 				maxOutputTokens, 0, min(properties.requestTimeout(), Duration.ofMinutes(2)));
 		try {
 			ExtractionClient.ModelAnswer answer = client.complete(request);
-			jdbc.update("""
-					INSERT INTO ai_call (kind, model, input_tokens, output_tokens, created_by, created_at)
-					VALUES (?, ?, ?, ?, ?, ?)""", kind, client.model(), answer.inputTokens(), answer.outputTokens(),
-					user, java.sql.Timestamp.from(clock.instant()));
+			record(kind, client.model(), answer, user);
 			return new Answer(answer.text(), client.model());
 		}
 		catch (ProviderException ex) {
+			if (ex.usage() != null) {
+				record(kind, client.model(), ex.usage(), user);
+			}
 			log.warn("AI call {} failed: {} {}", kind, ex.kind(), SecretRedactor.redact(ex.getMessage()));
 			throw problem(HttpStatus.BAD_GATEWAY, "L'IA n'a pas répondu (" + ex.kind() + ") : réessayez plus tard.");
 		}
+	}
+
+	/** The tokens of a call, counted in the monthly ceiling with the analyses. */
+	private void record(String kind, String model, ExtractionClient.ModelAnswer usage, String user) {
+		jdbc.update("""
+				INSERT INTO ai_call (kind, model, input_tokens, output_tokens, created_by, created_at)
+				VALUES (?, ?, ?, ?, ?, ?)""", kind, model, usage.inputTokens(), usage.outputTokens(), user,
+				java.sql.Timestamp.from(clock.instant()));
 	}
 
 	private static Duration min(Duration a, Duration b) {

@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -22,6 +23,8 @@ import eu.gpefrance.tenders.analysis.AnalysisReport.Limits;
 import eu.gpefrance.tenders.analysis.AnalysisReport.Quality;
 import eu.gpefrance.tenders.analysis.AnalysisRepository.TokenTotals;
 import eu.gpefrance.tenders.analysis.ExtractedFieldRepository.FieldCount;
+import eu.gpefrance.tenders.document.DceReview;
+import eu.gpefrance.tenders.document.DceReviewRepository;
 import eu.gpefrance.tenders.document.Dossier;
 import eu.gpefrance.tenders.document.DossierRepository;
 import eu.gpefrance.tenders.tender.Tender;
@@ -46,8 +49,11 @@ public class AnalysisReports {
 
 	private final AnalysisGate gate;
 
+	private final DceReviewRepository reviews;
+
 	public AnalysisReports(AnalysisRepository analyses, ExtractedFieldRepository fields, DossierRepository dossiers,
-			TenderRepository tenders, AnalysisProperties properties, AnalysisGate gate) {
+			TenderRepository tenders, AnalysisProperties properties, AnalysisGate gate, DceReviewRepository reviews) {
+		this.reviews = reviews;
 		this.analyses = analyses;
 		this.fields = fields;
 		this.dossiers = dossiers;
@@ -60,12 +66,14 @@ public class AnalysisReports {
 	public List<JournalEntry> journal(int limit) {
 		List<Analysis> latest = analyses.findAllByOrderByIdDesc(PageRequest.of(0, limit));
 		Map<Long, Tender> tendersById = byId(tenders.findAllById(ids(latest, Analysis::getTenderId)), Tender::getId);
+		Map<Long, DceReview> reviewsById = byId(reviews.findAllById(ids(latest, Analysis::getReviewId)), DceReview::getId);
 		Map<Long, Dossier> dossiersById = byId(dossiers.findAllById(ids(latest, Analysis::getDossierId)),
 				Dossier::getId);
 		return latest.stream()
-			.map(analysis -> new JournalEntry(analysis.getId(), analysis.getTenderId(),
+			.map(analysis -> new JournalEntry(analysis.getId(), analysis.getTenderId(), analysis.getReviewId(),
 					tendersById.containsKey(analysis.getTenderId()) ? tendersById.get(analysis.getTenderId()).getTitle()
-							: null,
+							: reviewsById.containsKey(analysis.getReviewId())
+									? reviewsById.get(analysis.getReviewId()).getName() : null,
 					dossiersById.containsKey(analysis.getDossierId())
 							? dossiersById.get(analysis.getDossierId()).getVersion() : 0,
 					analysis.getStatus(), analysis.getProvider(), analysis.getModel(), analysis.getPromptVersion(),
@@ -125,7 +133,7 @@ public class AnalysisReports {
 	}
 
 	private static <T> List<Long> ids(Collection<T> items, Function<T, Long> id) {
-		return items.stream().map(id).distinct().toList();
+		return items.stream().map(id).filter(Objects::nonNull).distinct().toList();
 	}
 
 	private static <T> Map<Long, T> byId(List<T> items, Function<T, Long> id) {

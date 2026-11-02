@@ -30,8 +30,13 @@ public class Dossier {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "tender_id", nullable = false, updatable = false)
+	/** Null for the dossier of a review. */
+	@Column(name = "tender_id", updatable = false)
 	private Long tenderId;
+
+	/** The analysis without tender it belongs to, null for the dossier of a tender. */
+	@Column(name = "review_id", updatable = false)
+	private Long reviewId;
 
 	@Column(nullable = false, updatable = false)
 	private int version;
@@ -84,6 +89,17 @@ public class Dossier {
 	}
 
 	/**
+	 * A version uploaded for a review: analysed on request only, each analysis
+	 * being paid for.
+	 */
+	static Dossier ofReview(Long reviewId, int version, String uploadedBy, Instant now) {
+		Dossier dossier = new Dossier(null, version, uploadedBy, now);
+		dossier.reviewId = reviewId;
+		dossier.autoAnalysis = false;
+		return dossier;
+	}
+
+	/**
 	 * A version retrieved from a link by a {@link DceRetriever}.
 	 * @param storedBytes bytes written to the storage directory, counted in the
 	 * quota of the retrieved files
@@ -126,6 +142,10 @@ public class Dossier {
 
 	public Long getTenderId() {
 		return tenderId;
+	}
+
+	public Long getReviewId() {
+		return reviewId;
 	}
 
 	public int getVersion() {

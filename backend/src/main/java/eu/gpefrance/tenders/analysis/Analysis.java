@@ -41,8 +41,13 @@ public class Analysis {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "tender_id", nullable = false, updatable = false)
+	/** Null for the analysis of a review. */
+	@Column(name = "tender_id", updatable = false)
 	private Long tenderId;
+
+	/** The analysis without tender it belongs to, null for the analysis of a tender. */
+	@Column(name = "review_id", updatable = false)
+	private Long reviewId;
 
 	@Column(name = "dossier_id", nullable = false, updatable = false)
 	private Long dossierId;
@@ -366,6 +371,15 @@ public class Analysis {
 
 	public Long getTenderId() {
 		return tenderId;
+	}
+
+	public Long getReviewId() {
+		return reviewId;
+	}
+
+	/** Before it is saved: the analysis of a dossier of a review. */
+	void belongTo(Long reviewId) {
+		this.reviewId = reviewId;
 	}
 
 	public Long getDossierId() {
