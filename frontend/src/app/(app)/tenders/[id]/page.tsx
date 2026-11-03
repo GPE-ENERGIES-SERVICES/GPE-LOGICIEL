@@ -422,7 +422,7 @@ function TenderDetails() {
             content: (
               <section className="card">
                 <h2>Dossier de réponse</h2>
-                <ResponseSection tenderId={tender.id} />
+                <ResponseSection tenderId={tender.id} lots={tender.lots} />
               </section>
             ),
           },

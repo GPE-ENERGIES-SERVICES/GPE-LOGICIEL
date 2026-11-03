@@ -8,7 +8,6 @@ import { cancelAnalysis, getFinancialAnalysis, getTenderAnalysis, sendAnalysisNo
 import { allowAutoAnalysis, getDossiers } from "@/services/documentApi";
 import type { Analysis } from "@/types/analysis";
 import type { Dossier } from "@/types/document";
-import { Icon } from "./Icon";
 
 /** What an analysis takes before any has been measured on this server. */
 const DEFAULT_SUMMARY_SECONDS = 180;
@@ -342,7 +341,7 @@ export function ProcessingPanel({ tenderId, retained }: { tenderId: number; reta
           {steps.map((step, index) => (
             <li key={step.title} className={`step step-${step.state}`}>
               <span className="step-marker" aria-hidden="true">
-                {step.state === "done" ? <Icon name="check" size={13} /> : step.state === "error" ? "!" : index + 1}
+                {step.state === "done" ? "✓" : step.state === "error" ? "!" : index + 1}
               </span>
               <div className="step-body">
                 <div className="step-title">

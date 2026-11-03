@@ -46,6 +46,15 @@ const GROUPS: { title: string; fields: ProfileField[] }[] = [
       { name: "interventionNote", label: "Précisions", wide: true },
     ],
   },
+  {
+    title: "Pour les formulaires de réponse",
+    fields: [
+      { name: "signatoryName", label: "Nom du signataire", placeholder: "Prénom NOM" },
+      { name: "signatoryTitle", label: "Qualité du signataire", placeholder: "Président" },
+      { name: "iban", label: "IBAN", placeholder: "FR76…", wide: true },
+      { name: "bic", label: "BIC" },
+    ],
+  },
 ];
 
 function shown(value: unknown): string {

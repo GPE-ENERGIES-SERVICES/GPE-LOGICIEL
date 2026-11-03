@@ -59,7 +59,7 @@ function PointSource({ point, documents }: { point: FinancialPoint; documents: A
         title={shown ? "Masquer la source" : "Afficher la source et l'extrait cité"}
         onClick={() => setShown(!shown)}
       >
-        <Icon name="check" size={14} />
+        ✓
         <span className="badge-chevron">
           <Icon name={shown ? "chevronUp" : "chevronDown"} size={12} />
         </span>

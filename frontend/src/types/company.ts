@@ -42,6 +42,10 @@ export type CompanyProfile = {
   website: string | null;
   interventionDepartments: string[];
   interventionNote: string | null;
+  iban: string | null;
+  bic: string | null;
+  signatoryName: string | null;
+  signatoryTitle: string | null;
   updatedBy: string | null;
   updatedAt: string;
   logo: CompanyFile | null;

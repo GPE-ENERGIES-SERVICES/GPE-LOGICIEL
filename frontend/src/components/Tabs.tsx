@@ -1,7 +1,6 @@
 "use client";
 
 import { useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
-import { Icon } from "./Icon";
 
 /** @param step where this part of the way of a tender stands; without it, a plain tab */
 export type Tab = { id: string; label: string; content: ReactNode; step?: "done" | "current" | "todo" };
@@ -54,7 +53,7 @@ export function Tabs({ label, tabs }: { label: string; tabs: Tab[] }) {
           >
             {tab.step && (
               <span className={`journey-mark journey-${tab.step}`} aria-hidden="true">
-                {tab.step === "done" ? <Icon name="check" size={13} /> : tabs.indexOf(tab) + 1}
+                {tab.step === "done" ? "✓" : tabs.indexOf(tab) + 1}
               </span>
             )}
             {tab.label}

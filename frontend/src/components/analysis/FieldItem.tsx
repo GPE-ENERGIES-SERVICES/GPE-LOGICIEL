@@ -73,7 +73,7 @@ export function FieldItem({ field, grid, readable, onChanged, filling = false }:
           title={open ? "Masquer la source et les actions" : "Source et actions"}
           onClick={() => setOpen(!open)}
         >
-          {reliable && !field.decision ? <Icon name="check" size={14} /> : stateLabel}
+          {reliable && !field.decision ? "✓" : stateLabel}
           <span className="badge-chevron">
             <Icon name={open ? "chevronUp" : "chevronDown"} size={12} />
           </span>

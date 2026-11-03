@@ -14,7 +14,7 @@ const COUNTS: { key: string; label: string; href: string }[] = [
   { key: "equipment", label: "Matériels", href: "/company/equipment" },
   { key: "certifications", label: "Certifications", href: "/company/certifications" },
   { key: "references", label: "Références", href: "/company/references" },
-  { key: "documents", label: "Documents", href: "/company/documents" },
+  { key: "documents", label: "Documents entreprise", href: "/company/documents" },
 ];
 
 /** What the company holds, and what expires or has expired: documents, certifications, habilitations, checks. */

@@ -4,7 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { FieldItem } from "@/components/analysis/FieldItem";
 import { PartTitle } from "@/components/analysis/PartTitle";
-import { Icon } from "@/components/Icon";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Fold } from "@/components/Fold";
 import {
@@ -240,8 +239,8 @@ function SummarySheet({
         )}
         {error && <p className="error">{error}</p>}
       </div>
-      <p className="hint icon-line">
-        <Icon name="check" size={14} /> extrait retrouvé dans le document ; l&apos;interprétation reste à confirmer en le lisant.
+      <p className="hint">
+        ✓ : extrait retrouvé dans le document ; l&apos;interprétation reste à confirmer en le lisant.
       </p>
 
       <Fold title={SECTION_TITLES.AT_A_GLANCE} count={found("AT_A_GLANCE")} open>

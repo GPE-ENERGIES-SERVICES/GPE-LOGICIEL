@@ -40,6 +40,15 @@ public class OfficeConverter {
 	 * @throws ConversionException if LibreOffice is missing, fails or takes too long
 	 */
 	public Path toPdf(Path source, Path outputDirectory) {
+		return convert(source, outputDirectory, "pdf");
+	}
+
+	/** A document in the old Word format (.doc), as .docx. */
+	public Path toDocx(Path source, Path outputDirectory) {
+		return convert(source, outputDirectory, "docx");
+	}
+
+	private Path convert(Path source, Path outputDirectory, String format) {
 		Path profile = null;
 		boolean reusable = false;
 		try {
@@ -50,7 +59,7 @@ public class OfficeConverter {
 				profile = Files.createTempDirectory("office-profile");
 			}
 			Process process = new ProcessBuilder(List.of(properties.officeCommand(), "--headless", "--norestore",
-					"-env:UserInstallation=" + profile.toUri(), "--convert-to", "pdf", "--outdir",
+					"-env:UserInstallation=" + profile.toUri(), "--convert-to", format, "--outdir",
 					outputDirectory.toString(), source.toString()))
 				.redirectErrorStream(true)
 				.redirectOutput(ProcessBuilder.Redirect.DISCARD)
@@ -59,7 +68,7 @@ public class OfficeConverter {
 				process.destroyForcibly();
 				throw new ConversionException("Conversion en PDF trop longue, abandonnée");
 			}
-			Path pdf = outputDirectory.resolve(baseName(source) + ".pdf");
+			Path pdf = outputDirectory.resolve(baseName(source) + "." + format);
 			if (process.exitValue() != 0 || !Files.exists(pdf)) {
 				throw new ConversionException("La conversion en PDF a échoué");
 			}

@@ -109,7 +109,7 @@ public class ResponseService {
 	 */
 	public record PieceResponse(Long id, Category category, String label, boolean fromAnalysis, PieceState state,
 			String detail, Long companyDocumentId, String fileName, Long sizeBytes, String attachedName,
-			String checkedBy, Instant checkedAt) {
+			String checkedBy, Instant checkedAt, boolean fillable) {
 	}
 
 	/** A step before the answer, as it stands. */
@@ -145,6 +145,11 @@ public class ResponseService {
 					file.validity(), file.path() != null))
 			.toList();
 		return new ResponseView(steps(analysis, tenderEstimates, memoirs), analysis != null, responses, documents);
+	}
+
+	@Transactional(readOnly = true)
+	public ResponseView viewOfPiece(Long pieceId) {
+		return view(find(pieceId).getTenderId());
 	}
 
 	/**
@@ -383,16 +388,17 @@ public class ResponseService {
 		}
 		return new PieceResponse(piece.getId(), piece.getCategory(), piece.getLabel(), piece.isFromAnalysis(), state, detail,
 				piece.getCompanyDocumentId(), piece.getFileName(), piece.getSizeBytes(),
-				attached == null ? null : attached.name(), piece.getCheckedBy(), piece.getCheckedAt());
+				attached == null ? null : attached.name(), piece.getCheckedBy(), piece.getCheckedAt(),
+				FormService.fillable(piece.getLabel()));
 	}
 
 	private static String whatToDo(String label, List<EstimateResponse.Summary> tenderEstimates, List<String> memoirs) {
 		return switch (PieceMatcher.kind(label)) {
-			case FORM -> "À compléter et déposer ici.";
-			case ENGAGEMENT -> "Complétez le formulaire de l'acheteur (dans le DCE) et déposez-le ici.";
+			case FORM -> "« Remplir » reprend le formulaire du DCE ; vous pouvez aussi déposer le vôtre.";
+			case ENGAGEMENT -> "« Remplir » reprend le formulaire du DCE ; vous pouvez aussi déposer le vôtre.";
 			case PRICES -> pricesToDo(tenderEstimates);
-			case MEMOIR -> memoirs.isEmpty() ? "Aucun mémoire : créez-le dans l'onglet « Mémoire », puis déposez sa version finale ici."
-					: "Mémoire : " + String.join(", ", memoirs) + ". Déposez sa version finale ici.";
+			case MEMOIR -> memoirs.isEmpty() ? "Aucun mémoire : créez-le dans l'onglet « Mémoire », exportez-le en Word, puis déposez sa version finale ici."
+					: "Mémoire : " + String.join(", ", memoirs) + ". Exportez-le en Word depuis sa page, relisez-le, puis déposez sa version finale ici.";
 			case OTHER -> "À déposer ici, ou à choisir dans les documents de l'entreprise.";
 		};
 	}

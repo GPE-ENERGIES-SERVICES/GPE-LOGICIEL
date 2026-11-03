@@ -4,16 +4,17 @@ import { dateCell, RecordTable } from "@/components/company/RecordTable";
 import { DOCUMENT_CATEGORY_LABELS } from "@/lib/company";
 
 /**
- * The official documents asked in the bids. The current file is the last
- * uploaded; the former ones stay as history.
+ * The documents of the company asked in the bids, from which the answers are
+ * composed. The current file is the last uploaded; the former ones stay as history.
  */
 export default function CompanyDocumentsPage() {
   return (
     <section className="card">
-      <h2>Documents administratifs</h2>
+      <h2>Documents entreprise</h2>
       <p className="muted">
-        Kbis, assurances, attestations fiscales, sociales et de vigilance… Pour remplacer un document arrivé à échéance,
-        ouvrez ses fichiers, déposez le nouveau puis mettez à jour ses dates.
+        Le dossier de réponse propose ces documents quand un appel d&apos;offres les demande : Kbis, assurances, attestations,
+        charte de sécurité, moyens humains et matériels, réalisations… Pour en ajouter un autre, choisissez « Autre justificatif ».
+        Pour remplacer un document arrivé à échéance, ouvrez ses fichiers, déposez le nouveau puis mettez à jour ses dates.
       </p>
       <RecordTable
         list="documents"

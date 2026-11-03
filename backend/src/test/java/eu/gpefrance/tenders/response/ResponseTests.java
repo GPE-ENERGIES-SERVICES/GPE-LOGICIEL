@@ -208,6 +208,11 @@ class ResponseTests {
 		assertThat(PieceMatcher.kind("Mémoire technique")).isEqualTo(PieceMatcher.Kind.MEMOIR);
 		assertThat(PieceMatcher.category("Attestation de vigilance URSSAF").name()).isEqualTo("VIGILANCE");
 		assertThat(PieceMatcher.category("Assurance décennale").name()).isEqualTo("INSURANCE");
+		assertThat(PieceMatcher.category("Charte de sécurité").name()).isEqualTo("SAFETY");
+		assertThat(PieceMatcher.category("Déclaration des moyens humains").name()).isEqualTo("STAFF");
+		assertThat(PieceMatcher.category("Liste du matériel").name()).isEqualTo("EQUIPMENT");
+		assertThat(PieceMatcher.category("Références de travaux similaires").name()).isEqualTo("REFERENCES");
+		assertThat(PieceMatcher.category("PPSPS")).isNull();
 		assertThat(PieceMatcher.category("Planning")).isNull();
 		assertThat(PieceMatcher.category("Mémoire sur l'assurance qualité")).isNull();
 	}

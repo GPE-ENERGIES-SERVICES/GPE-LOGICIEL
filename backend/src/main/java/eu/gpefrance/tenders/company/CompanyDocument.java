@@ -36,6 +36,14 @@ public class CompanyDocument extends CompanyRecord<CompanyDocument.Request> {
 		CERTIFICATE,
 		/** Bilan, chiffre d'affaires. */
 		FINANCIAL,
+		/** Charte de sécurité, prévention des risques. */
+		SAFETY,
+		/** Déclaration des moyens humains, effectifs. */
+		STAFF,
+		/** Déclaration des moyens matériels. */
+		EQUIPMENT,
+		/** Présentation de l'entreprise, réalisations, références. */
+		REFERENCES,
 		/** Autre justificatif administratif. */
 		OTHER
 

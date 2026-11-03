@@ -824,6 +824,17 @@ vérification, enregistrée et effacée quand ce qui est joint change. Le fichie
 de l'entreprise. Fichiers sous `responses/{tenderId}/{pieceId}/`, contrôlés par `FileTypeValidator`.
 `EstimateExportService` n'est jamais appelé ici : son export contient les déboursés et les coefficients.
 
+## Remplissage des formulaires du DCE
+
+`FormDocument` (POI) trouve les emplacements d'un .docx : pointillés, ligne vide après un libellé, cellule vide, case
+(champ Word ou caractère ¨ ou ☐). Un .doc passe d'abord par `OfficeConverter.toDocx`. Les emplacements après « sur
+l'honneur », « signature », « acceptation de l'offre » sont verrouillés : ni envoyés à l'IA ni écrits. `FormService` envoie
+les emplacements et les noms des valeurs connues ; l'IA répond CLE, TEXTE, COCHER, NE_PAS_COCHER, MANQUANT ou IGNORER. Pour
+CLE le logiciel écrit la valeur : l'IA ne voit ni l'IBAN ni le SIRET (`CompanyProfile.formValues`, hors `snapshot`). Les
+montants viennent du chiffrage validé du lot. Tables `response_form` et `response_form_field` (V42) ; source MANUAL jamais
+écrasée. Limite : un emplacement mal repéré ou mal verrouillé reste possible sur un formulaire de mise en page inhabituelle,
+d'où la relecture du Word généré.
+
 ## DCE : liens, fichiers et récupération future
 
 Un lien vers une plateforme n'est pas un fichier : les deux sont séparés.

@@ -246,6 +246,19 @@ public class MemoirController {
 		return service.workspace(id);
 	}
 
+	/**
+	 * The memoir as a Word document; what is still to write is said in it.
+	 */
+	@GetMapping("/api/memoirs/{id}/export")
+	public ResponseEntity<byte[]> export(@PathVariable Long id) {
+		MemoirService.Export export = service.exportWord(id);
+		return ResponseEntity.ok()
+			.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+			.header(HttpHeaders.CONTENT_DISPOSITION,
+					ContentDisposition.attachment().filename(export.fileName(), StandardCharsets.UTF_8).build().toString())
+			.body(export.content());
+	}
+
 	// Images
 
 	@PostMapping("/api/memoirs/{id}/files")

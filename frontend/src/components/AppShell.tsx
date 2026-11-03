@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Fragment, Suspense, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
+import { PRODUCT_NAME } from "@/lib/brand";
 import { useLoader } from "@/lib/useLoader";
 import { getDuplicateGroups } from "@/services/duplicateApi";
 
@@ -214,7 +215,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Icon name="menu" />
           </button>
           <Link href="/" className="app-title" onClick={closeMenu}>
-            Logiciel GPE
+            <span className="product-name" lang="ar" dir="rtl">
+              {PRODUCT_NAME}
+            </span>
           </Link>
           <button
             ref={closeButton}

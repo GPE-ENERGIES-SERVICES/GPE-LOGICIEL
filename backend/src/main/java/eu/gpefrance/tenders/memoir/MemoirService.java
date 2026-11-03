@@ -80,6 +80,19 @@ public class MemoirService {
 			MemoirStore.JobRow job, List<MemoirAi.SourceDocument> documents, AiAssistant.Availability ai) {
 	}
 
+	/** A memoir as a Word document, read again and finished by a user before it is sent. */
+	public Export exportWord(Long id) {
+		MemoirRow memoir = found(id);
+		byte[] content = MemoirWord.write(memoir, store.sections(id),
+				(fileId) -> store.file(fileId)
+					.filter((file) -> id.equals(file.memoirId()))
+					.map((file) -> files.resolve(file.storagePath())));
+		return new Export(MemoirWord.fileName(memoir), content);
+	}
+
+	public record Export(String fileName, byte[] content) {
+	}
+
 	public List<MemoirRow> list() {
 		return store.memoirs();
 	}

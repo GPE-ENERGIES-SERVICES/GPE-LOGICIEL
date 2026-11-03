@@ -198,6 +198,24 @@ class MemoirApiTests {
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM memoir_file", Long.class)).isZero();
 	}
 
+	@Test
+	void exportsTheMemoirAsAWordDocument() throws java.io.IOException {
+		post("/api/memoirs", "{\"tenderId\": " + tenderId + "}").exchange();
+		post("/api/memoirs/1/outline/template", "").exchange();
+		assertThat(put("/api/memoir-sections/1/content", "{\"html\": \"<p>Notre <strong>société</strong></p>\"}")).hasStatusOk();
+
+		MvcTestResult result = mvc.get().uri("/api/memoirs/1/export").with(TestUsers.user()).exchange();
+
+		assertThat(result).hasStatusOk();
+		assertThat(result.getResponse().getHeader("Content-Disposition")).contains("attachment").contains(".docx");
+		try (var word = new org.apache.poi.xwpf.usermodel.XWPFDocument(
+				new java.io.ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
+			assertThat(word.getParagraphs()).extracting(org.apache.poi.xwpf.usermodel.XWPFParagraph::getText)
+				.contains("1 Présentation de l'entreprise", "Notre société", "[Partie à rédiger]");
+		}
+		assertThat(mvc.get().uri("/api/memoirs/99/export").with(TestUsers.user())).hasStatus(HttpStatus.NOT_FOUND);
+	}
+
 	private MvcTestResult upload(String uri, String name, byte[] content) {
 		return mvc.post()
 			.uri(uri)

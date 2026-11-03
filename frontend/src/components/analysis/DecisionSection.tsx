@@ -57,7 +57,7 @@ function PointSource({ point, analysis }: { point: DecisionPoint; analysis: Anal
         title={shown ? "Masquer la source" : "Afficher la source et l'extrait cité"}
         onClick={() => setShown(!shown)}
       >
-        <Icon name="check" size={14} />
+        ✓
         <span className="badge-chevron">
           <Icon name={shown ? "chevronUp" : "chevronDown"} size={12} />
         </span>
@@ -149,7 +149,7 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
       </p>
 
       <Fold title={
-          <PartTitle icon="check" tone="success">
+          <PartTitle icon="valid" tone="success">
             Pourquoi l&apos;étudier
           </PartTitle>
         } count={decision.strengths.length > 0 ? `${decision.strengths.length}` : "aucun argument"}>
@@ -191,7 +191,7 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
           </ul>
         )}
         <p>
-          Capacités de GPE inconnues du logiciel ; seuls les points cochés sont appuyés par un extrait retrouvé dans le document.
+          Capacités de GPE inconnues du logiciel ; seuls les points marqués ✓ sont appuyés par un extrait retrouvé dans le document.
         </p>
       </Fold>
     </div>

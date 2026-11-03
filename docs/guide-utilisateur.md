@@ -136,7 +136,7 @@ mémoire, sans bloquer : vous avancez dans l'ordre que vous voulez.
 
 « Préparer le dossier » reprend les pièces de candidature et d'offre lues par la fiche IA (une valeur
 rejetée est ignorée, une valeur corrigée est reprise corrigée) et propose pour chacune le document de
-l'entreprise qui correspond (Kbis, assurance, attestations, certificat, bilan). C'est une proposition :
+l'entreprise qui correspond (Kbis, assurance, attestations, certificat, bilan, charte de sécurité, moyens humains et matériels, réalisations). C'est une proposition :
 vous pouvez renommer la pièce, choisir un autre document, déposer votre fichier, qui passe alors avant le
 document proposé, ou la marquer « non concernée ». Relancer la préparation ajoute seulement les pièces
 nouvelles et ne change jamais ce que vous avez modifié.
@@ -145,8 +145,13 @@ Une pièce est **prête** quand un fichier est joint et que vous avez coché « 
 ou le document enlève la coche. Un document expiré est signalé. Le ZIP contient les fichiers joints, rangés
 en Candidature et Offre, avec un avertissement si des pièces ne sont pas prêtes. L'export du chiffrage, qui
 contient vos coûts, n'en fait jamais partie : reportez vos prix sur le bordereau de l'acheteur et déposez-le.
-Le DC1, le DC2 et l'acte d'engagement se déposent pour l'instant complétés ; le logiciel ne les remplit pas
-encore, le mémoire non plus n'a pas encore d'export. La signature et le dépôt restent de votre côté.
+Le DC1, le DC2 et l'acte d'engagement du DCE se remplissent depuis leur pièce : « Remplir » lit le formulaire Word du
+DCE. Avec l'IA, chaque valeur affiche sa source : Entreprise ou Chiffrage (recopiée telle quelle par le logiciel), « IA :
+à vérifier », ou « Manquant » avec ce qu'il faut fournir. Vous pouvez aussi tout remplir à la main. Corrigez ici ce qu'il
+faut : relancer l'IA ne change jamais vos modifications. « Générer le Word » joint le document à la pièce, à vérifier
+ensuite. Un formulaire par lot : ajoutez une pièce pour chaque lot. Le montant vient du chiffrage validé du lot. Les
+déclarations sur l'honneur, le lieu, la date et la signature restent à compléter sur le document. Le mémoire s'exporte en Word depuis sa page (« Exporter en Word ») : ce qui reste à rédiger y est signalé
+entre crochets ; relisez-le, puis déposez sa version finale. La signature et le dépôt restent de votre côté.
 
 ## L'aide à la décision
 

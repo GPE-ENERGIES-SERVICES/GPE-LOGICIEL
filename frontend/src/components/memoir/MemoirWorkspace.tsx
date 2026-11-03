@@ -95,6 +95,9 @@ export function MemoirWorkspaceView({ id }: { id: number }) {
           <button type="button" className="secondary" onClick={() => setPanel(!panel)} aria-expanded={panel}>
             {panel ? "Masquer la préparation" : "Afficher la préparation"}
           </button>
+          <a className="button" href={`/api/memoirs/${memoir.id}/export`}>
+            Exporter en Word
+          </a>
           <button
             type="button"
             className="secondary danger"

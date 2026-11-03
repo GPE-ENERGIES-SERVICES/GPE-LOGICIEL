@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BRAND, PRODUCT_NAME } from "@/lib/brand";
 import { login } from "@/services/authApi";
 import { ApiError } from "@/services/http";
 
@@ -39,8 +41,8 @@ function LoginForm() {
   return (
     <form className="login-card" onSubmit={submit}>
       <div className="login-brand">
-        <h1>Logiciel GPE</h1>
-        <p className="muted">Connectez-vous avec votre compte de l&apos;entreprise.</p>
+        <h1>Connexion</h1>
+        <p className="muted">Avec votre compte {BRAND.name}.</p>
       </div>
       <label>
         Adresse e-mail
@@ -73,12 +75,20 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="login-page">
-      <div className="login-theme">
-        <ThemeToggle />
-      </div>
-      <Suspense>
-        <LoginForm />
-      </Suspense>
+      <section className="login-side" aria-label={BRAND.name}>
+        <Image className="login-logo" src={BRAND.logo} alt={BRAND.name} priority unoptimized />
+        <p className="product-name login-product" lang="ar" dir="rtl">
+          {PRODUCT_NAME}
+        </p>
+      </section>
+      <section className="login-main">
+        <div className="login-theme">
+          <ThemeToggle />
+        </div>
+        <Suspense>
+          <LoginForm />
+        </Suspense>
+      </section>
     </main>
   );
 }

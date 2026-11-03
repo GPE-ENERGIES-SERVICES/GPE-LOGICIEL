@@ -46,7 +46,10 @@ public class CompanyProfile {
 			@Size(max = 100) String country, @Size(max = 30) String phone, @Email @Size(max = 200) String email,
 			@Size(max = 200) String website,
 			@Size(max = 120) List<@Pattern(regexp = "\\d{2}|2A|2B|97[1-6]") String> interventionDepartments,
-			@Size(max = 4000) String interventionNote) {
+			@Size(max = 4000) String interventionNote,
+			@Pattern(regexp = "[A-Z]{2}[0-9A-Z ]{13,40}", message = "IBAN non valide") String iban,
+			@Pattern(regexp = "[A-Z0-9]{8}([A-Z0-9]{3})?", message = "BIC non valide") String bic,
+			@Size(max = 200) String signatoryName, @Size(max = 200) String signatoryTitle) {
 	}
 
 	@Id
@@ -93,6 +96,16 @@ public class CompanyProfile {
 
 	private String website;
 
+	private String iban;
+
+	private String bic;
+
+	@Column(name = "signatory_name")
+	private String signatoryName;
+
+	@Column(name = "signatory_title")
+	private String signatoryTitle;
+
 	@JdbcTypeCode(SqlTypes.ARRAY)
 	@Column(name = "intervention_departments", nullable = false)
 	private List<String> interventionDepartments = new ArrayList<>();
@@ -133,8 +146,41 @@ public class CompanyProfile {
 		this.website = Texts.clean(request.website());
 		this.interventionDepartments = new ArrayList<>(Texts.list(request.interventionDepartments()));
 		this.interventionNote = Texts.clean(request.interventionNote());
+		this.iban = Texts.clean(request.iban());
+		this.bic = Texts.clean(request.bic());
+		this.signatoryName = Texts.clean(request.signatoryName());
+		this.signatoryTitle = Texts.clean(request.signatoryTitle());
 		this.updatedBy = user;
 		this.updatedAt = now;
+	}
+
+	/**
+	 * What a form may ask of the company, by the name the AI knows it under; a
+	 * value not entered is absent. Bank details are only read here: they never
+	 * go to the AI.
+	 */
+	public java.util.Map<String, String> formValues() {
+		java.util.Map<String, String> values = new java.util.LinkedHashMap<>();
+		values.put("denomination_sociale", legalName);
+		values.put("nom_commercial", tradeName != null ? tradeName : legalName);
+		values.put("forme_juridique", legalForm);
+		values.put("siret", siret);
+		values.put("siren", siren);
+		values.put("tva_intracommunautaire", vatNumber);
+		values.put("code_ape", apeCode);
+		values.put("rcs", rcs);
+		values.put("adresse", addressLine == null ? null
+				: addressLine + (postalCode == null && city == null ? ""
+						: ", " + (postalCode == null ? "" : postalCode + " ") + (city == null ? "" : city)).stripTrailing());
+		values.put("courriel", email);
+		values.put("telephone", phone);
+		values.put("site_web", website);
+		values.put("iban", iban);
+		values.put("bic", bic);
+		values.put("signataire_nom", signatoryName);
+		values.put("signataire_qualite", signatoryTitle);
+		values.values().removeIf((value) -> value == null || value.isBlank());
+		return values;
 	}
 
 	public String getLegalName() {

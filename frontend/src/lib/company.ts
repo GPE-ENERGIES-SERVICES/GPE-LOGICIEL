@@ -7,7 +7,7 @@ export const COMPANY_PAGES: { href: string; label: string }[] = [
   { href: "/company/equipment", label: "Matériel" },
   { href: "/company/certifications", label: "Certifications" },
   { href: "/company/references", label: "Références" },
-  { href: "/company/documents", label: "Documents" },
+  { href: "/company/documents", label: "Documents entreprise" },
   { href: "/company/economics", label: "Économie" },
 ];
 
@@ -54,6 +54,10 @@ export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
   VIGILANCE: "Attestation de vigilance",
   CERTIFICATE: "Certificat, qualification",
   FINANCIAL: "Document financier",
+  SAFETY: "Sécurité et prévention",
+  STAFF: "Moyens humains",
+  EQUIPMENT: "Moyens matériels",
+  REFERENCES: "Présentation, réalisations",
   OTHER: "Autre justificatif",
 };
 

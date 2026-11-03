@@ -77,6 +77,18 @@ final class PieceMatcher {
 		if (text.contains("bilan") || text.contains("chiffre d'affaires") || text.contains("chiffre d’affaires")) {
 			return CompanyDocument.Category.FINANCIAL;
 		}
+		if (text.contains("charte") || text.contains("prevention des risques")) {
+			return CompanyDocument.Category.SAFETY;
+		}
+		if (text.contains("moyens humains") || text.contains("effectif")) {
+			return CompanyDocument.Category.STAFF;
+		}
+		if (text.contains("moyens materiels") || text.contains("materiel")) {
+			return CompanyDocument.Category.EQUIPMENT;
+		}
+		if (text.contains("reference") || text.contains("realisation") || text.contains("presentation de l'entreprise")) {
+			return CompanyDocument.Category.REFERENCES;
+		}
 		if (text.contains("qualibat") || text.contains("qualifelec") || text.contains("certificat")
 				|| text.contains("qualification") || text.contains("rge")) {
 			return CompanyDocument.Category.CERTIFICATE;

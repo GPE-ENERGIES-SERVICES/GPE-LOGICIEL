@@ -3989,12 +3989,6 @@ button.primary,
   color: var(--tone);
 }
 
-.icon-line {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
 .field-toggle .icon,
 .badge-chevron .icon {
   display: block;
@@ -4136,4 +4130,153 @@ select.status-dismissed {
 
 .stat.tone-success strong {
   color: var(--success);
+}
+
+/* A form of the consultation file being filled. */
+.form-row > td {
+  background: var(--surface-2);
+}
+
+.form-fields {
+  display: grid;
+  margin: 0.5rem 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.form-field {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-field:last-child {
+  border-bottom: none;
+}
+
+.form-field-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.form-field-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.form-field-value > input {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.form-field-value .badge {
+  margin-left: 0;
+}
+
+@media (max-width: 700px) {
+  .form-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The login: the company on one side, always on white so that its logo reads, the form on the other. */
+.login-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: stretch;
+  padding: 0;
+}
+
+.login-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 3rem clamp(2rem, 7vw, 6rem);
+  background: #ffffff;
+  border-right: 1px solid var(--border);
+  color: #1c1c24;
+}
+
+.login-logo {
+  width: min(26rem, 100%);
+  height: auto;
+}
+
+/* The name of the software, written as calligraphy. */
+.product-name {
+  font-family: "Aref Ruqaa", "Noto Naskh Arabic", "Segoe UI", serif;
+  font-weight: 700;
+}
+
+.login-side .login-product {
+  margin: 0;
+  width: min(26rem, 100%);
+  color: #0a4ab0;
+  font-size: clamp(3rem, 6vw, 4.75rem);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.app-title .product-name {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.login-main {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem 1rem;
+}
+
+.login-main .login-card {
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+.login-brand {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.login-card h1 {
+  font-size: 1.5rem;
+}
+
+@media (max-width: 800px) {
+  .login-page {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .login-side {
+    align-items: center;
+    padding: 1.5rem 1rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .login-logo {
+    width: min(15rem, 100%);
+  }
+
+  .login-side .login-product {
+    width: min(15rem, 100%);
+    font-size: 2.75rem;
+  }
+
+  .login-main {
+    align-items: flex-start;
+    padding-top: 4rem;
+  }
 }
