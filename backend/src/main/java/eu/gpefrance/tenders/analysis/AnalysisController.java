@@ -82,16 +82,6 @@ public class AnalysisController {
 		return queries.ofTender(tenderId);
 	}
 
-	@GetMapping("/api/dce-reviews/{reviewId}/analysis")
-	public TenderAnalysis ofReview(@PathVariable Long reviewId) {
-		return queries.ofReview(reviewId);
-	}
-
-	@GetMapping("/api/dce-reviews/{reviewId}/financial-analysis")
-	public FinancialAnalysis financialOfReview(@PathVariable Long reviewId) {
-		return queries.financialOfReview(reviewId);
-	}
-
 	/**
 	 * Queues the analysis of a dossier of GPE; it runs in the background. A
 	 * failed analysis is tried again the same way, with force.
@@ -126,8 +116,7 @@ public class AnalysisController {
 	 */
 	@PostMapping("/api/analyses/{analysisId}/send-now")
 	public TenderAnalysis sendNow(@PathVariable Long analysisId) {
-		service.sendNow(analysisId);
-		return queries.sheetOf(analysisId);
+		return queries.ofTender(service.sendNow(analysisId));
 	}
 
 	/**
@@ -135,8 +124,7 @@ public class AnalysisController {
 	 */
 	@PostMapping("/api/analyses/{analysisId}/cancel")
 	public TenderAnalysis cancel(@PathVariable Long analysisId, @AuthenticationPrincipal AppUserPrincipal user) {
-		service.cancel(analysisId, user.displayName());
-		return queries.sheetOf(analysisId);
+		return queries.ofTender(service.cancel(analysisId, user.displayName()));
 	}
 
 	/**
@@ -146,14 +134,13 @@ public class AnalysisController {
 	@PutMapping("/api/extracted-fields/{fieldId}/decision")
 	public TenderAnalysis decide(@PathVariable Long fieldId, @Valid @RequestBody DecisionRequest request,
 			@AuthenticationPrincipal AppUserPrincipal user) {
-		return queries.sheetOf(validation.decide(fieldId, request.decision(), request.value(), user.displayName()));
+		return queries.ofTender(validation.decide(fieldId, request.decision(), request.value(), user.displayName()));
 	}
 
 	@PostMapping("/api/analyses/{analysisId}/validation")
 	public TenderAnalysis validateSheet(@PathVariable Long analysisId,
 			@AuthenticationPrincipal AppUserPrincipal user) {
-		validation.validateSheet(analysisId, user.displayName());
-		return queries.sheetOf(analysisId);
+		return queries.ofTender(validation.validateSheet(analysisId, user.displayName()));
 	}
 
 	/**

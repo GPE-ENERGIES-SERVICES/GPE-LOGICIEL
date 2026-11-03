@@ -141,7 +141,7 @@ export function ComponentsPanel({
                       </button>
                       <button
                         type="button"
-                        className="secondary"
+                        className="secondary danger"
                         disabled={busy}
                         onClick={() => run(() => deleteComponent(component.id))}
                       >
@@ -421,7 +421,7 @@ function ComponentForm({
               <strong>{offer.supplierName}</strong> · {offer.supplierRef} · {offer.designation} — prix net{" "}
               {formatMoney(offer.netPrice)}
               {offer.packQuantity !== 1 && ` les ${formatNumber(offer.packQuantity)} ${offer.purchaseUnit ?? ""}`}{" "}
-              <button type="button" className="secondary" onClick={() => setOffer(null)}>
+              <button type="button" className="secondary danger" onClick={() => setOffer(null)}>
                 Retirer
               </button>
             </p>

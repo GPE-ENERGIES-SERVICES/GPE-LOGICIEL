@@ -28,7 +28,7 @@ public class ValidationService {
 	}
 
 	/**
-	 * @return the analysis of the field
+	 * @return the tender of the field
 	 */
 	@Transactional
 	public Long decide(Long fieldId, FieldDecision decision, String correctedValue, String user) {
@@ -38,13 +38,17 @@ public class ValidationService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Saisissez la valeur corrigée.");
 		}
 		field.decide(decision, value, user, clock.instant());
-		return field.getAnalysis().getId();
+		return field.getAnalysis().getTenderId();
 	}
 
+	/**
+	 * @return the tender of the analysis
+	 */
 	@Transactional
-	public void validateSheet(Long analysisId, String user) {
+	public Long validateSheet(Long analysisId, String user) {
 		Analysis analysis = analyses.findById(analysisId).orElseThrow(() -> new AnalysisNotFoundException(analysisId));
 		analysis.validate(user, clock.instant());
+		return analysis.getTenderId();
 	}
 
 }

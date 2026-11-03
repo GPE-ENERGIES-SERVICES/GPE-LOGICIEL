@@ -13,6 +13,7 @@ import { EstimatesSection } from "@/components/estimate/EstimatesSection";
 import { MemoirsSection } from "@/components/memoir/MemoirsSection";
 import { NoticeHistory } from "@/components/NoticeHistory";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
+import { ResponseSection } from "@/components/ResponseSection";
 import { Tabs } from "@/components/Tabs";
 import { FollowButton } from "@/components/FollowButton";
 import { FollowUpForm } from "@/components/FollowUpForm";
@@ -30,11 +31,11 @@ import {
 } from "@/lib/format";
 import { consultationUrl } from "@/lib/dceUrl";
 import { backLink } from "@/lib/navigation";
+import { useJourney } from "@/lib/useJourney";
 import { useLoader } from "@/lib/useLoader";
 import { getTenderAwards } from "@/services/awardApi";
-import { tenderOwner } from "@/services/documentApi";
 import { available } from "@/services/http";
-import { getTender } from "@/services/tenderApi";
+import { getTender, MANUAL_SOURCE } from "@/services/tenderApi";
 import type { AwardedContract } from "@/types/award";
 import type { TenderDetail } from "@/types/tender";
 
@@ -79,6 +80,7 @@ function TenderDetails() {
   const searchParams = useSearchParams();
   const loaded = useLoader(() => getTender(id), id);
   const awards = useLoader(() => (available("awards") ? getTenderAwards(Number(id)) : Promise.resolve([])), id);
+  const journey = useJourney(Number(id));
   // The tender as last saved on this page, or as loaded.
   const [saved, setSaved] = useState<TenderDetail | null>(null);
   const tender = saved ?? loaded.data;
@@ -154,6 +156,7 @@ function TenderDetails() {
                 .join(" · ")}
             </p>
             <div className="badges">
+              {tender.source === MANUAL_SOURCE && <span className="badge">Ajouté manuellement</span>}
               <a href="#suivi" className="badge">
                 {FOLLOW_UP_LABELS[tender.followUpStatus]}
               </a>
@@ -217,9 +220,9 @@ function TenderDetails() {
         </dl>
       </header>
 
-      <ProcessingPanel owner={tenderOwner(tender.id)} retained={tender.retained ?? null} />
+      <ProcessingPanel tenderId={tender.id} retained={tender.retained ?? null} />
 
-      <DecisionSection owner={tenderOwner(tender.id)} />
+      <DecisionSection tenderId={tender.id} />
 
       <Tabs
         label="Sections de l'appel d'offres"
@@ -227,121 +230,107 @@ function TenderDetails() {
           {
             id: "avis",
             label: "Avis",
+            step: "done",
             content: (
               <>
                 <section className="card">
-                  <h2>Objet de la consultation</h2>
-                  <p className="description">{tender.description ?? "Description non disponible dans l'avis."}</p>
-                </section>
-          
-                <section className="card">
-                  <h2>Lots</h2>
-                  {tender.lots.length === 0 ? (
-                    <>
-                      <p>Consultation sans allotissement : un seul marché.</p>
-                      {singleAward && <p>Attribution : {awardText(singleAward)}</p>}
-                    </>
-                  ) : (
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>N°</th>
-                          <th>Intitulé</th>
-                          <th>Montant estimé</th>
-                          {awardsByLot.size > 0 && <th>Attribution</th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tender.lots.map((lot) => {
-                          const award = awardsByLot.get(lot.number);
-                          return (
-                            <tr key={lot.number}>
-                              <td>{lot.number}</td>
-                              <td>{lotTitle(lot.number, lot.title) ?? "Sans intitulé"}</td>
-                              <td className="nowrap">{formatAmount(lot.estimatedAmount)}</td>
-                              {awardsByLot.size > 0 && <td>{award ? awardText(award) : "Non attribué"}</td>}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      {lotAmounts.some((amount) => amount !== null) && (
-                        <tfoot>
-                          <tr>
-                            <td />
-                            <td>{lotAmounts.every((amount) => amount !== null) ? "Total" : "Total des montants indiqués"}</td>
-                            <td className="nowrap">{formatAmount(lotTotal)}</td>
-                            {awardsByLot.size > 0 && <td />}
-                          </tr>
-                        </tfoot>
-                      )}
-                    </table>
-                  )}
-                </section>
-          
-                {available("noticeDetails") && (
-                  <section className="card">
-                    <h2>Critères d&apos;attribution</h2>
-                    {criteria.length === 0 ? (
-                      <p className="muted">Critères non indiqués dans l&apos;avis.</p>
-                    ) : (
-                      <table className="criteria-table">
-                        <tbody>
-                          {criteria.map((criterion) => (
-                            <tr key={criterion.label}>
-                              <td>{criterion.label}</td>
-                              <td className="number">{criterion.weight === null ? "Non pondéré" : `${criterion.weight} %`}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        {allWeighted && (
-                          <tfoot>
+                  <dl className="facts rows">
+                    <Fact label="Objet">{tender.description ?? "Description non disponible dans l'avis."}</Fact>
+                    <Fact label="Lots">
+                      {tender.lots.length === 0 ? (
+                        <>
+                          Sans allotissement : un seul marché.
+                          {singleAward && <> Attribution : {awardText(singleAward)}</>}
+                        </>
+                      ) : (
+                        <table>
+                          <thead>
                             <tr>
-                              <td>Total</td>
-                              <td className="number">{weightTotal} %</td>
+                              <th>N°</th>
+                              <th>Intitulé</th>
+                              <th>Montant estimé</th>
+                              {awardsByLot.size > 0 && <th>Attribution</th>}
                             </tr>
-                          </tfoot>
-                        )}
-                      </table>
-                    )}
-                    {criteria.length > 0 && allWeighted && weightTotal !== 100 && (
-                      <p className="hint">Les pondérations publiées ne totalisent pas 100 % : vérifier le règlement de consultation.</p>
-                    )}
-                  </section>
-                )}
-          
-                {available("noticeDetails") && (
-                  <section className="card">
-                    <h2>Informations importantes</h2>
-                    {!info ? (
-                      <p className="muted">Non renseignées dans l&apos;avis. Elles seront relevées dans le DCE lors de son analyse.</p>
-                    ) : (
-                      <dl className="facts rows">
-                        <Fact label="Visite du site">
-                          {visit?.required ? (
-                            <>
-                              <span className="badge urgent">Obligatoire</span> {visit.date && `le ${formatDateTime(visit.date)}`}
-                              {visit.date && new Date(visit.date) < new Date() && <span className="muted"> (passée)</span>}
-                            </>
-                          ) : visit ? (
-                            "Facultative"
+                          </thead>
+                          <tbody>
+                            {tender.lots.map((lot) => {
+                              const award = awardsByLot.get(lot.number);
+                              return (
+                                <tr key={lot.number}>
+                                  <td>{lot.number}</td>
+                                  <td>{lotTitle(lot.number, lot.title) ?? "Sans intitulé"}</td>
+                                  <td className="nowrap">{formatAmount(lot.estimatedAmount)}</td>
+                                  {awardsByLot.size > 0 && <td>{award ? awardText(award) : "Non attribué"}</td>}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          {lotAmounts.some((amount) => amount !== null) && (
+                            <tfoot>
+                              <tr>
+                                <td />
+                                <td>{lotAmounts.every((amount) => amount !== null) ? "Total" : "Total des montants indiqués"}</td>
+                                <td className="nowrap">{formatAmount(lotTotal)}</td>
+                                {awardsByLot.size > 0 && <td />}
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      )}
+                    </Fact>
+                    {available("noticeDetails") && (
+                      <>
+                        <Fact label="Critères d'attribution">
+                          {criteria.length === 0 ? (
+                            <span className="muted">Non indiqués dans l&apos;avis.</span>
                           ) : (
-                            "Non mentionnée"
+                            <>
+                              <List
+                                items={criteria.map((criterion) =>
+                                  criterion.weight === null ? `${criterion.label} (non pondéré)` : `${criterion.label} : ${criterion.weight} %`,
+                                )}
+                              />
+                              {allWeighted && weightTotal !== 100 && (
+                                <p className="hint">
+                                  Les pondérations publiées ne totalisent pas 100 % : vérifier le règlement de consultation.
+                                </p>
+                              )}
+                            </>
                           )}
                         </Fact>
-                        <Fact label="Documents demandés">
-                          {info.requiredDocuments.length > 0 && <List items={info.requiredDocuments} />}
-                        </Fact>
-                        <Fact label="Qualifications">{info.qualifications.length > 0 && <List items={info.qualifications} />}</Fact>
-                        <Fact label="Certifications">{info.certifications.length > 0 && <List items={info.certifications} />}</Fact>
-                        <Fact label="Conditions particulières">{info.specialConditions}</Fact>
-                      </dl>
+                        {!info ? (
+                          <Fact label="Informations importantes">
+                            <span className="muted">Non renseignées dans l&apos;avis : elles seront relevées dans le DCE.</span>
+                          </Fact>
+                        ) : (
+                          <>
+                            <Fact label="Visite du site">
+                              {visit?.required ? (
+                                <>
+                                  <span className="badge urgent">Obligatoire</span> {visit.date && `le ${formatDateTime(visit.date)}`}
+                                  {visit.date && new Date(visit.date) < new Date() && <span className="muted"> (passée)</span>}
+                                </>
+                              ) : visit ? (
+                                "Facultative"
+                              ) : (
+                                "Non mentionnée"
+                              )}
+                            </Fact>
+                            <Fact label="Documents demandés">
+                              {info.requiredDocuments.length > 0 && <List items={info.requiredDocuments} />}
+                            </Fact>
+                            <Fact label="Qualifications">{info.qualifications.length > 0 && <List items={info.qualifications} />}</Fact>
+                            <Fact label="Certifications">{info.certifications.length > 0 && <List items={info.certifications} />}</Fact>
+                            <Fact label="Conditions particulières">{info.specialConditions}</Fact>
+                          </>
+                        )}
+                      </>
                     )}
-                  </section>
-                )}
-
+                  </dl>
+                </section>
 
                 <section className="card">
-                  <Fold title="Détails de l'avis" count={`${tender.source} · ${tender.externalId}`}>
+                  <Fold title="Détails de l'avis" count={tender.source === MANUAL_SOURCE ? "Ajouté manuellement" : `${tender.source} · ${tender.externalId}`}>
                     <dl className="facts grid">
                       <Fact label="Référence">{tender.reference}</Fact>
                       <Fact label="Lieu d'exécution">
@@ -370,31 +359,29 @@ function TenderDetails() {
           {
             id: "dce",
             label: "DCE et documents",
+            step: journey.dce,
             content: (
                 <section className="card">
                   <h2>Documents (DCE)</h2>
-                  <DocumentsSection owner={tenderOwner(tender.id)} tenderId={tender.id} />
+                  <DocumentsSection tenderId={tender.id} manual={tender.source === MANUAL_SOURCE} />
                 </section>
             ),
           },
           {
             id: "fiche",
             label: "Fiche IA",
+            step: journey.summary,
             content: (
                 <section className="card">
                   <h2>Analyse du DCE</h2>
-                  <p className="muted">
-                    Une fois le DCE déposé et lu, l&apos;analyse en tire une fiche de synthèse : informations clés, points de
-                    vigilance, pièces à fournir, qualifications et échéances, chacune avec sa source (document et page), à
-                    vérifier avant usage.
-                  </p>
-                  <AnalysisSection owner={tenderOwner(tender.id)} />
+                  <AnalysisSection tenderId={tender.id} />
                 </section>
             ),
           },
           {
             id: "finance",
             label: "Analyse financière",
+            step: journey.financial,
             content: (
                 <section className="card">
                   <h2>Analyse financière (DPGF, BPU, DQE)</h2>
@@ -402,13 +389,14 @@ function TenderDetails() {
                     À la demande : les montants des tableurs sont contrôlés par le logiciel (sommes, totaux, TVA), puis l&apos;IA
                     résume les postes principaux et les points à vérifier, chacun avec sa source (document, feuille, ligne).
                   </p>
-                  <FinancialSection owner={tenderOwner(tender.id)} />
+                  <FinancialSection tenderId={tender.id} />
                 </section>
             ),
           },
           {
             id: "chiffrage",
             label: "Chiffrage",
+            step: journey.estimate,
             content: (
               <section className="card">
                 <h2>Chiffrage</h2>
@@ -419,10 +407,22 @@ function TenderDetails() {
           {
             id: "memoire",
             label: "Mémoire",
+            step: journey.memoir,
             content: (
               <section className="card">
                 <h2>Mémoire technique</h2>
                 <MemoirsSection tender={tender} />
+              </section>
+            ),
+          },
+          {
+            id: "reponse",
+            label: "Dossier de réponse",
+            step: journey.response,
+            content: (
+              <section className="card">
+                <h2>Dossier de réponse</h2>
+                <ResponseSection tenderId={tender.id} />
               </section>
             ),
           },

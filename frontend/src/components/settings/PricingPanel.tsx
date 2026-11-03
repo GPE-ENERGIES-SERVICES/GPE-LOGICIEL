@@ -138,7 +138,7 @@ export function PricingPanel() {
                     </button>
                     <button
                       type="button"
-                      className="secondary"
+                      className="secondary danger"
                       onClick={async () => {
                         if (window.confirm(`Supprimer le taux ${rate.code} ? Les chiffrages gardent le coût copié.`)) {
                           try {

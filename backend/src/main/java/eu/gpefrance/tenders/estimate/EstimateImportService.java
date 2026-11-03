@@ -68,8 +68,7 @@ public class EstimateImportService {
 		Estimate estimate = estimates.found(estimateId);
 		Document document = documents.findById(documentId)
 			.orElseThrow(() -> EstimateRuleException.notFound("Document introuvable."));
-		// In this order: the document of an analysis without tender has none.
-		if (!estimate.getTenderId().equals(document.getDossier().getTenderId())) {
+		if (!document.getDossier().getTenderId().equals(estimate.getTenderId())) {
 			throw EstimateRuleException.invalid("Ce document n'appartient pas au marché du chiffrage.");
 		}
 		List<EstimateItem> items = read(document);

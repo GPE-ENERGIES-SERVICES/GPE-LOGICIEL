@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { FieldItem } from "@/components/analysis/FieldItem";
+import { PartTitle } from "@/components/analysis/PartTitle";
+import { Icon } from "@/components/Icon";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Fold } from "@/components/Fold";
 import {
   ANALYSIS_STATUS_LABELS,
   attentionPoints,
   checkReason,
+  effectiveValue,
   fieldsByKey,
   formatValue,
   NOT_IN_DOCUMENTS,
@@ -24,16 +27,90 @@ import {
   validateAnalysis,
 } from "@/services/analysisApi";
 import { getDossiers } from "@/services/documentApi";
-import type { Analysis, GridField, SummarySection, TenderAnalysis } from "@/types/analysis";
+import type { Analysis, ExtractedField, GridField, SummarySection, TenderAnalysis } from "@/types/analysis";
 
 const costFormat = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 4 });
 
-const SECTION_TITLES: Record<SummarySection, string> = {
-  AT_A_GLANCE: "1. En un coup d'œil",
-  ATTENTION: "2. Points d'attention",
-  REQUESTED: "3. Ce qui est demandé",
-  TO_ANSWER: "4. Pour répondre",
+const SECTION_TITLES: Record<SummarySection, ReactNode> = {
+  AT_A_GLANCE: (
+    <PartTitle icon="eye" tone="accent">
+      En un coup d&apos;œil
+    </PartTitle>
+  ),
+  ATTENTION: (
+    <PartTitle icon="warning" tone="warning">
+      Points d&apos;attention
+    </PartTitle>
+  ),
+  REQUESTED: (
+    <PartTitle icon="file" tone="accent">
+      Ce qui est demandé
+    </PartTitle>
+  ),
+  TO_ANSWER: (
+    <PartTitle icon="clipboard" tone="success">
+      Pour répondre
+    </PartTitle>
+  ),
 };
+
+/** A value long enough to need the whole width of the grid. */
+const LONG_VALUE = 60;
+
+/** Several short values read on one line; a long one keeps its own. */
+const SHORT_ITEM = 45;
+
+function isFound(fields: ExtractedField[]): boolean {
+  return fields.some((field) => field.state !== "NOT_INDICATED" || field.decision !== null);
+}
+
+/** What the documents do not say, on one line: each name opens the form that gives its value. */
+function MissingFields({
+  grids,
+  analysis,
+  onChanged,
+}: {
+  grids: GridField[];
+  analysis: Analysis;
+  onChanged: (analysis: TenderAnalysis) => void;
+}) {
+  const [filling, setFilling] = useState<string | null>(null);
+  const groups = fieldsByKey(analysis);
+  if (grids.length === 0) {
+    return null;
+  }
+  const chosen = grids.find((grid) => grid.key === filling);
+  const field = chosen ? groups.get(chosen.key)?.[0] : undefined;
+  return (
+    <div className="field-missing">
+      <span className="muted">Non indiqué dans les documents : </span>
+      {grids.map((grid, index) => (
+        <span key={grid.key}>
+          {index > 0 && <span className="muted"> · </span>}
+          {groups.get(grid.key)?.length ? (
+            <button
+              type="button"
+              className="link-button"
+              title="Renseigner cette valeur"
+              aria-expanded={filling === grid.key}
+              onClick={() => setFilling(filling === grid.key ? null : grid.key)}
+            >
+              {grid.label}
+            </button>
+          ) : (
+            <span className="muted">{grid.label}</span>
+          )}
+        </span>
+      ))}
+      {chosen && field && (
+        <div className="field-filling">
+          <strong>{chosen.label}</strong>
+          <FieldItem key={field.id} field={field} grid={chosen} readable={false} onChanged={onChanged} filling />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function FieldGroup({
   grid,
@@ -46,22 +123,32 @@ function FieldGroup({
 }) {
   const fields = fieldsByKey(analysis).get(grid.key) ?? [];
   const readable = new Set(analysis.documents.filter((document) => document.readable).map((document) => document.id));
+  const lengths = fields.map((field) => (effectiveValue(field) ?? field.value ?? "").length);
+  const classes = ["field-group"];
+  if (fields.length > 2 || lengths.some((length) => length > LONG_VALUE)) {
+    classes.push("wide");
+  }
+  if (fields.length > 1 && lengths.every((length) => length <= SHORT_ITEM)) {
+    classes.push("short-values");
+  }
   return (
-    <div className="field-group">
+    <div className={classes.join(" ")}>
       <h4>{grid.label}</h4>
       {grid.key === "deadline" && analysis.noticeDeadline && (
         <p className="hint">Date limite publiée dans l&apos;avis : {formatDateTime(analysis.noticeDeadline)}</p>
       )}
       {fields.length === 0 && <p className="muted">{NOT_IN_DOCUMENTS}</p>}
-      {fields.map((field) => (
-        <FieldItem
-          key={field.id}
-          field={field}
-          grid={grid}
-          readable={field.documentId !== null && readable.has(field.documentId)}
-          onChanged={onChanged}
-        />
-      ))}
+      <div className="field-values">
+        {fields.map((field) => (
+          <FieldItem
+            key={field.id}
+            field={field}
+            grid={grid}
+            readable={field.documentId !== null && readable.has(field.documentId)}
+            onChanged={onChanged}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -106,15 +193,25 @@ function SummarySheet({
     }
   };
 
-  const section = (name: SummarySection) => (
-    <div className="field-grid">
-      {data.grid
-        .filter((grid) => grid.section === name)
-        .map((grid) => (
-          <FieldGroup key={grid.key} grid={grid} analysis={analysis} onChanged={onChanged} />
-        ))}
-    </div>
-  );
+  const section = (name: SummarySection) => {
+    const grids = data.grid.filter((grid) => grid.section === name);
+    return (
+      <>
+        <div className={name === "AT_A_GLANCE" ? "field-grid glance" : "field-grid"}>
+          {grids
+            .filter((grid) => isFound(groups.get(grid.key) ?? []))
+            .map((grid) => (
+              <FieldGroup key={grid.key} grid={grid} analysis={analysis} onChanged={onChanged} />
+            ))}
+        </div>
+        <MissingFields
+          grids={grids.filter((grid) => !isFound(groups.get(grid.key) ?? []))}
+          analysis={analysis}
+          onChanged={onChanged}
+        />
+      </>
+    );
+  };
 
   /** How many questions of a part found an answer in the documents. */
   const found = (name: SummarySection) => {
@@ -143,16 +240,16 @@ function SummarySheet({
         )}
         {error && <p className="error">{error}</p>}
       </div>
-      <p className="hint">
-        Chaque information renvoie à sa source. « Source vérifiée » signifie que l&apos;extrait cité a été retrouvé
-        dans le document : l&apos;interprétation reste à confirmer en le lisant.
+      <p className="hint icon-line">
+        <Icon name="check" size={14} /> extrait retrouvé dans le document ; l&apos;interprétation reste à confirmer en le lisant.
       </p>
 
-      <Fold title={SECTION_TITLES.AT_A_GLANCE} count={found("AT_A_GLANCE")}>
+      <Fold title={SECTION_TITLES.AT_A_GLANCE} count={found("AT_A_GLANCE")} open>
         {section("AT_A_GLANCE")}
       </Fold>
 
       <Fold
+        open
         title={SECTION_TITLES.ATTENTION}
         count={points.length > 0 ? plural(points.length, "point") + " à surveiller" : found("ATTENTION")}
       >
@@ -175,7 +272,11 @@ function SummarySheet({
       </Fold>
 
       <Fold
-        title="5. À vérifier"
+        title={
+          <PartTitle icon="warning" tone={toCheck.length === 0 && notAnalysed.length === 0 ? "muted" : "warning"}>
+            À vérifier
+          </PartTitle>
+        }
         count={toCheck.length === 0 && notAnalysed.length === 0 ? "rien à signaler" : plural(toCheck.length, "point")}
       >
         {toCheck.length === 0 && notAnalysed.length === 0 ? (
@@ -198,7 +299,11 @@ function SummarySheet({
       </Fold>
 
       <Fold
-        title="6. Documents"
+        title={
+          <PartTitle icon="archive" tone="muted">
+            Documents
+          </PartTitle>
+        }
         count={`${analysed.length} analysé${analysed.length > 1 ? "s" : ""} sur ${analysis.documents.length}`}
       >
         {notAnalysed.length === 0 ? (
@@ -250,9 +355,9 @@ function notAnalysedReason(document: Analysis["documents"][number]): string {
  * Summary sheet of the consultation file: state of the AI analysis, the
  * extracted information with their sources, and the human validation.
  */
-export function AnalysisSection({ owner }: { owner: string }) {
-  const loaded = useLoader(() => getTenderAnalysis(owner), owner);
-  const dossiers = useLoader(() => getDossiers(owner), owner);
+export function AnalysisSection({ tenderId }: { tenderId: number }) {
+  const loaded = useLoader(() => getTenderAnalysis(tenderId), String(tenderId));
+  const dossiers = useLoader(() => getDossiers(tenderId), String(tenderId));
   // The analysis as returned by the last decision, until the next reload.
   const [saved, setSaved] = useState<TenderAnalysis | null>(null);
   const [starting, setStarting] = useState(false);
@@ -345,12 +450,6 @@ export function AnalysisSection({ owner }: { owner: string }) {
             {ANALYSIS_STATUS_LABELS[analysis.status]}
           </span>{" "}
           Dossier version {analysis.dossierVersion}, analyse du {formatDateTime(analysis.createdAt)}
-          {analysis.provider && (
-            <span className="muted">
-              {" "}
-              ({analysis.provider}, {analysis.model})
-            </span>
-          )}
           {analysis.cost !== null && <> — coût {costFormat.format(analysis.cost)}</>}
           {data.history.length > 1 && (
             <span className="muted">

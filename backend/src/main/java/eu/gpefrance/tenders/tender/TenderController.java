@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,6 +44,17 @@ public class TenderController {
 			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
 			@AuthenticationPrincipal AppUserPrincipal user) {
 		return tenderService.search(tab, search, sort, user.id(), page, size);
+	}
+
+	/**
+	 * Adds a tender found in no source followed: it then goes the way of any
+	 * other, from its consultation file to the answer.
+	 */
+	@PostMapping
+	@ResponseStatus(HttpStatus.CREATED)
+	public TenderDetailResponse create(@Valid @RequestBody ManualTenderRequest request,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return tenderService.createManual(request, user.displayName(), user.id());
 	}
 
 	@GetMapping("/counts")

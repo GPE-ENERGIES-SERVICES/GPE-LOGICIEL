@@ -9,6 +9,8 @@ import { useLoader } from "@/lib/useLoader";
 import { getFinancialAnalysis, startFinancialAnalysis } from "@/services/analysisApi";
 import { getDossiers } from "@/services/documentApi";
 import type { AnalysisDocument, FinancialPoint, FinancialResult, PriceCheck } from "@/types/analysis";
+import { KeyValues, PartTitle } from "@/components/analysis/PartTitle";
+import { Icon } from "@/components/Icon";
 
 const amountFormat = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -51,14 +53,15 @@ function PointSource({ point, documents }: { point: FinancialPoint; documents: A
     <>
       <button
         type="button"
-        className="badge verified badge-toggle"
+        className="field-toggle quiet"
         aria-expanded={shown}
+        aria-label={`Source vérifiée : ${shown ? "masquer" : "afficher"} la source et l'extrait cité`}
         title={shown ? "Masquer la source" : "Afficher la source et l'extrait cité"}
         onClick={() => setShown(!shown)}
       >
-        Source vérifiée
-        <span className="badge-chevron" aria-hidden="true">
-          {shown ? "▴" : "▾"}
+        <Icon name="check" size={14} />
+        <span className="badge-chevron">
+          <Icon name={shown ? "chevronUp" : "chevronDown"} size={12} />
         </span>
       </button>
       {shown && document && (
@@ -89,7 +92,7 @@ function Points({ points, documents, empty }: { points: FinancialPoint[]; docume
     <ul className="decision-points">
       {points.map((point, index) => (
         <li key={index}>
-          <span className="decision-point-text">{point.text}</span>
+          <span className="decision-point-text"><KeyValues text={point.text} /></span>
           <PointSource point={point} documents={documents} />
         </li>
       ))}
@@ -189,7 +192,11 @@ function Result({ result, documents }: { result: FinancialResult; documents: Ana
       {result.overview && <p className="verdict-conclusion">{result.overview}</p>}
 
       <Fold
-        title="Contrôles des montants (sans IA)"
+        title={
+          <PartTitle icon="calculator" tone="accent">
+            Contrôles des montants (sans IA)
+          </PartTitle>
+        }
         count={
           result.checks.length === 0
             ? "aucun tableur"
@@ -203,11 +210,19 @@ function Result({ result, documents }: { result: FinancialResult; documents: Ana
         )}
       </Fold>
 
-      <Fold title="Postes principaux" count={`${result.items.length}`}>
+      <Fold title={
+          <PartTitle icon="file" tone="accent">
+            Postes principaux
+          </PartTitle>
+        } count={`${result.items.length}`}>
         <Points points={result.items} documents={documents} empty="Aucun poste relevé." />
       </Fold>
 
-      <Fold title="Points à vérifier" count={`${result.points.length}`}>
+      <Fold title={
+          <PartTitle icon="warning" tone="warning">
+            Points à vérifier
+          </PartTitle>
+        } count={`${result.points.length}`}>
         <Points points={result.points} documents={documents} empty="Rien à signaler." />
       </Fold>
 
@@ -234,9 +249,9 @@ function Result({ result, documents }: { result: FinancialResult; documents: Ana
  * checks of the amounts made by the software, then the synthesis of the AI
  * with the source of each point. Displaying it never starts an analysis.
  */
-export function FinancialSection({ owner }: { owner: string }) {
-  const loaded = useLoader(() => getFinancialAnalysis(owner), owner);
-  const dossiers = useLoader(() => getDossiers(owner), owner);
+export function FinancialSection({ tenderId }: { tenderId: number }) {
+  const loaded = useLoader(() => getFinancialAnalysis(tenderId), String(tenderId));
+  const dossiers = useLoader(() => getDossiers(tenderId), String(tenderId));
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const data = loaded.data;

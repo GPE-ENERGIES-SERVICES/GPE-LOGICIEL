@@ -798,22 +798,31 @@ Retour arrière de V19 : annuler toutes les fusions depuis l'écran, puis
 code fonctionne aussi sur un schéma en V19 (colonnes ajoutées seulement), mais montrerait de
 nouveau les doublons fusionnés.
 
-## DCE analysé sans appel d'offres
+## Appels d'offres ajoutés à la main
 
-Table `dce_review` (V39) : un nom libre, sans ligne dans `tender`, donc absent des listes, filtres,
-veilles et doublons. `dossier` et `analysis` appartiennent soit à un appel d'offres (`tender_id`), soit
-à une analyse libre (`review_id`) : contrainte `CHECK` sur les deux tables. Lecture, file d'analyse,
-tri des pièces, plafonds et décisions sont ceux des appels d'offres, seule la recherche du propriétaire
-change. Routes : `GET|POST /api/dce-reviews`, `GET /api/dce-reviews/{id}`, puis comme pour un appel
-d'offres `/dossiers`, `/analysis` et `/financial-analysis`. Les fichiers vont dans
-`reviews/{id}/v{version}`. `auto_analysis` vaut faux : l'analyse ne part qu'à la demande (RM8).
+`POST /api/tenders` crée un `tender` de source `MANUAL` (`Tender.manual`), sans notice ni lot, en
+`TO_STUDY`, `retained` nul : pas d'analyse automatique. Il est exclu du filtre (`findToFilter`,
+`FilterService.apply`) et de l'éligibilité (`findOutOfDate`, `countOutOfDate`) : aucune veille ni
+récupération. Tout nouveau traitement de masse sur `tender` doit se poser la même question. La migration
+V40 convertit les `dce_review` de V39 en appels d'offres `MANUAL` (`external_id` `review-{id}`) ; leurs
+fichiers restent sous `reviews/{id}/`, les chemins étant stockés.
 
-`PUT /api/dce-reviews/{id}` renomme. `DELETE` efface lignes et fichiers, après avoir recopié les tokens
-dans `ai_call` (kind `DELETED_DCE_REVIEW`) pour que le plafond mensuel ne baisse pas ; le total de la
-page qualité (`sumTokens`), lui, ne compte que `analysis`. `POST .../attachment {tenderId}` transfère
-dossiers et analyses à l'appel d'offres (versions décalées après les siennes) et efface la ligne
-`dce_review` ; les fichiers restent sous `reviews/{id}/`, les chemins étant stockés. Ces deux opérations
-répondent 409 tant qu'une lecture ou une analyse est en cours.
+## Couleurs et icônes de l'interface
+
+La couleur porte un sens, jamais un décor : indigo pour agir, vert pour ce qui est fait ou fiable, orange pour ce
+qui demande un regard, rouge pour un danger ou une destruction (classe `danger`), gris pour le secondaire. Elle
+accompagne toujours un texte ou une icône. Le texte courant reste de la couleur du texte. Aucun emoji ni symbole
+texte : les marques viennent de `Icon`. Ni dégradé ni barre colorée au bord d'un bloc.
+
+## Dossier de réponse
+
+Paquet `response`, table `response_piece` (V41) : une pièce par `(tender_id, label_key)`, lue dans les
+champs `application_documents` et `offer_documents` de la dernière analyse `DCE_SUMMARY` terminée, ou
+ajoutée à la main. `PieceMatcher` propose d'après le libellé la catégorie de document de l'entreprise.
+L'état (`MISSING`, `EXPIRED`, `TO_CHECK`, `READY`, `NOT_NEEDED`) est calculé à la lecture, sauf la
+vérification, enregistrée et effacée quand ce qui est joint change. Le fichier déposé prime sur le document
+de l'entreprise. Fichiers sous `responses/{tenderId}/{pieceId}/`, contrôlés par `FileTypeValidator`.
+`EstimateExportService` n'est jamais appelé ici : son export contient les déboursés et les coefficients.
 
 ## DCE : liens, fichiers et récupération future
 

@@ -228,7 +228,7 @@ export function RecordTable({ list, columns, fields, noun, empty, filter, fixed,
                           </button>
                           <button
                             type="button"
-                            className="secondary"
+                            className="secondary danger"
                             disabled={busy}
                             onClick={() => {
                               if (window.confirm(`Supprimer ${noun} et ses fichiers ?`)) {
@@ -334,7 +334,7 @@ function Files({
               {admin && (
                 <button
                   type="button"
-                  className="secondary"
+                  className="secondary danger"
                   disabled={busy}
                   onClick={() => {
                     if (window.confirm(`Supprimer le fichier « ${file.fileName} » ?`)) {

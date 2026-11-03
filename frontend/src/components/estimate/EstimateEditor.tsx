@@ -18,7 +18,7 @@ import {
 } from "@/lib/estimate";
 import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
-import { getDossiers, tenderOwner } from "@/services/documentApi";
+import { getDossiers } from "@/services/documentApi";
 import {
   acceptSuggestion,
   copyRatesAgain,
@@ -166,7 +166,7 @@ export function EstimateEditor({ id }: { id: number }) {
         {editable && (
           <button
             type="button"
-            className="secondary"
+            className="secondary danger"
             disabled={busy}
             onClick={() => {
               if (window.confirm("Supprimer ce brouillon et toutes ses lignes ?")) {
@@ -318,7 +318,7 @@ function SettingsForm({ estimate, onSaved }: { estimate: Estimate; onSaved: (est
 
 /** The price schedules of the DCE of the tender, the DPGF, BPU and DQE first. */
 function ImportForm({ estimate, onImported }: { estimate: Estimate; onImported: (estimate: Estimate) => void }) {
-  const dossiers = useLoader(() => getDossiers(tenderOwner(estimate.tenderId)), String(estimate.tenderId));
+  const dossiers = useLoader(() => getDossiers(estimate.tenderId), String(estimate.tenderId));
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const documents = (dossiers.data ?? [])

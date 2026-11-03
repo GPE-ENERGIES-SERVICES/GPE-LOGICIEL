@@ -34,11 +34,6 @@ public class DocumentService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<DossierResponse> dossiersOfReview(Long reviewId) {
-		return dossiers.findByReviewIdOrderByVersionDesc(reviewId).stream().map(this::response).toList();
-	}
-
-	@Transactional(readOnly = true)
 	public DossierResponse dossier(Long dossierId) {
 		return response(findDossier(dossierId));
 	}

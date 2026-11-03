@@ -169,7 +169,7 @@ function AlertItem({ alert, onEdit, onChanged }: { alert: AlertSummary; onEdit: 
         {confirming ? (
           <>
             <span>Supprimer cette veille ?</span>
-            <button type="button" disabled={busy} onClick={() => run(() => deleteAlert(alert.id))}>
+            <button className="primary danger" type="button" disabled={busy} onClick={() => run(() => deleteAlert(alert.id))}>
               Supprimer
             </button>
             <button type="button" className="link-button" onClick={() => setConfirming(false)}>
@@ -177,7 +177,7 @@ function AlertItem({ alert, onEdit, onChanged }: { alert: AlertSummary; onEdit: 
             </button>
           </>
         ) : (
-          <button type="button" className="secondary" disabled={busy} onClick={() => setConfirming(true)}>
+          <button type="button" className="secondary danger" disabled={busy} onClick={() => setConfirming(true)}>
             Supprimer
           </button>
         )}

@@ -127,10 +127,7 @@ export type Decision = {
 
 export type AnalysisJournalEntry = {
   id: number;
-  /** Null for an analysis without tender. */
-  tenderId: number | null;
-  reviewId: number | null;
-  /** The title of the tender, or the name of the analysis without tender. */
+  tenderId: number;
   tenderTitle: string | null;
   dossierVersion: number;
   status: AnalysisStatus;

@@ -81,6 +81,15 @@ public class TenderService {
 	}
 
 	@Transactional
+	public TenderDetailResponse createManual(ManualTenderRequest request, String user, Long userId) {
+		String buyer = request.buyer() == null || request.buyer().isBlank() ? null : request.buyer().strip();
+		Tender tender = tenders.save(Tender.manual(new TenderDetails(request.title().strip(), null, buyer, null, null,
+				List.of(), List.of(), null, List.of(), null, null, request.deadline(), null, null, List.of()), user,
+				clock.instant()));
+		return TenderDetailResponse.from(tender, false, List.of());
+	}
+
+	@Transactional
 	public TenderDetailResponse followUp(Long id, FollowUpRequest request, String user, Long userId) {
 		Tender tender = find(id);
 		tender.followUp(request.status(), request.commentOr(tender.getFollowUpComment()), user, clock.instant());

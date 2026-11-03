@@ -162,7 +162,7 @@ export function DocumentEditor({ workspace, onSection, onChanged, onError }: Pro
               replacing.current = true;
               imageInput.current?.click();
             }}>Remplacer l&apos;image</button>
-            <button type="button" onClick={() => {
+            <button className="danger" type="button" onClick={() => {
               const image = selected.current;
               const body = image?.closest(".memoir-body");
               (image?.closest("figure") ?? image)?.remove();

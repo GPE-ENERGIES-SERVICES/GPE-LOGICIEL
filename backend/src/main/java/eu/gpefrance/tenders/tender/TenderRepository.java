@@ -52,7 +52,7 @@ public interface TenderRepository extends JpaRepository<Tender, Long>, JpaSpecif
 	/**
 	 * Tenders never filtered, or changed by a notice since they were.
 	 */
-	@Query("select t from Tender t where t.filteredAt is null or t.updatedAt > t.filteredAt order by t.id")
+	@Query("select t from Tender t where t.source <> 'MANUAL' and (t.filteredAt is null or t.updatedAt > t.filteredAt) order by t.id")
 	List<Tender> findToFilter(Pageable pageable);
 
 	List<Tender> findByIdGreaterThanOrderById(Long id, Pageable pageable);

@@ -112,28 +112,41 @@ historique.
    documents restent consultables. Une fois activée, pour un appel d'offres retenu, l'analyse
    démarre seule à la fin de la lecture et prend quelques minutes. Pour un appel d'offres écarté
    par le filtre, utiliser « Lancer l'analyse ». Une analyse en attente peut être annulée.
-10. **Vérification** : sur la fiche de synthèse, cliquer sur la source d'une information ouvre
-   le document à la bonne page ; l'extrait cité est affiché sous la valeur. Valider, corriger
-   ou rejeter les informations importantes, puis « Valider la fiche ».
+10. **Vérification** : sur la fiche de synthèse, cliquer sur le ✓ ou l'étiquette à côté d'une valeur
+   affiche sa source, l'extrait cité et les boutons Valider, Corriger et Rejeter. Vérifier les
+   informations importantes, puis « Valider la fiche ».
 11. **Statut et suivi** : le statut est partagé par toute l'équipe : Nouveau, À analyser, En
    préparation, Réponse envoyée ou Écarté. Il se change directement dans la liste, ou dans la
    section « Suivi » de la fiche avec un commentaire. L'étoile ☆ sert à suivre un appel d'offres :
    ce suivi est personnel et retrouvé dans l'onglet « Mes suivis ».
 
-## Analyser un DCE sans appel d'offres
+## Ajouter un appel d'offres absent de la veille
 
-Le menu « Analyser un DCE » (rubrique Appels d'offres) sert pour un DCE qui n'est pas dans la veille.
-Donnez un nom libre (pour quel appel d'offres), déposez le DCE, puis lancez la fiche de synthèse ou
-l'analyse financière : mêmes lectures, mêmes contrôles et mêmes plafonds de dépense que sur un appel
-d'offres, et un nouveau dépôt crée une nouvelle version. L'analyse ne part jamais toute seule, et
-sans avis publié, la date limite lue dans le DCE n'est comparée à rien. Ces analyses n'apparaissent
-ni dans les listes d'appels d'offres ni dans les veilles.
+Si vous ne trouvez pas un appel d'offres, le menu « Nouvel appel d'offres » le crée avec son nom, et
+si vous les connaissez son acheteur et sa date limite. Il s'ouvre sur la même page que les autres : DCE à
+déposer, fiche IA, analyse financière, chiffrage et mémoire. Il est classé « À analyser » et marqué
+« Ajouté manuellement ». Il ne passe ni par les filtres ni par les veilles, et son analyse ne part jamais
+toute seule. Sans avis publié, la date limite lue dans le DCE n'est comparée à aucune autre.
 
-Le bloc « Renommer, rattacher, supprimer » de sa page permet de changer le nom, de supprimer l'analyse
-et ses fichiers (la dépense déjà faite reste comptée dans le plafond du mois), ou de la rattacher à un
-appel d'offres : le DCE devient sa dernière version, ses analyses le suivent, et le chiffrage et le
-mémoire sont alors disponibles. Le rattachement ne se défait pas. Suppression et rattachement sont
-refusés tant qu'une lecture ou une analyse est en cours.
+## Le dossier de réponse
+
+C'est la dernière étape d'un appel d'offres, dans l'onglet « Dossier de réponse » de sa page ; le menu
+« Dossiers de réponse » liste ceux en préparation. Il rappelle où en sont la fiche IA, le chiffrage et le
+mémoire, sans bloquer : vous avancez dans l'ordre que vous voulez.
+
+« Préparer le dossier » reprend les pièces de candidature et d'offre lues par la fiche IA (une valeur
+rejetée est ignorée, une valeur corrigée est reprise corrigée) et propose pour chacune le document de
+l'entreprise qui correspond (Kbis, assurance, attestations, certificat, bilan). C'est une proposition :
+vous pouvez renommer la pièce, choisir un autre document, déposer votre fichier, qui passe alors avant le
+document proposé, ou la marquer « non concernée ». Relancer la préparation ajoute seulement les pièces
+nouvelles et ne change jamais ce que vous avez modifié.
+
+Une pièce est **prête** quand un fichier est joint et que vous avez coché « Vérifiée » ; changer le fichier
+ou le document enlève la coche. Un document expiré est signalé. Le ZIP contient les fichiers joints, rangés
+en Candidature et Offre, avec un avertissement si des pièces ne sont pas prêtes. L'export du chiffrage, qui
+contient vos coûts, n'en fait jamais partie : reportez vos prix sur le bordereau de l'acheteur et déposez-le.
+Le DC1, le DC2 et l'acte d'engagement se déposent pour l'instant complétés ; le logiciel ne les remplit pas
+encore, le mémoire non plus n'a pas encore d'export. La signature et le dépôt restent de votre côté.
 
 ## L'aide à la décision
 
@@ -154,7 +167,7 @@ supplémentaire. Il ne décrit pas le marché (le résumé de l'avis, au-dessus,
   reste dans « Analyse du DCE ») ; le logiciel ne connaît que les critères de veille de GPE, pas
   ses capacités (qualifications, chiffre d'affaires, moyens).
 
-Cliquer sur « Source vérifiée » affiche le document, la page et l'extrait. Une analyse faite
+Le ✓ indique une source vérifiée : cliquer dessus affiche le document, la page et l'extrait. Une analyse faite
 avant l'ajout de ce bloc n'a pas de recommandation : elle s'obtient en relançant l'analyse
 (nouvel appel payant), jamais automatiquement.
 
@@ -169,7 +182,7 @@ PDF, et donne :
   écrits comparés aux lignes, TVA et TTC, incohérences avec leur cellule (par exemple « F6 :
   quantité × prix unitaire = 4 200,00, montant écrit 4 300,00 ») ;
 - une **synthèse** par l'IA : postes principaux et points à vérifier, chacun avec sa source
-  (document, feuille, ligne) ; « Source vérifiée » signifie que le texte cité a été retrouvé dans
+  (document, feuille, ligne) ; le ✓ signifie que le texte cité a été retrouvé dans
   cette ligne.
 
 Dans un PDF numérique, les tableaux sont reconstruits à partir de la position des mots et contrôlés
@@ -297,7 +310,10 @@ n'en lance aucune.
 ## La fiche de synthèse
 
 Chaque partie se déplie au clic ; son titre indique ce qu'elle contient (par exemple « 5 sur 11
-renseignées », « 1 analysé sur 116 »).
+renseignées », « 1 analysé sur 116 »). « En un coup d'œil » et « Points d'attention » sont ouverts
+d'emblée. ✓ signifie que l'extrait a été retrouvé dans le document ; une étiquette orange signale ce
+qui demande votre attention. Ce que les documents ne disent pas est regroupé sur une ligne à la fin de
+chaque partie : cliquer sur un nom permet de le renseigner.
 
 1. **En un coup d'œil** : date limite, visite, lots, montant, durée.
 2. **Points d'attention** : visite obligatoire, délai court, qualifications exigées, date

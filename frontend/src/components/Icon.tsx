@@ -87,6 +87,31 @@ const PATHS = {
       <path d="M8 21h8M12 17v4" />
     </>
   ),
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  warning: (
+    <>
+      <path d="M12 4 2.8 19.5h18.4L12 4Z" />
+      <path d="M12 10v4.5M12 17.2v.1" />
+    </>
+  ),
+  clipboard: (
+    <>
+      <rect x="5" y="4.5" width="14" height="16" rx="2" />
+      <path d="M9 4.5V3h6v1.5M9 11h6M9 15h6" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+  chevronDown: <path d="m6 9.5 6 6 6-6" />,
+  chevronUp: <path d="m6 14.5 6-6 6 6" />,
+  arrowUp: <path d="M12 19V5M6 11l6-6 6 6" />,
+  arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
+  arrowLeft: <path d="M19 12H5M11 6l-6 6 6 6" />,
+  arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   close: <path d="M18 6 6 18M6 6l12 12" />,
 } satisfies Record<string, ReactNode>;

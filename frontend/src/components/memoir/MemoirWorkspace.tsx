@@ -97,7 +97,7 @@ export function MemoirWorkspaceView({ id }: { id: number }) {
           </button>
           <button
             type="button"
-            className="secondary"
+            className="secondary danger"
             onClick={async () => {
               if (window.confirm("Supprimer ce mémoire, son sommaire, son texte et ses images ?")) {
                 try {

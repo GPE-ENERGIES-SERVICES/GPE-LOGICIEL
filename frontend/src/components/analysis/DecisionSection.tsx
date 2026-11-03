@@ -6,6 +6,8 @@ import { Fold } from "@/components/Fold";
 import { useLoader } from "@/lib/useLoader";
 import { getTenderAnalysis } from "@/services/analysisApi";
 import type { Analysis, DecisionPoint, ObstacleKind, Verdict } from "@/types/analysis";
+import { KeyValues, PartTitle } from "@/components/analysis/PartTitle";
+import { Icon } from "@/components/Icon";
 
 const VERDICT_LABELS: Record<Verdict, string> = {
   PRIORITY: "À étudier en priorité",
@@ -49,14 +51,15 @@ function PointSource({ point, analysis }: { point: DecisionPoint; analysis: Anal
     <>
       <button
         type="button"
-        className="badge verified badge-toggle"
+        className="field-toggle quiet"
         aria-expanded={shown}
+        aria-label={`Source vérifiée : ${shown ? "masquer" : "afficher"} la source et l'extrait cité`}
         title={shown ? "Masquer la source" : "Afficher la source et l'extrait cité"}
         onClick={() => setShown(!shown)}
       >
-        Source vérifiée
-        <span className="badge-chevron" aria-hidden="true">
-          {shown ? "▴" : "▾"}
+        <Icon name="check" size={14} />
+        <span className="badge-chevron">
+          <Icon name={shown ? "chevronUp" : "chevronDown"} size={12} />
         </span>
       </button>
       {shown && (
@@ -103,7 +106,7 @@ function Points({
                 {OBSTACLE_LABELS[point.kind]}
               </span>
             )}
-            {point.text}
+            <KeyValues text={point.text} />
             {point.deduced && (
               <span className="decision-deduced" title="Déduit de plusieurs éléments, non écrit tel quel dans le DCE">
                 {" "}
@@ -145,16 +148,28 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
         {notAnalysed > 0 && <> (détail dans {ANALYSIS_LINK})</>}
       </p>
 
-      <Fold title="Pourquoi l'étudier" count={decision.strengths.length > 0 ? `${decision.strengths.length}` : "aucun argument"}>
+      <Fold title={
+          <PartTitle icon="check" tone="success">
+            Pourquoi l&apos;étudier
+          </PartTitle>
+        } count={decision.strengths.length > 0 ? `${decision.strengths.length}` : "aucun argument"}>
         <Points points={decision.strengths} analysis={analysis} empty="Aucun argument favorable identifié dans les documents." />
       </Fold>
 
-      <Fold title="Obstacles et risques" count={kinds || "aucun"}>
+      <Fold title={
+          <PartTitle icon="warning" tone="danger">
+            Obstacles et risques
+          </PartTitle>
+        } count={kinds || "aucun"}>
         <Points points={decision.obstacles} analysis={analysis} empty="Aucun obstacle identifié dans les documents analysés." />
       </Fold>
 
       {decision.checks.length > 0 && (
-        <Fold title="À vérifier avant de décider" count={`${decision.checks.length}`}>
+        <Fold title={
+          <PartTitle icon="clipboard" tone="warning">
+            À vérifier avant de décider
+          </PartTitle>
+        } count={`${decision.checks.length}`}>
           <ol className="decision-checks">
             {decision.checks.map((check, index) => (
               <li key={index}>
@@ -176,7 +191,7 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
           </ul>
         )}
         <p>
-          Capacités de GPE inconnues du logiciel ; seuls les points « Source vérifiée » sont appuyés par un extrait.
+          Capacités de GPE inconnues du logiciel ; seuls les points cochés sont appuyés par un extrait retrouvé dans le document.
         </p>
       </Fold>
     </div>
@@ -188,8 +203,8 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
  * arguments, obstacles, checks and limits. It only shows what was stored:
  * displaying it never starts an analysis.
  */
-export function DecisionSection({ owner }: { owner: string }) {
-  const loaded = useLoader(() => getTenderAnalysis(owner), owner);
+export function DecisionSection({ tenderId }: { tenderId: number }) {
+  const loaded = useLoader(() => getTenderAnalysis(tenderId), String(tenderId));
   const analysis = loaded.data?.latest ?? null;
   const running =
     analysis?.status === "PENDING" || analysis?.status === "PROCESSING" || analysis?.status === "RETRY_WAITING";

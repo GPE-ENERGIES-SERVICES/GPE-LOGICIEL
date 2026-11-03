@@ -29,14 +29,6 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 	Optional<Analysis> findFirstByTenderIdAndKindAndInputFingerprintAndStatusOrderByIdDesc(Long tenderId,
 			AnalysisKind kind, String fingerprint, AnalysisStatus status);
 
-	List<Analysis> findByReviewIdAndKindOrderByIdDesc(Long reviewId, AnalysisKind kind);
-
-	Optional<Analysis> findFirstByReviewIdAndKindAndStatusInOrderByIdDesc(Long reviewId, AnalysisKind kind,
-			Collection<AnalysisStatus> statuses);
-
-	Optional<Analysis> findFirstByReviewIdAndKindAndInputFingerprintAndStatusOrderByIdDesc(Long reviewId,
-			AnalysisKind kind, String fingerprint, AnalysisStatus status);
-
 	List<Analysis> findAllByOrderByIdDesc(Pageable pageable);
 
 	/** The latest finished analyses of a kind, to tell how long they take. */

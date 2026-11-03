@@ -18,6 +18,7 @@ import {
   validateOutline,
 } from "@/services/memoirApi";
 import type { MemoirSection, MemoirWorkspace, RequirementCategory } from "@/types/memoir";
+import { Icon } from "@/components/Icon";
 
 type Props = {
   workspace: MemoirWorkspace;
@@ -176,20 +177,20 @@ export function OutlinePanel({ workspace, onChanged, onError, onShow }: Props) {
                           + Sous-partie
                         </button>
                         <button type="button" className="secondary" aria-label="Monter" disabled={busy} onClick={() => move(section, "up")}>
-                          ↑
+                          <Icon name="arrowUp" size={14} />
                         </button>
                         <button type="button" className="secondary" aria-label="Descendre" disabled={busy} onClick={() => move(section, "down")}>
-                          ↓
+                          <Icon name="arrowDown" size={14} />
                         </button>
                         <button type="button" className="secondary" aria-label="Décaler à droite" title="Faire une sous-partie de la précédente" disabled={busy} onClick={() => move(section, "in")}>
-                          →
+                          <Icon name="arrowRight" size={14} />
                         </button>
                         <button type="button" className="secondary" aria-label="Décaler à gauche" disabled={busy || section.parentId === null} onClick={() => move(section, "out")}>
-                          ←
+                          <Icon name="arrowLeft" size={14} />
                         </button>
                         <button
                           type="button"
-                          className="secondary"
+                          className="secondary danger"
                           aria-label="Supprimer"
                           disabled={busy}
                           onClick={() => {
@@ -198,7 +199,7 @@ export function OutlinePanel({ workspace, onChanged, onError, onShow }: Props) {
                             }
                           }}
                         >
-                          ✕
+                          <Icon name="close" size={14} />
                         </button>
                       </div>
                     )}
@@ -274,7 +275,7 @@ export function OutlinePanel({ workspace, onChanged, onError, onShow }: Props) {
                 {requirement.quote && <blockquote>« {requirement.quote} »</blockquote>}
                 <button
                   type="button"
-                  className="secondary"
+                  className="secondary danger"
                   disabled={busy}
                   onClick={() => run(() => deleteRequirement(memoir.id, requirement.id))}
                 >

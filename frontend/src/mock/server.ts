@@ -804,7 +804,6 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/dce\/events$/, () => []],
   ["POST", /^\/api\/dce-links\/(\d+)\/retry$/, () => refuseRetry()],
   ["GET", /^\/api\/tenders\/(\d+)\/analysis$/, (id) => find(id) && NO_ANALYSIS],
-  ["GET", /^\/api\/dce-reviews$/, () => []],
   ["GET", /^\/api\/analyses\/configuration$/, () => ANALYSIS_CONFIGURATION],
   ["GET", /^\/api\/analyses\/quality$/, () => NO_QUALITY],
   ["GET", /^\/api\/analyses$/, () => []],
@@ -826,6 +825,13 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/estimate-assistant$/, () => ({ available: false, message: NOT_ENABLED })],
   // Memoirs: none in the demonstration; their changes answer « indisponible ».
   ["GET", /^\/api\/memoirs$/, () => []],
+  // Answers: none in the demonstration; their changes answer « indisponible ».
+  ["GET", /^\/api\/responses$/, () => []],
+  [
+    "GET",
+    /^\/api\/tenders\/(\d+)\/response$/,
+    (id) => find(id) && { steps: [], analysisDone: false, pieces: [], documents: [] },
+  ],
   ["GET", /^\/api\/memoir-library$/, () => []],
   // The company: empty in the demonstration; its changes answer « indisponible ».
   ["GET", /^\/api\/company\/profile$/, () => ({ interventionDepartments: [], logo: null, updatedAt: "2026-10-01T08:00:00Z" })],

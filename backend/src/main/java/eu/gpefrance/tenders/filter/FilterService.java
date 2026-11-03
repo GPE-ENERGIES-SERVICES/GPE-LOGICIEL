@@ -102,6 +102,9 @@ public class FilterService {
 		FilterCriteria criteria = criteriaRepository.getCurrent();
 		Instant now = clock.instant();
 		for (Tender tender : batch) {
+			if (Tender.MANUAL_SOURCE.equals(tender.getSource())) {
+				continue;
+			}
 			FilterResult result = TenderFilter.apply(tender, criteria, now);
 			tender.applyFilter(result.retained(), result.reason(), now);
 		}

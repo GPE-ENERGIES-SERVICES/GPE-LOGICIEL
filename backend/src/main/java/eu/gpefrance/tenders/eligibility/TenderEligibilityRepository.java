@@ -15,7 +15,7 @@ public interface TenderEligibilityRepository extends JpaRepository<TenderEligibi
 	@Query(nativeQuery = true, value = """
 			SELECT t.id FROM tender t
 			LEFT JOIN tender_eligibility e ON e.tender_id = t.id
-			WHERE t.merged_into_id IS NULL
+			WHERE t.merged_into_id IS NULL AND t.source <> 'MANUAL'
 			  AND (e.tender_id IS NULL OR e.alert_revision < :revision OR e.evaluated_at < t.updated_at)
 			  AND t.id > :afterId
 			ORDER BY t.id
@@ -26,7 +26,7 @@ public interface TenderEligibilityRepository extends JpaRepository<TenderEligibi
 	@Query(nativeQuery = true, value = """
 			SELECT count(*) FROM tender t
 			LEFT JOIN tender_eligibility e ON e.tender_id = t.id
-			WHERE t.merged_into_id IS NULL
+			WHERE t.merged_into_id IS NULL AND t.source <> 'MANUAL'
 			  AND (e.tender_id IS NULL OR e.alert_revision < :revision OR e.evaluated_at < t.updated_at)
 			""")
 	long countOutOfDate(long revision);

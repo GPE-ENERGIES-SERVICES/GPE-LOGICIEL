@@ -175,9 +175,7 @@ export function AnalysisJournal() {
               <tr key={entry.id} className={entry.status === "FAILED" ? "row-error" : ""}>
                 <td>{formatDateTime(entry.createdAt)}</td>
                 <td>
-                  <Link href={entry.reviewId ? `/dce-reviews/${entry.reviewId}` : `/tenders/${entry.tenderId}`}>
-                    {entry.tenderTitle ?? `#${entry.tenderId}`}
-                  </Link>
+                  <Link href={`/tenders/${entry.tenderId}`}>{entry.tenderTitle ?? `#${entry.tenderId}`}</Link>
                   <span className="muted"> (v{entry.dossierVersion})</span>
                 </td>
                 <td>{ANALYSIS_STATUS_LABELS[entry.status]}</td>

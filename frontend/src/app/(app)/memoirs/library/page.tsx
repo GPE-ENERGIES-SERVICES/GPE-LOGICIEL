@@ -147,7 +147,7 @@ export default function MemoirLibraryPage() {
                   <td className="row-actions">
                     <button
                       type="button"
-                      className="secondary"
+                      className="secondary danger"
                       onClick={async () => {
                         if (window.confirm(`Supprimer « ${entry.title} » de la bibliothèque ?`)) {
                           try {

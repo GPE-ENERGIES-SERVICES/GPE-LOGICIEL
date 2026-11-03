@@ -91,6 +91,29 @@ public class CompanyDirectory {
 	}
 
 	/**
+	 * An official document and its current file (the last uploaded).
+	 * @param fileName the name of its file, null when none was uploaded
+	 * @param path where its file is, null when none was uploaded
+	 */
+	public record DocumentFile(Long id, CompanyDocument.Category category, String name, LocalDate expiresOn,
+			Validity validity, String fileName, java.nio.file.Path path) {
+	}
+
+	/** Every official document, to join them to an answer. */
+	@Transactional(readOnly = true)
+	public List<DocumentFile> documentFiles() {
+		LocalDate today = LocalDate.now(clock);
+		Map<Long, List<CompanyFiles.FileResponse>> byDocument = files.byOwner(FileOwner.DOCUMENT);
+		return documents.findAll().stream().map(document -> {
+			List<CompanyFiles.FileResponse> found = byDocument.getOrDefault(document.getId(), List.of());
+			CompanyFiles.Stored stored = found.isEmpty() ? null : files.find(found.getFirst().id()).orElse(null);
+			return new DocumentFile(document.getId(), document.getCategory(), document.title(), document.endsOn(),
+					Validity.of(document.endsOn(), today, properties.expiryWarningDays()),
+					stored == null ? null : stored.file().fileName(), stored == null ? null : stored.path());
+		}).toList();
+	}
+
+	/**
 	 * Something of the company that ends.
 	 * @param kind DOCUMENT, CERTIFICATION, CREDENTIAL (of an employee) or EQUIPMENT (its next check)
 	 * @param detail who or what it belongs to, or null

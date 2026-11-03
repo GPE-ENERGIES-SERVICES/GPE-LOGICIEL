@@ -16,6 +16,7 @@ import type { Estimate, EstimateItem, ItemInput, PricingRate, Suggestion } from 
 
 import { ComponentsPanel } from "./ComponentsPanel";
 import { ItemForm } from "./ItemForm";
+import { Icon } from "@/components/Icon";
 
 type Field = "reference" | "designation" | "quantity" | "unit" | "price";
 
@@ -364,7 +365,7 @@ export function EstimateGrid({ estimate, editable, rates, aiAvailable, suggestio
                     {editable && (
                       <>
                         <button type="button" className="secondary" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Monter la ligne">
-                          ↑
+                          <Icon name="arrowUp" size={14} />
                         </button>
                         <button
                           type="button"
@@ -373,11 +374,11 @@ export function EstimateGrid({ estimate, editable, rates, aiAvailable, suggestio
                           disabled={index === items.length - 1}
                           aria-label="Descendre la ligne"
                         >
-                          ↓
+                          <Icon name="arrowDown" size={14} />
                         </button>
                         <button
                           type="button"
-                          className="secondary"
+                          className="secondary danger"
                           aria-label="Supprimer la ligne"
                           title="Supprimer la ligne"
                           onClick={() => {
@@ -386,7 +387,7 @@ export function EstimateGrid({ estimate, editable, rates, aiAvailable, suggestio
                             }
                           }}
                         >
-                          ✕
+                          <Icon name="close" size={14} />
                         </button>
                       </>
                     )}

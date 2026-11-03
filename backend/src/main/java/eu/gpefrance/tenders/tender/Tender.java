@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -30,6 +31,9 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "tender")
 public class Tender {
+
+	/** The source of the tenders added by a user. */
+	public static final String MANUAL_SOURCE = "MANUAL";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -142,6 +146,16 @@ public class Tender {
 	private List<TenderNotice> notices = new ArrayList<>();
 
 	protected Tender() {
+	}
+
+	/**
+	 * A tender added by a user, published in no source followed: it takes no
+	 * part in the filter, the saved searches nor the retrieval of the files.
+	 */
+	public static Tender manual(TenderDetails details, String user, Instant now) {
+		Tender tender = new Tender(MANUAL_SOURCE, "manual-" + UUID.randomUUID(), details, now);
+		tender.followUp(FollowUpStatus.TO_STUDY, null, user, now);
+		return tender;
 	}
 
 	public Tender(String source, String externalId, TenderDetails details, Instant now) {

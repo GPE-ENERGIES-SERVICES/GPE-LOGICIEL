@@ -14,6 +14,7 @@ import {
   STATUS_LABELS,
 } from "@/lib/format";
 import { available } from "@/services/http";
+import { MANUAL_SOURCE } from "@/services/tenderApi";
 import type { FollowUpStatus, TenderSummary } from "@/types/tender";
 
 import { DeadlineBadge } from "./DeadlineBadge";
@@ -28,6 +29,11 @@ type Props = {
   busy: boolean;
 };
 
+/** The score of relevance, at a glance; the number stays written. */
+function relevanceClass(score: number): string {
+  return score >= 75 ? "relevance relevance-high" : score >= 50 ? "relevance relevance-medium" : "relevance";
+}
+
 /** One line of the tender table: what is needed to sort out many tenders quickly. */
 export function TenderRow({ tender, href, onFollowUp, onFollowChanged, busy }: Props) {
   // The postal code when known, otherwise the departments.
@@ -37,7 +43,7 @@ export function TenderRow({ tender, href, onFollowUp, onFollowChanged, busy }: P
   const about = [
     tender.buyer ?? "Acheteur non indiqué",
     tender.reference && `Réf. ${tender.reference}`,
-    tender.source,
+    tender.source === MANUAL_SOURCE ? "Ajouté manuellement" : tender.source,
     documentCount > 0 && `DCE : ${documentCount} document${documentCount > 1 ? "s" : ""}`,
   ]
     .filter(Boolean)
@@ -84,13 +90,19 @@ export function TenderRow({ tender, href, onFollowUp, onFollowChanged, busy }: P
         </div>
       </td>
       <td className="nowrap">
-        {available("relevance") && (tender.relevanceScore != null ? `${tender.relevanceScore} %` : "–")}
+        {available("relevance") &&
+          (tender.relevanceScore != null ? (
+            <span className={relevanceClass(tender.relevanceScore)}>{tender.relevanceScore} %</span>
+          ) : (
+            "–"
+          ))}
         <div className="small muted" title={tender.filterReason ?? undefined}>
           {tender.retained === false ? "Hors critères" : "Retenu"}
         </div>
       </td>
       <td>
         <select
+          className={`status-select status-${tender.followUpStatus.toLowerCase().replace("_", "-")}`}
           value={tender.followUpStatus}
           disabled={busy}
           aria-label="Statut"

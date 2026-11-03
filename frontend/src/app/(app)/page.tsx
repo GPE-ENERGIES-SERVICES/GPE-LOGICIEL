@@ -14,6 +14,7 @@ import { getAwardedContracts } from "@/services/awardApi";
 import { available } from "@/services/http";
 import { getStatusCounts, getTenderCounts, getTenders } from "@/services/tenderApi";
 import type { TenderSummary } from "@/types/tender";
+import { Icon } from "@/components/Icon";
 
 /** Consultations published since yesterday. */
 const RECENT_QUERY = "publishedWithinDays=1";
@@ -55,15 +56,19 @@ export default function DashboardPage() {
       label: newCount === 1 ? "nouvelle opportunité depuis hier" : "nouvelles opportunités depuis hier",
       detail: recent.data && `dont ${recent.data.ALL} correspondant à vos critères`,
       href: `/tenders?tab=ALL&${RECENT_QUERY}`,
+      icon: "tenders" as const,
+      tone: newCount ? "success" : "muted",
     },
-    { value: statuses.data?.TO_STUDY, label: "à analyser", href: "/tenders?tab=TO_PROCESS&status=TO_STUDY" },
+    { value: statuses.data?.TO_STUDY, label: "à analyser", href: "/tenders?tab=TO_PROCESS&status=TO_STUDY", icon: "clipboard" as const, tone: "accent" },
     {
       value: deadlines.data?.totalElements,
       label: "échéances dans les 7 prochains jours",
       href: `/tenders?${DEADLINES_QUERY}`,
+      icon: "clock" as const,
+      tone: deadlines.data?.totalElements ? "warning" : "muted",
     },
-    { value: counts.data?.FOLLOWED, label: "consultations suivies", href: "/follows" },
-    { value: counts.data?.FILTERED_OUT, label: "hors critères à vérifier", href: "/tenders?tab=FILTERED_OUT" },
+    { value: counts.data?.FOLLOWED, label: "consultations suivies", href: "/follows", icon: "star" as const, tone: "accent" },
+    { value: counts.data?.FILTERED_OUT, label: "hors critères à vérifier", href: "/tenders?tab=FILTERED_OUT", icon: "eye" as const, tone: "muted" },
   ];
 
   const openAlert = async (alertId: number) => {
@@ -85,8 +90,11 @@ export default function DashboardPage() {
       <h2>Aujourd&apos;hui</h2>
       <div className="stats">
         {figures.map((figure) => (
-          <Link key={figure.href} href={figure.href} className="card stat">
-            <strong>{figure.value ?? "–"}</strong>
+          <Link key={figure.href} href={figure.href} className={`card stat tone-${figure.tone}`}>
+            <span className="stat-head">
+              <Icon name={figure.icon} size={18} />
+              <strong>{figure.value ?? "–"}</strong>
+            </span>
             <span>{figure.label}</span>
             {figure.detail && <span className="small muted">{figure.detail}</span>}
           </Link>

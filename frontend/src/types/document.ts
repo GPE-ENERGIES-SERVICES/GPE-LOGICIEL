@@ -26,14 +26,6 @@ export type AiUse = "SUMMARY" | "IF_ROOM" | "FINANCIAL" | "EXCLUDED";
 
 export type AiChoice = "INCLUDE" | "EXCLUDE";
 
-/** A consultation file analysed without any tender, under the name given by the user. */
-export type DceReview = {
-  id: number;
-  name: string;
-  createdBy: string | null;
-  createdAt: string;
-};
-
 export type Dossier = {
   id: number;
   version: number;

@@ -13,25 +13,27 @@ import { Icon, type IconName } from "./Icon";
 import { ThemeToggle } from "./ThemeToggle";
 
 /**
+ * @param title the name above the page when the label of the menu is shortened
  * @param group the title shown above the first entry of a group, or none
  * @param admin shown to administrators only
  * @param separator a line above it, apart from what precedes
  */
-type Section = { href: string; label: string; icon: IconName; group?: string; admin?: boolean; separator?: boolean };
+type Section = { href: string; label: string; title?: string; icon: IconName; group?: string; admin?: boolean; separator?: boolean };
 
 /** Main sections, in the order of the work; a section is active on its page and on the pages below it. */
 const SECTIONS: Section[] = [
   { href: "/", label: "Tableau de bord", icon: "dashboard" },
-  { href: "/tenders", label: "Tous les appels d'offres", icon: "tenders", group: "Appels d'offres" },
+  { href: "/tenders", label: "Tous les AO", title: "Tous les appels d'offres", icon: "tenders", group: "Appels d'offres" },
   { href: "/follows", label: "Mes suivis", icon: "star", group: "Appels d'offres" },
   { href: "/alerts", label: "Mes veilles", icon: "alerts", group: "Appels d'offres" },
-  { href: "/dce-reviews", label: "Analyser un DCE", icon: "file", group: "Appels d'offres" },
+  { href: "/tenders/new", label: "Nouvel appel d'offres", icon: "file", group: "Appels d'offres" },
   { href: "/awards", label: "Marchés attribués", icon: "award", group: "Appels d'offres" },
   { href: "/archives", label: "Archives", icon: "archive", group: "Appels d'offres" },
   { href: "/estimates", label: "Chiffrages", icon: "calculator", group: "Chiffrage" },
   { href: "/suppliers", label: "Tarifs fournisseurs", icon: "tag", group: "Chiffrage", admin: true },
   { href: "/memoirs", label: "Mémoires", icon: "file", group: "Mémoire technique" },
   { href: "/memoirs/library", label: "Bibliothèque", icon: "archive", group: "Mémoire technique" },
+  { href: "/responses", label: "Dossiers de réponse", icon: "archive", group: "Réponse" },
   { href: "/company", label: "Entreprise", icon: "building", separator: true },
   { href: "/supervision", label: "Supervision", icon: "eye", admin: true, separator: true },
   { href: "/settings", label: "Paramètres", icon: "settings", admin: true },
@@ -74,6 +76,20 @@ function activeSection(sections: Section[], current: string): Section | undefine
   return sections.filter(({ href }) => isActive(href)).sort((a, b) => b.href.length - a.href.length)[0];
 }
 
+/**
+ * Reduced to its icons, the menu shows the first entry of each group only
+ * (nav-sub hides the others); it stays lit while on another page of its group.
+ */
+function navClass(href: string, group: string | undefined, sub: boolean, active: Section | undefined): string {
+  if (active?.href === href) {
+    return sub ? "active nav-sub" : "active";
+  }
+  if (sub) {
+    return "nav-sub";
+  }
+  return group && active?.group === group ? "group-active" : "";
+}
+
 function SectionNav({
   sections,
   origin,
@@ -99,10 +115,10 @@ function SectionNav({
           {separator && <span className="app-nav-group" aria-hidden="true" />}
           <Link
             href={href}
-            className={active?.href === href ? "active" : ""}
+            className={navClass(href, group, Boolean(group) && group === sections[index - 1]?.group, active)}
             aria-current={active?.href === href ? "page" : undefined}
             onClick={onNavigate}
-            title={collapsed ? label : undefined}
+            title={collapsed ? (group ?? label) : undefined}
           >
             <Icon name={icon} />
             <span className="nav-label">{label}</span>
@@ -120,7 +136,8 @@ function SectionNav({
 
 function SectionTitle({ sections, origin }: { sections: Section[]; origin: string | null }) {
   const pathname = usePathname();
-  return <p className="app-context">{activeSection(sections, origin ?? pathname)?.label}</p>;
+  const section = activeSection(sections, origin ?? pathname);
+  return <p className="app-context">{section?.title ?? section?.label}</p>;
 }
 
 /** The details of a tender belong to the section they were opened from (?from=…). */

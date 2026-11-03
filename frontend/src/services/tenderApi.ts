@@ -23,6 +23,14 @@ export function getStatusCounts(params: SearchParams): Promise<Record<FollowUpSt
   return api(`/api/tenders/status-counts?${params}`);
 }
 
+/** The source of the tenders added by a user. */
+export const MANUAL_SOURCE = "MANUAL";
+
+/** Adds a tender found in no source followed. */
+export function createManualTender(body: { title: string; buyer: string | null; deadline: string | null }): Promise<TenderDetail> {
+  return api("/api/tenders", { method: "POST", body });
+}
+
 export function getTender(id: number | string): Promise<TenderDetail> {
   return api(`/api/tenders/${id}`);
 }

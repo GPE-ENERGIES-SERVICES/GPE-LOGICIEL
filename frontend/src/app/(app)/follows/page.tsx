@@ -72,7 +72,7 @@ function FollowList() {
 
       {total === 0 && !text ? (
         <p className="page-message">
-          Vous ne suivez aucune consultation. Cliquez sur l&apos;étoile ☆ d&apos;une consultation, dans{" "}
+          Vous ne suivez aucune consultation. Cliquez sur l&apos;étoile d&apos;une consultation, dans{" "}
           <Link href="/tenders">Appels d&apos;offres</Link> ou sur sa fiche, pour la retrouver ici.
         </p>
       ) : (

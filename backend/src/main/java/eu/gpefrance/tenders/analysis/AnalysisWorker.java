@@ -297,9 +297,7 @@ public class AnalysisWorker {
 			.stream()
 			.map(document -> AnalysisService.load(document, pages))
 			.toList();
-		// Without tender, no notice to compare the deadline with.
-		Instant noticeDeadline = analysis.getTenderId() == null ? null
-				: tenders.findById(analysis.getTenderId()).map(Tender::getDeadline).orElse(null);
+		Instant noticeDeadline = tenders.findById(analysis.getTenderId()).map(Tender::getDeadline).orElse(null);
 		String company = ExtractionPrompt.company(criteria.findAll().stream().findFirst().orElse(null));
 		return new Prepared(AnalysisKind.DCE_SUMMARY, sources,
 				sources.stream().mapToLong(SourceDocument::length).sum() + company.length(), noticeDeadline, company,

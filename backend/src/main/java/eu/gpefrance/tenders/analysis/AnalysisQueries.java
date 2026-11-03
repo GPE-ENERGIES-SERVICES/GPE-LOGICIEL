@@ -8,16 +8,13 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import eu.gpefrance.tenders.analysis.AnalysisResponse.DocumentResponse;
 import eu.gpefrance.tenders.analysis.AnalysisResponse.FinancialAnalysis;
 import eu.gpefrance.tenders.analysis.AnalysisResponse.FieldResponse;
 import eu.gpefrance.tenders.analysis.AnalysisResponse.TenderAnalysis;
-import eu.gpefrance.tenders.document.DceReviewRepository;
 import eu.gpefrance.tenders.document.Document;
 import eu.gpefrance.tenders.document.DocumentPageRepository;
 import eu.gpefrance.tenders.document.DocumentTriage;
@@ -45,12 +42,8 @@ public class AnalysisQueries {
 
 	private final DocumentPageRepository pages;
 
-	private final DceReviewRepository reviews;
-
 	public AnalysisQueries(AnalysisRepository analyses, DossierRepository dossiers, TenderRepository tenders,
-			AnalysisGate gate, AnalysisProperties properties, DocumentPageRepository pages,
-			DceReviewRepository reviews) {
-		this.reviews = reviews;
+			AnalysisGate gate, AnalysisProperties properties, DocumentPageRepository pages) {
 		this.pages = pages;
 		this.analyses = analyses;
 		this.dossiers = dossiers;
@@ -62,25 +55,8 @@ public class AnalysisQueries {
 	@Transactional(readOnly = true)
 	public TenderAnalysis ofTender(Long tenderId) {
 		Tender tender = tenders.findById(tenderId).orElseThrow(() -> new TenderNotFoundException(tenderId));
-		return sheet(analyses.findByTenderIdAndKindOrderByIdDesc(tenderId, AnalysisKind.DCE_SUMMARY),
-				tender.getDeadline());
-	}
-
-	@Transactional(readOnly = true)
-	public TenderAnalysis ofReview(Long reviewId) {
-		checkReview(reviewId);
-		return sheet(analyses.findByReviewIdAndKindOrderByIdDesc(reviewId, AnalysisKind.DCE_SUMMARY), null);
-	}
-
-	/** The sheet an analysis belongs to, of a tender or of a review. */
-	@Transactional(readOnly = true)
-	public TenderAnalysis sheetOf(Long analysisId) {
-		Analysis analysis = analyses.findById(analysisId).orElseThrow(() -> new AnalysisNotFoundException(analysisId));
-		return analysis.getReviewId() != null ? ofReview(analysis.getReviewId()) : ofTender(analysis.getTenderId());
-	}
-
-	private TenderAnalysis sheet(List<Analysis> all, Instant noticeDeadline) {
-		AnalysisResponse latest = all.isEmpty() ? null : detail(all.getFirst(), noticeDeadline);
+		List<Analysis> all = analyses.findByTenderIdAndKindOrderByIdDesc(tenderId, AnalysisKind.DCE_SUMMARY);
+		AnalysisResponse latest = all.isEmpty() ? null : detail(all.getFirst(), tender.getDeadline());
 		AnalysisGate.Status status = gate.status();
 		return new TenderAnalysis(status.ready(), status.ready() ? null : status.message(), ExtractionGrid.FIELDS,
 				latest, all.stream().map(this::summary).toList(), typicalSeconds(AnalysisKind.DCE_SUMMARY));
@@ -93,29 +69,9 @@ public class AnalysisQueries {
 	@Transactional(readOnly = true)
 	public FinancialAnalysis financialOfTender(Long tenderId) {
 		tenders.findById(tenderId).orElseThrow(() -> new TenderNotFoundException(tenderId));
-		return financial(analyses.findByTenderIdAndKindOrderByIdDesc(tenderId, AnalysisKind.FINANCIAL),
-				dossiers.findByTenderIdOrderByVersionDesc(tenderId));
-	}
-
-	@Transactional(readOnly = true)
-	public FinancialAnalysis financialOfReview(Long reviewId) {
-		checkReview(reviewId);
-		return financial(analyses.findByReviewIdAndKindOrderByIdDesc(reviewId, AnalysisKind.FINANCIAL),
-				dossiers.findByReviewIdOrderByVersionDesc(reviewId));
-	}
-
-	private void checkReview(Long reviewId) {
-		if (!reviews.existsById(reviewId)) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Analyse de DCE introuvable.");
-		}
-	}
-
-	/**
-	 * @param versions the dossiers, the latest first
-	 */
-	private FinancialAnalysis financial(List<Analysis> all, List<Dossier> versions) {
+		List<Analysis> all = analyses.findByTenderIdAndKindOrderByIdDesc(tenderId, AnalysisKind.FINANCIAL);
 		Analysis latest = all.isEmpty() ? null : all.getFirst();
-		List<DocumentResponse> pieces = versions
+		List<DocumentResponse> pieces = dossiers.findByTenderIdOrderByVersionDesc(tenderId)
 			.stream()
 			.findFirst()
 			.map(dossier -> {

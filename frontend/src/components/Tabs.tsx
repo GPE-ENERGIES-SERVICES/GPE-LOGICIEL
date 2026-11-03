@@ -1,8 +1,10 @@
 "use client";
 
 import { useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { Icon } from "./Icon";
 
-export type Tab = { id: string; label: string; content: ReactNode };
+/** @param step where this part of the way of a tender stands; without it, a plain tab */
+export type Tab = { id: string; label: string; content: ReactNode; step?: "done" | "current" | "todo" };
 
 function subscribe(onChange: () => void) {
   window.addEventListener("hashchange", onChange);
@@ -37,7 +39,7 @@ export function Tabs({ label, tabs }: { label: string; tabs: Tab[] }) {
 
   return (
     <div className="tender-tabs">
-      <div className="tabs" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+      <div className={tabs.some((tab) => tab.step) ? "tabs journey" : "tabs"} role="tablist" aria-label={label} onKeyDown={onKeyDown}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -50,6 +52,11 @@ export function Tabs({ label, tabs }: { label: string; tabs: Tab[] }) {
             tabIndex={tab === active ? 0 : -1}
             onClick={() => open(tab.id)}
           >
+            {tab.step && (
+              <span className={`journey-mark journey-${tab.step}`} aria-hidden="true">
+                {tab.step === "done" ? <Icon name="check" size={13} /> : tabs.indexOf(tab) + 1}
+              </span>
+            )}
             {tab.label}
           </button>
         ))}

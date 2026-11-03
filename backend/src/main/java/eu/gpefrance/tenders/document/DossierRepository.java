@@ -15,11 +15,6 @@ public interface DossierRepository extends JpaRepository<Dossier, Long> {
 	@Query("select coalesce(max(d.version), 0) from Dossier d where d.tenderId = :tenderId")
 	int findLastVersion(Long tenderId);
 
-	List<Dossier> findByReviewIdOrderByVersionDesc(Long reviewId);
-
-	@Query("select coalesce(max(d.version), 0) from Dossier d where d.reviewId = :reviewId")
-	int findLastReviewVersion(Long reviewId);
-
 	List<Dossier> findByStatusIn(Collection<DossierStatus> statuses);
 
 }

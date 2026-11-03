@@ -8,6 +8,7 @@ import { cancelAnalysis, getFinancialAnalysis, getTenderAnalysis, sendAnalysisNo
 import { allowAutoAnalysis, getDossiers } from "@/services/documentApi";
 import type { Analysis } from "@/types/analysis";
 import type { Dossier } from "@/types/document";
+import { Icon } from "./Icon";
 
 /** What an analysis takes before any has been measured on this server. */
 const DEFAULT_SUMMARY_SECONDS = 180;
@@ -150,10 +151,10 @@ function analysisStep(
  * of the prices, each with its progress and the time left when it can be
  * estimated. Folds into one line once everything is over.
  */
-export function ProcessingPanel({ owner, retained }: { owner: string; retained: boolean | null }) {
-  const dossiers = useLoader(() => getDossiers(owner), owner);
-  const summary = useLoader(() => getTenderAnalysis(owner), owner);
-  const financial = useLoader(() => getFinancialAnalysis(owner), owner);
+export function ProcessingPanel({ tenderId, retained }: { tenderId: number; retained: boolean | null }) {
+  const dossiers = useLoader(() => getDossiers(tenderId), String(tenderId));
+  const summary = useLoader(() => getTenderAnalysis(tenderId), String(tenderId));
+  const financial = useLoader(() => getFinancialAnalysis(tenderId), String(tenderId));
   const [now, setNow] = useState(() => Date.now());
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -299,7 +300,18 @@ export function ProcessingPanel({ owner, retained }: { owner: string; retained: 
         },
   );
 
-  const steps = [upload, readingStep(dossier, now), summaryStep, financialStep];
+  const responseStep: Step = {
+    title: "Dossier de réponse",
+    state: "todo",
+    detail: "Après la fiche IA, le chiffrage et le mémoire : les pièces à réunir et à vérifier.",
+    action: (
+      <a href="#reponse" className="button">
+        Ouvrir le dossier de réponse
+      </a>
+    ),
+  };
+
+  const steps = [upload, readingStep(dossier, now), summaryStep, financialStep, responseStep];
   const left = steps
     .filter((step) => step.state === "running" || (step.state === "todo" && step.remaining))
     .reduce((sum, step) => sum + (step.remaining ?? 0), 0);
@@ -330,7 +342,7 @@ export function ProcessingPanel({ owner, retained }: { owner: string; retained: 
           {steps.map((step, index) => (
             <li key={step.title} className={`step step-${step.state}`}>
               <span className="step-marker" aria-hidden="true">
-                {step.state === "done" ? "✓" : step.state === "error" ? "!" : index + 1}
+                {step.state === "done" ? <Icon name="check" size={13} /> : step.state === "error" ? "!" : index + 1}
               </span>
               <div className="step-body">
                 <div className="step-title">

@@ -217,13 +217,13 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
 }
 
 /**
- * Consultation file (DCE): upload, versions and reading state of each document.
+ * Consultation file (DCE) of a tender: upload, versions and reading state
+ * of each document.
  *
- * @param owner the tender or the analysis without tender it belongs to
- * @param tenderId for a tender: where to get the file and the search in its text
+ * @param manual added by a user: no notice gives a link to retrieve the file
  */
-export function DocumentsSection({ owner, tenderId }: { owner: string; tenderId?: number }) {
-  const { data, error, reload } = useLoader(() => getDossiers(owner), owner);
+export function DocumentsSection({ tenderId, manual = false }: { tenderId: number; manual?: boolean }) {
+  const { data, error, reload } = useLoader(() => getDossiers(tenderId), String(tenderId));
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -251,7 +251,7 @@ export function DocumentsSection({ owner, tenderId }: { owner: string; tenderId?
     setUploading(true);
     setUploadError(null);
     try {
-      await uploadDossier(owner, files);
+      await uploadDossier(tenderId, files);
       if (fileInput.current) {
         fileInput.current.value = "";
       }
@@ -266,13 +266,13 @@ export function DocumentsSection({ owner, tenderId }: { owner: string; tenderId?
 
   return (
     <div>
-      {tenderId !== undefined && (
+      {!manual && (
         <>
           <h3>1. Récupérer le DCE sur la plateforme de l&apos;acheteur</h3>
           <DceLinks tenderId={tenderId} />
         </>
       )}
-      <h3>{tenderId !== undefined ? "2. Le déposer ici" : "Déposer le DCE"}</h3>
+      <h3>{manual ? "Déposer le DCE" : "2. Le déposer ici"}</h3>
       <form
         className={dragging ? "upload dropping" : "upload"}
         onSubmit={submit}
@@ -320,12 +320,10 @@ export function DocumentsSection({ owner, tenderId }: { owner: string; tenderId?
         </div>
         {uploadError && <p className="error">{uploadError}</p>}
       </form>
-      <h3>{tenderId !== undefined ? "3. Dossier déposé et ses fichiers" : "Dossier déposé et ses fichiers"}</h3>
+      <h3>{manual ? "Dossier déposé et ses fichiers" : "3. Dossier déposé et ses fichiers"}</h3>
       {error && <p className="error">{error}</p>}
       {data && data.length === 0 && <p className="muted">Aucun dossier déposé.</p>}
-      {tenderId !== undefined && data?.[0]?.status === "DONE" && available("documentSearch") && (
-        <DocumentSearch tenderId={tenderId} />
-      )}
+      {data?.[0]?.status === "DONE" && available("documentSearch") && <DocumentSearch tenderId={tenderId} />}
       {data?.map((dossier, index) =>
         index === 0 ? (
           <DossierView key={dossier.id} dossier={dossier} onChanged={reload} />
