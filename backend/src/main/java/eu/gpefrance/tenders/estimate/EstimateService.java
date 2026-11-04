@@ -216,6 +216,32 @@ public class EstimateService {
 		return response;
 	}
 
+	/**
+	 * Copies again, in a draft, the prices read from the suppliers for its
+	 * offers. A price only imported from a file is left out: it was not asked.
+	 */
+	@Transactional
+	public EstimateResponse copySupplierPrices(Long id, String user) {
+		int[] copied = { 0 };
+		EstimateResponse response = change(id, user, estimate -> estimate.getItems()
+			.stream()
+			.flatMap(item -> item.getComponents().stream())
+			.filter(component -> component.getOfferId() != null)
+			.forEach(component -> catalog.find(component.getOfferId())
+				.filter(offer -> !"IMPORT".equals(offer.priceSource()))
+				.ifPresent(offer -> {
+					if (component.getUnitCost() == null || component.getUnitCost().compareTo(offer.unitCost()) != 0) {
+						component.setUnitCost(offer.unitCost());
+						copied[0]++;
+					}
+					component.setCostDate(costDate(offer));
+				})));
+		record(found(id), Kind.SUPPLIER_PRICES_COPIED, copied[0] + " coût(s) modifié(s) d'après les prix des fournisseurs",
+				user);
+		log.info("{} costs of estimate {} copied from supplier prices by {}", copied[0], id, user);
+		return response;
+	}
+
 	@Transactional
 	public EstimateResponse addItem(Long estimateId, ItemRequest request, String user) {
 		request.check();
@@ -317,9 +343,7 @@ public class EstimateService {
 			Offer offer = catalog.find(request.offerId())
 				.orElseThrow(() -> EstimateRuleException.invalid("Offre fournisseur introuvable."));
 			return request.withOffer(offer.id(), offer.supplierName(), offer.supplierRef(), offer.manufacturerRef(),
-					offer.purchaseUnit(), offer.unitCost(),
-					offer.validFrom() != null ? offer.validFrom()
-							: offer.importedAt().atZone(clock.getZone()).toLocalDate());
+					offer.purchaseUnit(), offer.unitCost(), costDate(offer));
 		}
 		String code = ItemRequest.clean(request.rateCode());
 		if (code != null && (previous == null || !code.equalsIgnoreCase(previous.getRateCode()))) {
@@ -329,6 +353,10 @@ public class EstimateService {
 			return request.withRate(rate);
 		}
 		return request;
+	}
+
+	private java.time.LocalDate costDate(Offer offer) {
+		return offer.validFrom() != null ? offer.validFrom() : offer.importedAt().atZone(clock.getZone()).toLocalDate();
 	}
 
 	private void ensureNoDraft(Long tenderId, String lotNumber) {

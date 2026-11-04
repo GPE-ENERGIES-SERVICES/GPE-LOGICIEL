@@ -15,16 +15,22 @@ import {
   textOrNull,
 } from "@/lib/estimate";
 import { formatDate } from "@/lib/format";
+import { useLoader } from "@/lib/useLoader";
 import {
   acceptSuggestion,
   addComponent,
   deleteComponent,
+  getOfferAvailability,
+  getSupplierConnectors,
+  lookupOffer,
+  refreshOffers,
   rejectSuggestion,
   searchOffers,
   suggestSupplies,
   updateComponent,
 } from "@/services/estimateApi";
 import type {
+  Availability,
   ComponentInput,
   ComponentType,
   Estimate,
@@ -275,14 +281,68 @@ function ComponentForm({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const connectors = useLoader(() => getSupplierConnectors(), "supplier-connectors");
+  const connector = connectors.data?.find((candidate) => candidate.available) ?? null;
+  const [buyQuantity, setBuyQuantity] = useState("1");
+  const [availabilities, setAvailabilities] = useState<Record<number, Availability | null>>({});
+  const [unpriced, setUnpriced] = useState<number[]>([]);
+  const [priceLabels, setPriceLabels] = useState<Record<number, string | null>>({});
+  const [manufacturerCode, setManufacturerCode] = useState("");
+  const [manufacturerRef, setManufacturerRef] = useState("");
+  const [packQuantity, setPackQuantity] = useState("1");
+  const [asking, setAsking] = useState(false);
   const picked = Boolean(rateCode) || offer !== null;
+  const quantityToBuy = Number.parseInt(buyQuantity, 10);
+  const validQuantity = quantityToBuy >= 1;
 
   const search = async () => {
     setSearchError(null);
+    setAvailabilities({});
+    setUnpriced([]);
+    setPriceLabels({});
     try {
       setOffers(await searchOffers(query));
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : "Recherche impossible.");
+    }
+  };
+
+  /** The prices and stocks of the offers listed, asked to the supplier by one request. */
+  const askSupplier = async (listed: SupplierOffer[]) => {
+    setAsking(true);
+    setSearchError(null);
+    try {
+      const ids = listed.map((candidate) => candidate.id);
+      const refreshed = await refreshOffers(ids, quantityToBuy);
+      const updated = new Map(refreshed.map((line) => [line.offerId, line.offer]));
+      setOffers(listed.map((candidate) => updated.get(candidate.id) ?? candidate));
+      setUnpriced(refreshed.filter((line) => line.status === "NOT_PRICED").map((line) => line.offerId));
+      setPriceLabels(Object.fromEntries(refreshed.map((line) => [line.offerId, line.priceLabel])));
+      const stocks = await getOfferAvailability(ids, quantityToBuy);
+      setAvailabilities(Object.fromEntries(stocks.map((line) => [line.offerId, line.availability])));
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : "Le fournisseur ne répond pas.");
+    } finally {
+      setAsking(false);
+    }
+  };
+
+  const lookup = async () => {
+    const pack = parseNumber(packQuantity);
+    if (!connector || pack === null || Number.isNaN(pack) || pack <= 0) {
+      setSearchError("Conditionnement illisible : indiquez le nombre d'unités vendues pour le prix.");
+      return;
+    }
+    setAsking(true);
+    setSearchError(null);
+    try {
+      const found = await lookupOffer(connector.supplierCode, manufacturerCode.trim(), manufacturerRef.trim(), quantityToBuy, pack);
+      setOffers([found]);
+      await askSupplier([found]);
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : "Le fournisseur ne répond pas.");
+    } finally {
+      setAsking(false);
     }
   };
 
@@ -415,12 +475,16 @@ function ComponentForm({
 
       {!rateCode && (
         <fieldset>
-          <legend>Prix d&apos;un fournisseur (catalogues importés)</legend>
+          <legend>Prix d&apos;un fournisseur</legend>
+          {connector?.environment === "TEST" && (
+            <p className="banner info">Connexion {connector.supplierName} en TEST : ces prix ne sont pas ceux du compte réel.</p>
+          )}
           {offer ? (
             <p>
               <strong>{offer.supplierName}</strong> · {offer.supplierRef} · {offer.designation} — prix net{" "}
               {formatMoney(offer.netPrice)}
-              {offer.packQuantity !== 1 && ` les ${formatNumber(offer.packQuantity)} ${offer.purchaseUnit ?? ""}`}{" "}
+              {offer.packQuantity !== 1 && ` les ${formatNumber(offer.packQuantity)} ${offer.purchaseUnit ?? ""}`}
+              {offer.priceSource === "REXEL_TEST" && " · prix de TEST"}{" "}
               <button type="button" className="secondary danger" onClick={() => setOffer(null)}>
                 Retirer
               </button>
@@ -444,8 +508,43 @@ function ComponentForm({
               {searchError && <span className="error">{searchError}</span>}
             </div>
           )}
+          {!offer && connector && (
+            <div className="inline-form">
+              <label>
+                Quantité à acheter
+                <input inputMode="numeric" value={buyQuantity} onChange={(event) => setBuyQuantity(event.target.value)} />
+              </label>
+              <label>
+                Trigramme fabricant
+                <input maxLength={10} value={manufacturerCode} onChange={(event) => setManufacturerCode(event.target.value)} placeholder="SCH" />
+              </label>
+              <label>
+                Réf. commerciale
+                <input maxLength={100} value={manufacturerRef} onChange={(event) => setManufacturerRef(event.target.value)} />
+              </label>
+              <label>
+                Unités vendues pour le prix
+                <input inputMode="decimal" value={packQuantity} onChange={(event) => setPackQuantity(event.target.value)} />
+              </label>
+              <button
+                type="button"
+                onClick={lookup}
+                disabled={asking || !validQuantity || !manufacturerCode.trim() || !manufacturerRef.trim()}
+              >
+                Vérifier chez {connector.supplierName}
+              </button>
+            </div>
+          )}
           {!offer && offers !== null && offers.length === 0 && (
             <p className="muted">Aucune offre trouvée : saisissez le coût à la main ou importez le tarif du fournisseur.</p>
+          )}
+          {!offer && connector && offers && offers.length > 0 && (
+            <p>
+              <button type="button" className="secondary" onClick={() => askSupplier(offers)} disabled={asking || !validQuantity}>
+                {asking ? "Demande en cours…" : "Actualiser prix et disponibilités"}
+              </button>{" "}
+              <span className="hint">Vérifiez l&apos;unité du prix (à la pièce, au cent, au mètre) avant de le retenir.</span>
+            </p>
           )}
           {!offer && offers && offers.length > 0 && (
             <ul className="plain-list offer-results">
@@ -467,7 +566,15 @@ function ComponentForm({
                     {formatMoney(candidate.netPrice)}
                     {candidate.packQuantity !== 1 && ` les ${formatNumber(candidate.packQuantity)}`}
                     {candidate.validFrom && ` · prix du ${formatDate(candidate.validFrom)}`}
+                    {candidate.priceSource !== "IMPORT" && ` · lu chez le fournisseur le ${formatDate(candidate.importedAt)}`}
+                    {candidate.priceSource === "REXEL_TEST" && " (TEST)"}
+                    {candidate.ecoTax !== null && ` · écotaxe ${formatMoney(candidate.ecoTax)}`}
                   </button>
+                  {unpriced.includes(candidate.id) && <span className="error"> Pas de prix du fournisseur : ancien prix conservé.</span>}
+                  {priceLabels[candidate.id] && (
+                    <span className={/unitaire/i.test(priceLabels[candidate.id]!) ? "muted" : "error"}> {priceLabels[candidate.id]}</span>
+                  )}
+                  {availabilities[candidate.id] && <AvailabilityLine availability={availabilities[candidate.id]!} />}
                 </li>
               ))}
             </ul>
@@ -489,4 +596,17 @@ function ComponentForm({
       </div>
     </form>
   );
+}
+
+/** The stocks and delays of the supplier, written as it gives them. */
+export function AvailabilityLine({ availability }: { availability: Availability }) {
+  const parts = [
+    availability.branchStock && `Agence : ${availability.branchStock}`,
+    availability.branchDelay && `délai agence : ${availability.branchDelay}`,
+    availability.warehouseStock && `Centre logistique : ${availability.warehouseStock}`,
+    availability.warehouseDelay && `délai centre : ${availability.warehouseDelay}`,
+    availability.warehouseInfo,
+    availability.deliveryDate && `livraison : ${availability.deliveryDate}`,
+  ].filter(Boolean);
+  return <p className="muted">{parts.length > 0 ? parts.join(" · ") : "Disponibilité non précisée par le fournisseur."}</p>;
 }

@@ -242,7 +242,23 @@ Un coût se saisit à la main, ou se choisit :
 - dans les **tarifs des fournisseurs** importés (recherche par référence, EAN ou mots) : le prix net
   par unité, les références et la date du prix sont copiés.
 
-Un nouveau tarif ou un nouveau taux ne change jamais un chiffrage existant.
+Quand la connexion à Rexel est active (voir « Chiffrage › Tarifs fournisseurs »), le formulaire permet aussi :
+
+- **« Actualiser prix et disponibilités »** sur les offres trouvées : le prix de votre compte, le stock et
+  les délais sont demandés à Rexel pour la quantité à acheter indiquée. Une offre sans trigramme fabricant
+  garde son prix importé ;
+- **« Vérifier chez Rexel »** : pour un produit absent des tarifs, saisissez le trigramme du fabricant et la
+  référence commerciale. L'offre n'est créée que si Rexel donne un prix. Rexel ne propose pas de recherche
+  par désignation.
+
+Avant de retenir un prix, vérifiez son unité (à la pièce, au cent, au mètre) et le nombre d'unités vendues
+pour ce prix. Une mention « TEST » signale un prix qui n'est pas celui de votre compte réel.
+
+Sur un brouillon, **« Actualiser les prix fournisseurs »** compare chaque coût issu d'une offre au prix du jour,
+pour la quantité à acheter sur tout le chiffrage, et affiche le stock et les délais. Le chiffrage ne change
+que si vous cliquez sur « Recopier les prix » ; l'opération est inscrite à l'historique.
+
+Un nouveau tarif ou un nouveau taux ne change jamais un chiffrage existant tant que vous ne le demandez pas.
 
 « Importer un DPGF, BPU ou DQE du DCE » ajoute les lignes d'un bordereau du dossier (n°, désignation,
 unité, quantité, chapitre), avec leur feuille et leur ligne d'origine. Les prix du fichier ne sont pas

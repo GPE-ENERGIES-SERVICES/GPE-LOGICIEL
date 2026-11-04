@@ -9,6 +9,8 @@ import {
   COMPONENT_TYPES,
   ESTIMATE_STATUS_LABELS,
   EVENT_LABELS,
+  formatMoney,
+  formatNumber,
   formatRate,
   numberInput,
   parseNumber,
@@ -21,7 +23,9 @@ import { useLoader } from "@/lib/useLoader";
 import { getDossiers } from "@/services/documentApi";
 import {
   acceptSuggestion,
+  checkSupplierPrices,
   copyRatesAgain,
+  copySupplierPrices,
   deleteEstimate,
   estimateExportUrl,
   getAssistant,
@@ -29,6 +33,7 @@ import {
   getEstimateEvents,
   getRates,
   getSuggestions,
+  getSupplierConnectors,
   importPriceSchedule,
   newEstimateVersion,
   rejectSuggestion,
@@ -37,11 +42,12 @@ import {
   validateEstimate,
 } from "@/services/estimateApi";
 import { DEMO_DATA } from "@/services/http";
-import type { ComponentType, Estimate } from "@/types/estimate";
+import type { ComponentType, Estimate, SupplierPriceLine } from "@/types/estimate";
 
+import { AvailabilityLine } from "./ComponentsPanel";
 import { EstimateGrid } from "./EstimateGrid";
 
-type Panel = "import" | "settings" | "history" | null;
+type Panel = "import" | "settings" | "history" | "supplier" | null;
 
 /**
  * An estimate: its items as in the price schedule, the costs of each item,
@@ -53,6 +59,7 @@ export function EstimateEditor({ id }: { id: number }) {
   const loaded = useLoader(() => getEstimate(id), String(id));
   const rates = useLoader(() => getRates(), "rates");
   const assistant = useLoader(() => getAssistant(), "assistant");
+  const connectors = useLoader(() => getSupplierConnectors(), "supplier-connectors");
   // Bumped after each change: the journal and the proposals are read again.
   const [revision, setRevision] = useState(0);
   const events = useLoader(() => getEstimateEvents(id), `${id}#${revision}`);
@@ -155,6 +162,11 @@ export function EstimateEditor({ id }: { id: number }) {
             TVA {formatRate(estimate.vatRate)}
           </button>
         )}
+        {editable && connectors.data?.some((connector) => connector.available) && (
+          <button type="button" aria-pressed={panel === "supplier"} onClick={() => show("supplier")}>
+            Actualiser les prix fournisseurs
+          </button>
+        )}
         <button type="button" className="secondary" aria-pressed={panel === "history"} onClick={() => show("history")}>
           Historique
         </button>
@@ -190,6 +202,17 @@ export function EstimateEditor({ id }: { id: number }) {
           <button type="button" className="secondary" disabled={busy} onClick={() => run(() => copyRatesAgain(estimate.id))}>
             Recopier les taux GPE actuels dans le détail
           </button>
+        </div>
+      )}
+      {panel === "supplier" && editable && (
+        <div className="sheet-panel">
+          <SupplierPricesPanel
+            estimate={estimate}
+            onCopied={(next) => {
+              changed(next);
+              setPanel(null);
+            }}
+          />
         </div>
       )}
       {panel === "history" && (
@@ -251,6 +274,88 @@ export function EstimateEditor({ id }: { id: number }) {
         </p>
       )}
     </article>
+  );
+}
+
+const NO_PRICE_LABELS: Partial<Record<SupplierPriceLine["status"], string>> = {
+  NOT_PRICED: "Pas de prix du fournisseur",
+  NOT_CONNECTED: "Sans trigramme ou fournisseur non connecté",
+};
+
+/**
+ * The prices of the suppliers beside the costs of the draft, for the quantities
+ * of the whole estimate. Nothing changes in the draft until the user copies them.
+ */
+function SupplierPricesPanel({ estimate, onCopied }: { estimate: Estimate; onCopied: (estimate: Estimate) => void }) {
+  const lines = useLoader(() => checkSupplierPrices(estimate.id), String(estimate.id));
+  const [copying, setCopying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (lines.error) {
+    return <p className="banner error">{lines.error}</p>;
+  }
+  if (!lines.data) {
+    return <p className="muted">Demande au fournisseur…</p>;
+  }
+  if (lines.data.length === 0) {
+    return <p className="muted">Aucun coût de ce chiffrage ne vient d&apos;une offre de fournisseur.</p>;
+  }
+  const changes = lines.data.filter((line) => line.newCost !== null && line.newCost !== line.currentCost);
+  const copy = async () => {
+    setCopying(true);
+    setError(null);
+    try {
+      onCopied(await copySupplierPrices(estimate.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Copie impossible.");
+      setCopying(false);
+    }
+  };
+  return (
+    <>
+      {lines.data.some((line) => line.priceSource === "REXEL_TEST") && (
+        <p className="banner info">Connexion en TEST : ces prix ne sont pas ceux du compte réel, ne chiffrez pas avec.</p>
+      )}
+      <table>
+        <thead>
+          <tr>
+            <th>Poste</th>
+            <th>Fourniture</th>
+            <th className="number">À acheter</th>
+            <th className="number">Coût actuel</th>
+            <th className="number">Prix fournisseur</th>
+            <th>Disponibilité</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.data.map((line) => (
+            <tr key={line.componentId}>
+              <td>{line.itemReference ?? line.itemDesignation}</td>
+              <td>{line.label}</td>
+              <td className="number">{formatNumber(line.quantityToBuy)}</td>
+              <td className="number">{formatMoney(line.currentCost)}</td>
+              <td className="number">
+                {line.newCost === null ? (
+                  <span className="muted">{NO_PRICE_LABELS[line.status]}</span>
+                ) : (
+                  <>
+                    {line.newCost === line.currentCost ? formatMoney(line.newCost) : <strong>{formatMoney(line.newCost)}</strong>}
+                    {line.priceLabel && !/unitaire/i.test(line.priceLabel) && <span className="error"> {line.priceLabel}</span>}
+                  </>
+                )}
+              </td>
+              <td>{line.availability && <AvailabilityLine availability={line.availability} />}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="form-actions">
+        <button type="button" className="primary" disabled={copying || changes.length === 0} onClick={copy}>
+          {changes.length === 0 ? "Aucun écart" : `Recopier ${changes.length} prix dans le chiffrage`}
+        </button>
+        {error && <span className="error">{error}</span>}
+      </div>
+    </>
   );
 }
 

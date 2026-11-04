@@ -1,5 +1,6 @@
 import type {
   AssistantAvailability,
+  CatalogueFilling,
   ComponentInput,
   Estimate,
   EstimateEvent,
@@ -7,13 +8,17 @@ import type {
   EstimateSummary,
   ItemInput,
   ListedEstimate,
+  OfferAvailability,
   OfferImport,
   PricingRate,
   PricingSettings,
   RateInput,
+  RefreshedOffer,
   Suggestion,
   Supplier,
+  SupplierConnector,
   SupplierOffer,
+  SupplierPriceLine,
 } from "@/types/estimate";
 
 import { api, upload } from "./http";
@@ -146,8 +151,56 @@ export function importOffers(supplierId: number, file: File, validFrom: string |
   return upload(`/api/suppliers/${supplierId}/offers${query}`, form);
 }
 
+export function getSupplierOffers(supplierId: number): Promise<SupplierOffer[]> {
+  return api(`/api/suppliers/${supplierId}/offers`);
+}
+
 export function searchOffers(query: string): Promise<SupplierOffer[]> {
   return api(`/api/supplier-offers?q=${encodeURIComponent(query)}`);
+}
+
+/** Asks the suppliers the prices of the offers of a draft: its costs stay as they are. */
+export function checkSupplierPrices(estimateId: number): Promise<SupplierPriceLine[]> {
+  return api(`/api/estimates/${estimateId}/supplier-prices/check`, { method: "POST" });
+}
+
+export function copySupplierPrices(estimateId: number): Promise<Estimate> {
+  return api(`/api/estimates/${estimateId}/supplier-prices/copy`, { method: "POST" });
+}
+
+/** Fills the catalogue from the past orders, in the background (administrators). */
+export function fillCatalogue(supplierCode: string): Promise<CatalogueFilling> {
+  return api(`/api/suppliers/connectors/${supplierCode}/catalogue`, { method: "POST" });
+}
+
+export function getCatalogueFilling(supplierCode: string): Promise<CatalogueFilling> {
+  return api(`/api/suppliers/connectors/${supplierCode}/catalogue`);
+}
+
+export function getSupplierConnectors(): Promise<SupplierConnector[]> {
+  return api("/api/supplier-connectors");
+}
+
+export function refreshOffers(offerIds: number[], quantity: number): Promise<RefreshedOffer[]> {
+  return api("/api/supplier-offers/refresh", { method: "POST", body: { offerIds, quantity } });
+}
+
+export function getOfferAvailability(offerIds: number[], quantity: number): Promise<OfferAvailability[]> {
+  return api("/api/supplier-offers/availability", { method: "POST", body: { offerIds, quantity } });
+}
+
+/** A reference given by hand: the offer exists only if the supplier answers with a price. */
+export function lookupOffer(
+  supplierCode: string,
+  manufacturerCode: string,
+  manufacturerRef: string,
+  quantity: number,
+  packQuantity: number,
+): Promise<SupplierOffer> {
+  return api("/api/supplier-offers/lookup", {
+    method: "POST",
+    body: { supplierCode, manufacturerCode, manufacturerRef, quantity, packQuantity },
+  });
 }
 
 // Assistance of the AI: proposals only, each decided by a user.

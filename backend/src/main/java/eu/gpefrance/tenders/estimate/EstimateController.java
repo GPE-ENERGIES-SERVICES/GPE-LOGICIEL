@@ -36,10 +36,14 @@ public class EstimateController {
 
 	private final EstimateExportService exports;
 
-	public EstimateController(EstimateService service, EstimateImportService imports, EstimateExportService exports) {
+	private final EstimateSupplierPriceService supplierPrices;
+
+	public EstimateController(EstimateService service, EstimateImportService imports, EstimateExportService exports,
+			EstimateSupplierPriceService supplierPrices) {
 		this.service = service;
 		this.imports = imports;
 		this.exports = exports;
+		this.supplierPrices = supplierPrices;
 	}
 
 	@GetMapping("/api/estimates")
@@ -137,6 +141,19 @@ public class EstimateController {
 	@PostMapping("/api/estimates/{id}/rates-copy")
 	public EstimateResponse copyRatesAgain(@PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal user) {
 		return service.copyRatesAgain(id, user.displayName());
+	}
+
+	/** Asks the suppliers the prices of the offers of a draft: its costs stay as they are. */
+	@PostMapping("/api/estimates/{id}/supplier-prices/check")
+	public List<EstimateSupplierPriceService.Line> checkSupplierPrices(@PathVariable Long id,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return supplierPrices.check(id, user.displayName());
+	}
+
+	/** Copies in a draft the prices read from the suppliers. */
+	@PostMapping("/api/estimates/{id}/supplier-prices/copy")
+	public EstimateResponse copySupplierPrices(@PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal user) {
+		return service.copySupplierPrices(id, user.displayName());
 	}
 
 	@GetMapping("/api/estimates/{id}/events")

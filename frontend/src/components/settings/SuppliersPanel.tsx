@@ -2,21 +2,47 @@
 
 import { useState, type FormEvent } from "react";
 
-import { formatDateTime } from "@/lib/format";
+import { formatMoney, formatRate } from "@/lib/estimate";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
-import { createSupplier, getSuppliers, importOffers } from "@/services/estimateApi";
-import type { OfferImport } from "@/types/estimate";
+import {
+  createSupplier,
+  fillCatalogue,
+  getCatalogueFilling,
+  getSupplierConnectors,
+  getSupplierOffers,
+  getSuppliers,
+  importOffers,
+} from "@/services/estimateApi";
+import type { CatalogueFilling, OfferImport, Supplier } from "@/types/estimate";
 
 /**
- * The suppliers of GPE and the import of their price files (CSV, XLSX). No
- * supplier is contacted by the application: the prices are those of the
- * files given by the suppliers.
+ * The suppliers of GPE, the import of their price files (CSV, XLSX) and the
+ * state of the connections to their services.
  */
 export function SuppliersPanel() {
   const suppliers = useLoader(() => getSuppliers(), "suppliers");
+  const connectors = useLoader(() => getSupplierConnectors(), "supplier-connectors");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OfferImport | null>(null);
   const [busy, setBusy] = useState(false);
+  const [filling, setFilling] = useState<CatalogueFilling | null>(null);
+
+  const fill = async (code: string) => {
+    setError(null);
+    try {
+      let state = await fillCatalogue(code);
+      setFilling(state);
+      while (state.running) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        state = await getCatalogueFilling(code);
+        setFilling(state);
+      }
+      suppliers.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Remplissage impossible.");
+    }
+  };
 
   const create = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -55,6 +81,24 @@ export function SuppliersPanel() {
 
   return (
     <>
+      {connectors.data?.map((connector) => (
+        <p key={connector.supplierCode} className={connector.environment === "TEST" && connector.available ? "banner info" : "hint"}>
+          Connexion {connector.supplierName} :{" "}
+          {connector.available ? `active, environnement ${connector.environment}` : "désactivée ou incomplète, aucune demande n'est envoyée"}.{" "}
+          {connector.available && (
+            <button type="button" className="secondary" disabled={filling?.running} onClick={() => fill(connector.supplierCode)}>
+              Remplir le catalogue depuis mes commandes
+            </button>
+          )}
+        </p>
+      ))}
+      {filling && (
+        <p className={filling.error ? "banner error" : "banner info"}>
+          {filling.running ? "Lecture des commandes en cours… " : ""}
+          {filling.ordersRead} commande(s) lue(s), {filling.products} produit(s) trouvé(s), {filling.imported} ajouté(s) au catalogue
+          {filling.notPriced > 0 && `, ${filling.notPriced} sans prix écarté(s)`}.{filling.error && ` ${filling.error}`}
+        </p>
+      )}
       {suppliers.data && suppliers.data.length > 0 && (
         <table>
           <thead>
@@ -77,6 +121,10 @@ export function SuppliersPanel() {
           </tbody>
         </table>
       )}
+
+      {suppliers.data
+        ?.filter((supplier) => supplier.offers > 0)
+        .map((supplier) => <OfferList key={supplier.id} supplier={supplier} />)}
 
       <form className="inline-form" onSubmit={create}>
         <input name="code" required maxLength={30} pattern="[A-Za-z0-9_\-]+" placeholder="Code (REXEL)" />
@@ -104,7 +152,9 @@ export function SuppliersPanel() {
       )}
       <p className="hint">
         Le fichier doit avoir une ligne d&apos;en-tête avec au moins une référence, une désignation et un prix (net, ou tarif et
-        remise). Un nouvel import remplace le prix de chaque référence du fichier ; les chiffrages gardent le prix copié.
+        remise). Une colonne « Trigramme » permet ensuite de demander le prix et le stock au fournisseur connecté. Un nouvel
+        import remplace le prix de chaque référence du fichier, l&apos;ancien reste dans l&apos;historique ; les chiffrages gardent
+        le prix copié.
       </p>
       {result && (
         <p className="banner info">
@@ -119,6 +169,61 @@ export function SuppliersPanel() {
         </p>
       )}
       {(error || suppliers.error) && <p className="banner error">{error ?? suppliers.error}</p>}
+    </>
+  );
+}
+
+/** The prices of a supplier, filtered on the page: at most the 2000 first by designation. */
+function OfferList({ supplier }: { supplier: Supplier }) {
+  const offers = useLoader(() => getSupplierOffers(supplier.id), `${supplier.id}#${supplier.offers}#${supplier.lastImport}`);
+  const [filter, setFilter] = useState("");
+  const words = filter.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = (offers.data ?? []).filter((offer) => {
+    const text = `${offer.designation} ${offer.supplierRef} ${offer.manufacturerCode ?? ""} ${offer.manufacturerRef ?? ""}`.toLowerCase();
+    return words.every((word) => text.includes(word));
+  });
+
+  return (
+    <>
+      <h2>Prix {supplier.name}</h2>
+      {offers.error && <p className="banner error">{offers.error}</p>}
+      <div className="inline-form">
+        <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filtrer : R2V, H07VR, DNX3…" aria-label={`Filtrer les prix ${supplier.name}`} />
+        <span className="muted">
+          {shown.length} produit(s) sur {supplier.offers}
+        </span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Désignation</th>
+            <th>Réf. fournisseur</th>
+            <th>Trigramme</th>
+            <th>Réf. commerciale</th>
+            <th className="number">Prix de base</th>
+            <th className="number">Remise</th>
+            <th className="number">Prix net HT</th>
+            <th>Date du prix</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((offer) => (
+            <tr key={offer.id}>
+              <td>{offer.designation}</td>
+              <td>{offer.supplierRef}</td>
+              <td>{offer.manufacturerCode ?? "—"}</td>
+              <td>{offer.manufacturerRef ?? "—"}</td>
+              <td className="number">{offer.listPrice === null ? "—" : formatMoney(offer.listPrice)}</td>
+              <td className="number">{offer.discountRate === null ? "—" : formatRate(offer.discountRate)}</td>
+              <td className="number">
+                <strong>{formatMoney(offer.netPrice)}</strong>
+                {offer.priceSource === "REXEL_TEST" && " (TEST)"}
+              </td>
+              <td>{formatDate(offer.validFrom ?? offer.importedAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </>
   );
 }

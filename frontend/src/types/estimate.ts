@@ -129,7 +129,7 @@ export type ComponentInput = {
 
 export type EstimateEvent = {
   id: number;
-  kind: "CREATED" | "NEW_VERSION" | "IMPORTED" | "RATES_COPIED" | "VALIDATED" | "SUPERSEDED" | "SUGGESTION_ACCEPTED";
+  kind: "CREATED" | "NEW_VERSION" | "IMPORTED" | "RATES_COPIED" | "SUPPLIER_PRICES_COPIED" | "VALIDATED" | "SUPERSEDED" | "SUGGESTION_ACCEPTED";
   detail: string | null;
   createdBy: string | null;
   createdAt: string;
@@ -181,6 +181,69 @@ export type SupplierOffer = {
   validFrom: string | null;
   validUntil: string | null;
   importedAt: string;
+  /** Code of the manufacturer at the supplier (three letters at Rexel). */
+  manufacturerCode: string | null;
+  /** Not part of the cost. */
+  ecoTax: number | null;
+  /** IMPORT, or the service read: REXEL_TEST, REXEL_PROD. */
+  priceSource: string;
+};
+
+/** A service of a supplier; a test environment is always shown as such. */
+export type SupplierConnector = {
+  supplierCode: string;
+  supplierName: string;
+  available: boolean;
+  environment: string | null;
+};
+
+export type RefreshedOffer = {
+  offerId: number;
+  status: "UPDATED" | "FRESH" | "NOT_PRICED" | "NOT_CONNECTED";
+  offer: SupplierOffer | null;
+  /** What the price stands for, as said by the supplier: « Prix unitaire € HT ». */
+  priceLabel: string | null;
+};
+
+/** The values of the supplier as it gives them. */
+export type Availability = {
+  branchStock: string | null;
+  branchDelay: string | null;
+  warehouseStock: string | null;
+  warehouseDelay: string | null;
+  warehouseInfo: string | null;
+  deliveryDate: string | null;
+};
+
+/** Where the filling of the catalogue from the past orders stands. */
+export type CatalogueFilling = {
+  running: boolean;
+  ordersRead: number;
+  ordersFailed: number;
+  products: number;
+  imported: number;
+  notPriced: number;
+  error: string | null;
+  finishedAt: string | null;
+};
+
+export type OfferAvailability = { offerId: number; availability: Availability | null };
+
+/** A cost of a draft against the price of its offer read from the supplier. */
+export type SupplierPriceLine = {
+  componentId: number;
+  itemReference: string | null;
+  itemDesignation: string;
+  label: string;
+  offerId: number;
+  /** For the whole estimate, in units sold. */
+  quantityToBuy: number;
+  currentCost: number | null;
+  newCost: number | null;
+  status: RefreshedOffer["status"];
+  priceLabel: string | null;
+  priceSource: string | null;
+  availability: Availability | null;
 };
 
 export type OfferImport = {

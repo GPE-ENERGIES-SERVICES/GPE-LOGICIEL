@@ -39,6 +39,7 @@ export const EVENT_LABELS: Record<EstimateEvent["kind"], string> = {
   NEW_VERSION: "Nouvelle version",
   IMPORTED: "Import d'un bordereau",
   RATES_COPIED: "Taux recopiés",
+  SUPPLIER_PRICES_COPIED: "Prix fournisseurs recopiés",
   VALIDATED: "Validation",
   SUPERSEDED: "Remplacé",
   SUGGESTION_ACCEPTED: "Proposition de l'IA acceptée",

@@ -29,7 +29,7 @@ final class OfferFileReader {
 
 	enum Role {
 
-		MANUFACTURER_REF, EAN, SUPPLIER_REF, DESIGNATION, PACK, UNIT, DISCOUNT, NET_PRICE, LIST_PRICE
+		MANUFACTURER_CODE, MANUFACTURER_REF, EAN, SUPPLIER_REF, DESIGNATION, PACK, UNIT, DISCOUNT, NET_PRICE, LIST_PRICE
 
 	}
 
@@ -37,6 +37,7 @@ final class OfferFileReader {
 	private static final Map<Role, Pattern> HEADERS = new LinkedHashMap<>();
 
 	static {
+		HEADERS.put(Role.MANUFACTURER_CODE, Pattern.compile("trigramme|code mot|mot (clef? )?fab|supplier ?code"));
 		HEADERS.put(Role.MANUFACTURER_REF, Pattern.compile("ref\\w* (fabricant|constructeur|fab|fournisseur fabricant)|^ref fab"));
 		HEADERS.put(Role.EAN, Pattern.compile("\\bean\\b|gencod|code barre"));
 		HEADERS.put(Role.SUPPLIER_REF, Pattern.compile("^ref\\w*|code article|^article|^code\\b|ref\\w* (article|distributeur|fournisseur)"));
@@ -54,7 +55,7 @@ final class OfferFileReader {
 	/**
 	 * @param discountRate share deducted, 0.35 for 35 %
 	 */
-	record Line(String supplierRef, String manufacturerRef, String ean, String designation, String unit,
+	record Line(String supplierRef, String manufacturerCode, String manufacturerRef, String ean, String designation, String unit,
 			BigDecimal packQuantity, BigDecimal listPrice, BigDecimal discountRate, BigDecimal netPrice) {
 	}
 
@@ -124,7 +125,10 @@ final class OfferFileReader {
 		if (net == null || net.signum() < 0 || pack != null && pack.signum() <= 0) {
 			return null;
 		}
-		return new Line(cut(ref, 100), cut(manufacturerRef, 100), cut(text(row, header, Role.EAN), 20), designation,
+		String manufacturerCode = text(row, header, Role.MANUFACTURER_CODE);
+		return new Line(cut(ref, 100),
+				manufacturerCode == null ? null : cut(manufacturerCode.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", ""), 10),
+				cut(manufacturerRef, 100), cut(text(row, header, Role.EAN), 20), designation,
 				cut(text(row, header, Role.UNIT), 20), pack == null ? BigDecimal.ONE : pack, list, discount, net);
 	}
 

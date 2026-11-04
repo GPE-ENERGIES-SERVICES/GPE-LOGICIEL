@@ -179,9 +179,13 @@ public class EstimateComponent {
 		return offerId;
 	}
 
-	/** The cost copied again from its rate. */
+	/** The cost copied again from its rate or its offer. */
 	void setUnitCost(BigDecimal unitCost) {
 		this.unitCost = unitCost;
+	}
+
+	void setCostDate(LocalDate costDate) {
+		this.costDate = costDate;
 	}
 
 }

@@ -68,6 +68,12 @@ public class ImportedSupplierCatalog implements SupplierCatalog {
 		return jdbc.query(SELECT + " WHERE o.id = ?", ImportedSupplierCatalog::offer, offerId).stream().findFirst();
 	}
 
+	@Override
+	public List<Offer> list(Long supplierId, int limit) {
+		return jdbc.query(SELECT + " WHERE o.supplier_id = ? ORDER BY o.designation, o.id LIMIT ?",
+				ImportedSupplierCatalog::offer, supplierId, limit);
+	}
+
 	/** The text searched as written: % and _ are no wildcards. */
 	private static String like(String text) {
 		return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
@@ -80,7 +86,8 @@ public class ImportedSupplierCatalog implements SupplierCatalog {
 				row.getString("designation"), row.getString("purchase_unit"), row.getBigDecimal("pack_quantity"),
 				row.getBigDecimal("list_price"), row.getBigDecimal("discount_rate"), row.getBigDecimal("net_price"),
 				row.getObject("valid_from", java.time.LocalDate.class),
-				row.getObject("valid_until", java.time.LocalDate.class), imported.toInstant());
+				row.getObject("valid_until", java.time.LocalDate.class), imported.toInstant(),
+				row.getString("manufacturer_code"), row.getBigDecimal("eco_tax"), row.getString("price_source"));
 	}
 
 }

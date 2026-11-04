@@ -346,7 +346,8 @@ tarifs). Principe : **l'IA propose, le moteur calcule, l'humain valide**.
 | `EstimateImportService` | Lignes d'un DPGF/BPU/DQE du DCE du marché, lues par `PriceScheduleChecker.lines` (même détection d'en-têtes que les contrôles). Prix du fichier jamais repris. Lignes de PDF ou incomplètes : `to_check` |
 | `EstimateExportService` | Export XLSX (Apache POI) : postes, totaux, sous-détail ; valeurs, pas de formules |
 | `PricingService` | `pricing_settings` (ligne unique : TVA, coefficients par type) et `pricing_rate` (taux : profil horaire, km, location) |
-| `SupplierCatalog` | Seul contrat que connaît le chiffrage. Implémentation actuelle : `ImportedSupplierCatalog`, prix importés des fichiers des fournisseurs (`OfferFileReader`, colonnes reconnues par leurs en-têtes). Aucun fournisseur n'est contacté |
+| `SupplierCatalog` | Seul contrat que connaît le chiffrage. Implémentation : `ImportedSupplierCatalog`, offres tenues par GPE, issues des fichiers des fournisseurs (`OfferFileReader`, colonnes reconnues par leurs en-têtes) |
+| `SupplierConnector`, `SupplierPricingService` | Service d'un fournisseur : prix et stocks de références connues. Un prix lu met à jour l'offre et son historique ; le chiffrage ne contacte jamais de fournisseur (voir « Connexion à Rexel ») |
 | `EstimateAssistant` | Propositions de l'IA (`estimate_suggestion`), via `analysis.AiAssistant` |
 
 **Modèle.** `estimate` (une version : marché, numéro de lot, TVA, coefficients dans
@@ -384,7 +385,74 @@ parmi eux, sans voir de prix ; un `offer_id` non transmis est écarté) et relec
 taux, fournisseurs et imports de tarifs : ADMIN ; lecture des paramètres, taux, fournisseurs et
 recherche d'offres : tout utilisateur.
 
-**Migrations** V31 à V36 (rollback en tête de chaque fichier).
+**Migrations** V31 à V36 et V43 (rollback en tête de chaque fichier).
+
+### Connexion à Rexel
+
+**État : désactivée par défaut.** Rien n'est envoyé tant que
+`REXEL_ENABLED`, `REXEL_ENVIRONMENT`, `REXEL_CLIENT_ID`, `REXEL_CLIENT_SECRET`,
+`REXEL_SUBSCRIPTION_KEY` et `REXEL_CUSTOMER_ID` ne sont pas tous renseignés. Lecture seule : aucun
+appel aux commandes n'existe dans l'application.
+
+| Élément | Rôle |
+|---|---|
+| `RexelEnvironment` | `TEST` ou `PRODUCTION` : fixe l'hôte, la `resource` du jeton et la source écrite avec chaque prix |
+| `RexelTokenService` | Jeton OAuth2 en mémoire, redemandé 60 s avant sa fin selon `expires_in`. `/oauth2/v2.0/token` : `scope` ; autre URL : `resource` |
+| `RexelHttpClient` | Jeton et `Ocp-Apim-Subscription-Key`, une reprise sur 5xx ou réseau, nouveau jeton une fois sur 401, 4xx et 429 jamais repris, lots dédoublonnés (`REXEL_BATCH_SIZE`), aucun corps journalisé |
+| `RexelPriceService`, `RexelStockService` | ProductPrice et Stocks. Prix net absent, nul ou illisible : ligne écartée, jamais 0 € |
+| `SupplierPricingService` | Appels hors transaction ; fraîcheur d'un prix (`supplier.price-max-age`, même quantité, sans lieu précisé) ; stocks en mémoire (`supplier.availability-max-age`) |
+
+Un `supplierCode` de Rexel est le **fabricant** (`supplier_offer.manufacturer_code`) ; le
+`supplier` de GPE est le distributeur. La documentation de Rexel ne décrit **aucune recherche
+catalogue** : une désignation est cherchée dans `supplier_offer`, alimenté par un fichier avec une
+colonne trigramme ou par `POST /api/supplier-offers/lookup` (trigramme et référence saisis, offre créée
+seulement si Rexel donne un prix).
+
+Routes (utilisateur connecté, CSRF) : `GET /api/supplier-connectors` ;
+`POST /api/supplier-offers/refresh`, `/availability`, `/lookup` ; `GET /api/supplier-offers/{id}/prices`.
+
+Historique : `supplier_offer_price`, une ligne quand le prix ou les conditions changent, à l'import
+comme à la lecture. Le prix le plus récent l'emporte, qu'il vienne d'un fichier ou de Rexel.
+
+**Constaté en TEST (04/11/2026), différent ou absent de la documentation :**
+
+- POST sur `apidev.rexel.fr` ; le jeton s'obtient en v1 comme en v2 (même émetteur, même audience, 3599 s) ;
+- sans `idCodOrigin` ni `idNumVersion`, dits facultatifs, la passerelle répond 500 ;
+- **l'ordre des champs compte** : Rexel convertit le JSON en XML et répond 500 si un champ sort de sa séquence
+  (ordre du tableau de la documentation, verrouillé par un test) ;
+- la réponse écrit `SCH.` pour `SCH` demandé ; `rexelRef` valait trigramme + référence sur le produit essayé ;
+- pas de `referenceRebate` : la remise est calculée entre les deux prix, le libellé vaut par exemple `GP 39,73` ;
+- `totalPrice` et `totalLineAmount` ne sont **pas** à utiliser (net × 1,2 sur le produit essayé) ;
+- une référence inconnue est omise, avec un avertissement `FuncErrors` et un HTTP 200 : le reste du lot passe ;
+- le prix net n'a pas changé entre les quantités 1 et 10 sur le produit essayé.
+
+**Encore à vérifier :** D3E incluse ou non dans le net
+(`eco_tax` reste hors coût), limite de lot.
+
+**Prix au mètre et trigrammes (production, 04/11/2026, 6 câbles) :** `clientNetPrice` est le prix de
+l'unité principale de `products/v2/units` (`METRE`, conversion 1), même pour une couronne de 100 m :
+`pack_quantity` vaut alors 1. Les lignes de commande (`orderDetailsById`, et non `ordersDetailsById` comme
+écrit dans la documentation, code `agence-000numéro`) donnent `referenceCommerciale` = trigramme + `supplierComRef`
+(`FILR2V5G10TGL` : `FIL` + `R2V5G10TGL`) ; `rexelRef` ne suit pas toujours cette forme (`FIL031700`).
+
+**Remplir le catalogue.** `POST /api/suppliers/connectors/REXEL/catalogue` (ADMIN, en tâche de fond, état par
+`GET` sur la même route) lit les commandes passées (`RexelOrderService`), déduit trigramme et référence de
+`referenceCommerciale`, demande leur prix et ne garde que les produits tarifés. Relancé, il met à jour les
+mêmes offres. Seuls les produits déjà achetés y sont : les autres se saisissent par `lookup`.
+
+**Actualiser un brouillon.** `POST /api/estimates/{id}/supplier-prices/check` demande les prix et stocks des
+offres du brouillon, pour la quantité à acheter sur tout le chiffrage (quantité du poste × quantité
+par unité × (1 + perte), additionnée par offre, divisée par le conditionnement, arrondie au supérieur), sans
+modifier ses coûts. `POST .../copy` recopie les prix lus chez le fournisseur et l'écrit au journal ; un prix
+seulement importé n'est pas recopié.
+
+**TEST et production (04/11/2026, 3 articles) :** la production redonne les prix du compte, dérogations
+comprises (`conditionLabel` vaut alors `DEROG`). Le TEST s'en écarte (de −1,6 % à +18,9 %) : ne jamais
+chiffrer avec des prix de TEST.
+
+**Basculer en production :** un déploiement ne porte qu'un environnement. Remplacer dans `.env` la
+clé, le compte et le secret par ceux de production, `REXEL_ENVIRONMENT=PRODUCTION`, puis
+`docker compose up -d backend`. Les paramètres affichent l'environnement actif.
 
 ## Entreprise (référentiel GPE)
 

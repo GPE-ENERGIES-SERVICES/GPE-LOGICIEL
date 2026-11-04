@@ -104,32 +104,47 @@ public class SupplierService {
 		List<OfferFileReader.Line> lines = result.lines();
 		for (int start = 0; start < lines.size(); start += BATCH) {
 			jdbc.batchUpdate("""
-					INSERT INTO supplier_offer (supplier_id, supplier_ref, manufacturer_ref, ean, designation,
-					    purchase_unit, pack_quantity, list_price, discount_rate, net_price, valid_from, imported_at,
-					    imported_by)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-					ON CONFLICT (supplier_id, supplier_ref) DO UPDATE SET manufacturer_ref = excluded.manufacturer_ref,
+					INSERT INTO supplier_offer (supplier_id, supplier_ref, manufacturer_code, manufacturer_ref, ean,
+					    designation, purchase_unit, pack_quantity, list_price, discount_rate, net_price, valid_from,
+					    imported_at, imported_by)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					ON CONFLICT (supplier_id, supplier_ref) DO UPDATE SET
+					    manufacturer_code = COALESCE(excluded.manufacturer_code, supplier_offer.manufacturer_code),
+					    manufacturer_ref = COALESCE(excluded.manufacturer_ref, supplier_offer.manufacturer_ref),
 					    ean = excluded.ean, designation = excluded.designation, purchase_unit = excluded.purchase_unit,
 					    pack_quantity = excluded.pack_quantity, list_price = excluded.list_price,
 					    discount_rate = excluded.discount_rate, net_price = excluded.net_price,
 					    valid_from = excluded.valid_from, valid_until = NULL, imported_at = excluded.imported_at,
-					    imported_by = excluded.imported_by""",
+					    imported_by = excluded.imported_by, eco_tax = NULL, price_source = 'IMPORT', priced_quantity = NULL""",
 					lines.subList(start, Math.min(start + BATCH, lines.size())), BATCH, (statement, line) -> {
 						statement.setLong(1, supplierId);
 						statement.setString(2, line.supplierRef());
-						statement.setString(3, line.manufacturerRef());
-						statement.setString(4, line.ean());
-						statement.setString(5, line.designation());
-						statement.setString(6, line.unit());
-						statement.setBigDecimal(7, line.packQuantity());
-						statement.setBigDecimal(8, line.listPrice());
-						statement.setBigDecimal(9, line.discountRate());
-						statement.setBigDecimal(10, line.netPrice());
-						statement.setObject(11, validFrom);
-						statement.setTimestamp(12, now);
-						statement.setString(13, user);
+						statement.setString(3, line.manufacturerCode());
+						statement.setString(4, line.manufacturerRef());
+						statement.setString(5, line.ean());
+						statement.setString(6, line.designation());
+						statement.setString(7, line.unit());
+						statement.setBigDecimal(8, line.packQuantity());
+						statement.setBigDecimal(9, line.listPrice());
+						statement.setBigDecimal(10, line.discountRate());
+						statement.setBigDecimal(11, line.netPrice());
+						statement.setObject(12, validFrom);
+						statement.setTimestamp(13, now);
+						statement.setString(14, user);
 					});
 		}
+		// One line of history for each price this import changed.
+		jdbc.update("""
+				INSERT INTO supplier_offer_price (offer_id, list_price, discount_rate, net_price, pack_quantity, source,
+				    observed_at, observed_by)
+				SELECT o.id, o.list_price, o.discount_rate, o.net_price, o.pack_quantity, 'IMPORT', o.imported_at, o.imported_by
+				FROM supplier_offer o
+				LEFT JOIN LATERAL (SELECT * FROM supplier_offer_price p WHERE p.offer_id = o.id
+				    ORDER BY p.observed_at DESC, p.id DESC LIMIT 1) last ON TRUE
+				WHERE o.supplier_id = ? AND o.imported_at = ? AND (last.id IS NULL
+				    OR last.net_price IS DISTINCT FROM o.net_price OR last.list_price IS DISTINCT FROM o.list_price
+				    OR last.discount_rate IS DISTINCT FROM o.discount_rate OR last.pack_quantity IS DISTINCT FROM o.pack_quantity)""",
+				supplierId, now);
 		log.info("{} prices imported for supplier {} by {} ({} lines left out)", lines.size(), supplierId, user,
 				result.rejected());
 		return new ImportResult(lines.size(), result.rejected(),

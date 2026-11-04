@@ -46,6 +46,15 @@ services:
       ANALYSIS_MONTHLY_BUDGET: ${ANALYSIS_MONTHLY_BUDGET:-}
       ANALYSIS_INPUT_PRICE: ${ANALYSIS_INPUT_PRICE:-0}
       ANALYSIS_OUTPUT_PRICE: ${ANALYSIS_OUTPUT_PRICE:-0}
+      # Rexel: off unless enabled, with an environment and all its values
+      REXEL_ENABLED: ${REXEL_ENABLED:-false}
+      REXEL_ENVIRONMENT: ${REXEL_ENVIRONMENT:-}
+      REXEL_CLIENT_ID: ${REXEL_CLIENT_ID:-}
+      REXEL_CLIENT_SECRET: ${REXEL_CLIENT_SECRET:-}
+      REXEL_SUBSCRIPTION_KEY: ${REXEL_SUBSCRIPTION_KEY:-}
+      REXEL_CUSTOMER_ID: ${REXEL_CUSTOMER_ID:-}
+      REXEL_BATCH_SIZE: ${REXEL_BATCH_SIZE:-20}
+      REXEL_TOKEN_URL: ${REXEL_TOKEN_URL:-https://login.microsoftonline.com/822cd975-5643-4b7e-b398-69a164e55719/oauth2/v2.0/token}
       # Sources not collected; remove AWS from the list to collect marches-publics.info
       COLLECT_DISABLED_SOURCES: ${COLLECT_DISABLED_SOURCES:-APPROCH,AWS}
       # Limits of the reading of marches-publics.info, below its terms of use
