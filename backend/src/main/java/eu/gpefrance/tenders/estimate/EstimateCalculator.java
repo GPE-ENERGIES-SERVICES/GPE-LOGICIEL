@@ -30,6 +30,21 @@ final class EstimateCalculator {
 
 	record Cost(ComponentType type, BigDecimal quantity, BigDecimal unitCost, BigDecimal wasteRate,
 			BigDecimal coefficient) {
+
+		/** Cost of one unit of the item: quantity x unit cost x (1 + waste); null when the unit cost is missing. */
+		BigDecimal value() {
+			if (unitCost == null) {
+				return null;
+			}
+			BigDecimal waste = wasteRate == null ? BigDecimal.ZERO : wasteRate;
+			return quantity.multiply(unitCost).multiply(BigDecimal.ONE.add(waste));
+		}
+
+		/** Its own coefficient, or that of the estimate for its type. */
+		BigDecimal coefficient(Map<ComponentType, BigDecimal> coefficients) {
+			return coefficient != null ? coefficient : coefficients.getOrDefault(type, BigDecimal.ONE);
+		}
+
 	}
 
 	record Line(PriceMode mode, BigDecimal quantity, BigDecimal fixedUnitPrice, boolean option, List<Cost> costs) {
@@ -93,16 +108,13 @@ final class EstimateCalculator {
 		BigDecimal sale = BigDecimal.ZERO;
 		boolean costsKnown = !line.costs().isEmpty();
 		for (Cost component : line.costs()) {
-			if (component.unitCost() == null) {
+			BigDecimal value = component.value();
+			if (value == null) {
 				costsKnown = false;
 				continue;
 			}
-			BigDecimal waste = component.wasteRate() == null ? BigDecimal.ZERO : component.wasteRate();
-			BigDecimal value = component.quantity().multiply(component.unitCost()).multiply(BigDecimal.ONE.add(waste));
-			BigDecimal coefficient = component.coefficient() != null ? component.coefficient()
-					: coefficients.getOrDefault(component.type(), BigDecimal.ONE);
 			cost = cost.add(value);
-			sale = sale.add(value.multiply(coefficient));
+			sale = sale.add(value.multiply(component.coefficient(coefficients)));
 		}
 		BigDecimal unitCost = costsKnown ? cost.setScale(COST_SCALE, RoundingMode.HALF_UP) : null;
 		BigDecimal unitPrice = switch (line.mode()) {

@@ -10,6 +10,8 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,7 +63,8 @@ class EstimateWorkflowTests {
 	void cleanDatabase() {
 		jdbc.execute("TRUNCATE estimate, pricing_rate, document_page, document, dossier, lot, tender "
 				+ "RESTART IDENTITY CASCADE");
-		jdbc.update("UPDATE pricing_settings SET vat_rate = 0.2000");
+		jdbc.update("UPDATE pricing_settings SET vat_rate = 0.2000, agency_fee_rate = 0.05, overhead_rate = 0.05, "
+				+ "service_fee_rate = 0.05");
 		jdbc.update("UPDATE pricing_coefficient SET coefficient = 1.0000");
 		tenderId = jdbc.queryForObject("""
 				INSERT INTO tender (source, external_id, title, status, created_at, updated_at)
@@ -74,12 +77,14 @@ class EstimateWorkflowTests {
 		assertThat(put("/api/pricing-settings", "{\"vatRate\": 0.10}", TestUsers.user())).hasStatus(HttpStatus.FORBIDDEN);
 		assertThat(post("/api/pricing-rates", rate("ELEC", "45"), TestUsers.user())).hasStatus(HttpStatus.FORBIDDEN);
 
-		assertThat(put("/api/pricing-settings", "{\"vatRate\": 0.10, \"coefficients\": {\"LABOR\": 1.45}}",
-				TestUsers.admin()))
+		assertThat(put("/api/pricing-settings",
+				"{\"vatRate\": 0.10, \"coefficients\": {\"LABOR\": 1.45}, \"overheadRate\": 0.07}", TestUsers.admin()))
 			.hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("{\"vatRate\": 0.10, \"coefficients\": {\"LABOR\": 1.45, \"SUPPLY\": 1.0000}, "
-					+ "\"updatedBy\": \"Admin GPE\"}");
+					+ "\"agencyFeeRate\": 0.0500, \"overheadRate\": 0.07, \"updatedBy\": \"Admin GPE\"}");
+		assertThat(put("/api/pricing-settings", "{\"serviceFeeRate\": 1}", TestUsers.admin()))
+			.hasStatus(HttpStatus.BAD_REQUEST);
 		assertThat(post("/api/pricing-rates", rate("elec", "45"), TestUsers.admin())).hasStatus(HttpStatus.CREATED)
 			.bodyJson()
 			.isLenientlyEqualTo("{\"id\": 1, \"code\": \"ELEC\", \"cost\": 45}");
@@ -208,18 +213,42 @@ class EstimateWorkflowTests {
 		send("/api/estimates/1/items", "{\"reference\": \"2.1\", \"designation\": \"Prise\", \"unit\": \"u\", "
 				+ "\"quantity\": 10, \"priceMode\": \"COMPOSED\"}");
 		send("/api/estimate-items/1/components", """
-				{"type": "SUPPLY", "label": "Prise Legrand", "quantity": 1, "unitCost": 3.20, "supplierRef": "LEG1"}""");
+				{"type": "SUPPLY", "label": "Prise Legrand", "quantity": 1, "unitCost": 3.20, "coefficient": 1.25,
+				"supplierRef": "LEG1"}""");
+		send("/api/estimate-items/1/components", """
+				{"type": "LABOR", "label": "Pose", "quantity": 0.5, "unit": "h", "unitCost": 40, "coefficient": 1.5}""");
 
 		byte[] file = mvc.get().uri("/api/estimates/1/export").with(TestUsers.user()).exchange().getResponse()
 			.getContentAsByteArray();
 
+		// Unit: supply 3.20 sold 4.00, labour 0.5 h x 40 = 20 sold 30: price 34, x 10 = 340.
+		// Fees 3 x 5 % of 34 = 5.10: net margin 34 - 23.20 - 5.10 = 5.70 per unit, 57 in all.
 		try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(file))) {
-			assertThat(workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue())
-				.isEqualTo("Rénovation électrique école");
-			assertThat(workbook.getSheetAt(0).getRow(4).getCell(2).getStringCellValue()).isEqualTo("Prise");
-			assertThat(workbook.getSheetAt(0).getRow(4).getCell(6).getNumericCellValue()).isEqualTo(32.0);
-			assertThat(workbook.getSheetAt(0).getRow(6).getCell(5).getStringCellValue()).isEqualTo("Total HT");
-			assertThat(workbook.getSheetAt(0).getRow(8).getCell(6).getNumericCellValue()).isEqualTo(38.4);
+			Sheet prices = workbook.getSheet("Calcul P.V.");
+			assertThat(prices.getRow(0).getCell(1).getStringCellValue()).isEqualTo("Rénovation électrique école");
+			Row prise = prices.getRow(5);
+			assertThat(prise.getCell(1).getStringCellValue()).isEqualTo("Prise");
+			assertThat(prise.getCell(4).getNumericCellValue()).isEqualTo(34.0);
+			assertThat(prise.getCell(5).getNumericCellValue()).isEqualTo(340.0);
+			assertThat(prise.getCell(7).getNumericCellValue()).isEqualTo(3.2);
+			assertThat(prise.getCell(8).getNumericCellValue()).isEqualTo(0.25);
+			assertThat(prise.getCell(10).getNumericCellValue()).isEqualTo(32.0);
+			assertThat(prise.getCell(15).getNumericCellValue()).isEqualTo(40.0);
+			assertThat(prise.getCell(16).getNumericCellValue()).isEqualTo(0.5);
+			assertThat(prise.getCell(19).getNumericCellValue()).isEqualTo(30.0);
+			assertThat(prise.getCell(20).getNumericCellValue()).isEqualTo(5.0);
+			assertThat(prise.getCell(21).getNumericCellValue()).isEqualTo(200.0);
+			assertThat(prise.getCell(23).getNumericCellValue()).isEqualTo(1.7);
+			assertThat(prise.getCell(26).getNumericCellValue()).isEqualTo(5.7);
+			assertThat(prices.getRow(7).getCell(4).getStringCellValue()).isEqualTo("Total HT");
+			assertThat(prices.getRow(9).getCell(5).getNumericCellValue()).isEqualTo(408.0);
+
+			Sheet budget = workbook.getSheet("Fiche budget");
+			assertThat(budget.getRow(5).getCell(1).getNumericCellValue()).isEqualTo(340.0);
+			assertThat(budget.getRow(12).getCell(1).getNumericCellValue()).isEqualTo(308.0);
+			assertThat(budget.getRow(18).getCell(1).getNumericCellValue()).isEqualTo(108.0);
+			assertThat(budget.getRow(24).getCell(0).getStringCellValue()).isEqualTo("MARGE NETTE (B)");
+			assertThat(budget.getRow(24).getCell(1).getNumericCellValue()).isEqualTo(57.0);
 			assertThat(workbook.getSheet("Sous-détail").getRow(1).getCell(10).getStringCellValue()).isEqualTo("LEG1");
 		}
 	}

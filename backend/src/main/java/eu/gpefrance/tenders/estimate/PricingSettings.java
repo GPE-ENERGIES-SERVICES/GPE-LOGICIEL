@@ -40,6 +40,15 @@ public class PricingSettings {
 	@Column(name = "coefficient", nullable = false)
 	private Map<ComponentType, BigDecimal> coefficients = new EnumMap<>(ComponentType.class);
 
+	@Column(name = "agency_fee_rate", nullable = false)
+	private BigDecimal agencyFeeRate;
+
+	@Column(name = "overhead_rate", nullable = false)
+	private BigDecimal overheadRate;
+
+	@Column(name = "service_fee_rate", nullable = false)
+	private BigDecimal serviceFeeRate;
+
 	@Column(name = "updated_by")
 	private String updatedBy;
 
@@ -49,11 +58,20 @@ public class PricingSettings {
 	protected PricingSettings() {
 	}
 
-	void change(BigDecimal vatRate, Map<ComponentType, BigDecimal> coefficients, String user, Instant now) {
-		if (vatRate != null) {
-			this.vatRate = vatRate;
+	void change(SettingsRequest request, String user, Instant now) {
+		if (request.vatRate() != null) {
+			this.vatRate = request.vatRate();
 		}
-		this.coefficients.putAll(coefficients);
+		if (request.agencyFeeRate() != null) {
+			this.agencyFeeRate = request.agencyFeeRate();
+		}
+		if (request.overheadRate() != null) {
+			this.overheadRate = request.overheadRate();
+		}
+		if (request.serviceFeeRate() != null) {
+			this.serviceFeeRate = request.serviceFeeRate();
+		}
+		this.coefficients.putAll(request.coefficientsOrEmpty());
 		this.updatedBy = user;
 		this.updatedAt = now;
 	}
@@ -64,6 +82,18 @@ public class PricingSettings {
 
 	public Map<ComponentType, BigDecimal> getCoefficients() {
 		return Map.copyOf(coefficients);
+	}
+
+	public BigDecimal getAgencyFeeRate() {
+		return agencyFeeRate;
+	}
+
+	public BigDecimal getOverheadRate() {
+		return overheadRate;
+	}
+
+	public BigDecimal getServiceFeeRate() {
+		return serviceFeeRate;
 	}
 
 	public String getUpdatedBy() {

@@ -37,7 +37,7 @@ public class PricingController {
 	}
 
 	@PutMapping("/api/pricing-settings")
-	public SettingsResponse changeSettings(@Valid @RequestBody EstimateRequest request,
+	public SettingsResponse changeSettings(@Valid @RequestBody SettingsRequest request,
 			@AuthenticationPrincipal AppUserPrincipal user) {
 		return service.changeSettings(request, user.displayName());
 	}

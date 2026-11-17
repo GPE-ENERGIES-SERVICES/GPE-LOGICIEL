@@ -6,6 +6,7 @@ import type {
   EstimateEvent,
   EstimateInput,
   EstimateSummary,
+  FeeRates,
   ItemInput,
   ListedEstimate,
   OfferAvailability,
@@ -114,7 +115,9 @@ export function getPricingSettings(): Promise<PricingSettings> {
   return api("/api/pricing-settings");
 }
 
-export function updatePricingSettings(input: EstimateInput): Promise<PricingSettings> {
+export function updatePricingSettings(
+  input: Pick<EstimateInput, "vatRate" | "coefficients"> & FeeRates,
+): Promise<PricingSettings> {
   return api("/api/pricing-settings", { method: "PUT", body: input });
 }
 

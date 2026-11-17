@@ -32,12 +32,14 @@ public class PricingService {
 		this.clock = clock;
 	}
 
-	public record SettingsResponse(BigDecimal vatRate, Map<ComponentType, BigDecimal> coefficients, String updatedBy,
+	public record SettingsResponse(BigDecimal vatRate, Map<ComponentType, BigDecimal> coefficients,
+			BigDecimal agencyFeeRate, BigDecimal overheadRate, BigDecimal serviceFeeRate, String updatedBy,
 			Instant updatedAt) {
 
 		static SettingsResponse from(PricingSettings settings) {
-			return new SettingsResponse(settings.getVatRate(), settings.getCoefficients(), settings.getUpdatedBy(),
-					settings.getUpdatedAt());
+			return new SettingsResponse(settings.getVatRate(), settings.getCoefficients(),
+					settings.getAgencyFeeRate(), settings.getOverheadRate(), settings.getServiceFeeRate(),
+					settings.getUpdatedBy(), settings.getUpdatedAt());
 		}
 
 	}
@@ -57,11 +59,11 @@ public class PricingService {
 		return SettingsResponse.from(settings.current());
 	}
 
-	/** Changes the values given only: the VAT rate when given, the coefficients listed. */
+	/** Changes the values given only: the rates when given, the coefficients listed. */
 	@Transactional
-	public SettingsResponse changeSettings(EstimateRequest request, String user) {
+	public SettingsResponse changeSettings(SettingsRequest request, String user) {
 		PricingSettings current = settings.current();
-		current.change(request.vatRate(), request.coefficientsOrEmpty(), user, clock.instant());
+		current.change(request, user, clock.instant());
 		log.info("Pricing settings changed by {}", user);
 		return SettingsResponse.from(settings.save(current));
 	}

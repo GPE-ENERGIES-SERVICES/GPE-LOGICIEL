@@ -772,6 +772,9 @@ const NO_QUALITY: AnalysisQuality = { done: 0, failed: 0, totalCost: null, avera
 const PRICING_SETTINGS: PricingSettings = {
   vatRate: 0.2,
   coefficients: { SUPPLY: 1, LABOR: 1, SERVICE: 1, TRAVEL: 1, RENTAL: 1, SUBCONTRACT: 1, LUMP_SUM: 1, OTHER: 1 },
+  agencyFeeRate: 0.05,
+  overheadRate: 0.05,
+  serviceFeeRate: 0.05,
   updatedBy: null,
   updatedAt: "2026-10-01T08:00:00Z",
 };

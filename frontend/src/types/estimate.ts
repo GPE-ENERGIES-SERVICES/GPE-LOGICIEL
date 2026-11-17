@@ -135,7 +135,14 @@ export type EstimateEvent = {
   createdAt: string;
 };
 
-export type PricingSettings = {
+/** Fee rates are shares of the sale price (0.05 for 5 %): they give the net margin of the export. */
+export type FeeRates = {
+  agencyFeeRate: number;
+  overheadRate: number;
+  serviceFeeRate: number;
+};
+
+export type PricingSettings = FeeRates & {
   vatRate: number;
   coefficients: Record<ComponentType, number>;
   updatedBy: string | null;

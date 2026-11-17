@@ -14,7 +14,13 @@ import {
 import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { createRate, deleteRate, getPricingSettings, getRates, updatePricingSettings, updateRate } from "@/services/estimateApi";
-import type { ComponentType, PricingRate, RateInput } from "@/types/estimate";
+import type { ComponentType, FeeRates, PricingRate, RateInput } from "@/types/estimate";
+
+const FEES: { key: keyof FeeRates; label: string }[] = [
+  { key: "agencyFeeRate", label: "Frais d'agence" },
+  { key: "overheadRate", label: "Frais généraux" },
+  { key: "serviceFeeRate", label: "Frais de service" },
+];
 
 /**
  * The settings of GPE for its estimates: VAT rate and coefficients given to a
@@ -47,10 +53,19 @@ export function PricingPanel() {
       setError("Taux de TVA invalide.");
       return;
     }
+    const fees = {} as FeeRates;
+    for (const fee of FEES) {
+      const value = parsePercent(String(form.get(fee.key) ?? ""));
+      if (value === null || Number.isNaN(value) || value < 0 || value >= 1) {
+        setError(`Taux « ${fee.label} » invalide.`);
+        return;
+      }
+      fees[fee.key] = value;
+    }
     setSaving(true);
     setError(null);
     try {
-      await updatePricingSettings({ label: null, vatRate, coefficients });
+      await updatePricingSettings({ vatRate, coefficients, ...fees });
       setMessage("Paramètres enregistrés : ils s'appliquent aux prochains chiffrages.");
       settings.reload();
     } catch (err) {
@@ -88,8 +103,18 @@ export function PricingPanel() {
               </label>
             ))}
           </div>
+          <h3>Frais (en % du prix de vente)</h3>
+          <div className="form-grid">
+            {FEES.map((fee) => (
+              <label key={fee.key}>
+                {fee.label} (%)
+                <input name={fee.key} required inputMode="decimal" defaultValue={percentInput(settings.data?.[fee.key])} />
+              </label>
+            ))}
+          </div>
           <p className="hint">
-            Prix de vente = coût × coefficient (frais généraux et marge compris).
+            Prix de vente = coût × coefficient (frais généraux et marge compris). Les frais ne changent aucun prix :
+            ils donnent la marge nette de l&apos;export Excel (Calcul P.V. et Fiche budget).
             {settings.data.updatedBy && ` Modifié par ${settings.data.updatedBy} le ${formatDateTime(settings.data.updatedAt)}.`}
           </p>
           <div className="form-actions">
