@@ -205,7 +205,8 @@ public class EquipmentService {
 	}
 
 	private static String category(String text) {
-		if (text.matches(".*(sun2000|onduleur|inverter|\\bktl\\b).*")) {
+		// « HWE3152972 »: an inverter in the references of Huawei at the suppliers.
+		if (text.matches(".*(sun2000|onduleur|inverter|\\bktl\\b|\\bhwe ?\\d).*")) {
 			return "INVERTER";
 		}
 		if (text.matches(".*(fusionsolar|smartlogger|webdyn|monitoring|supervision|gateway).*")) {
@@ -251,7 +252,7 @@ public class EquipmentService {
 
 	private static Map<String, String> brands() {
 		Map<String, String> brands = new LinkedHashMap<>();
-		brands.put("sun2000|huawei|\\bhwe\\b|fusionsolar|smartlogger", "Huawei");
+		brands.put("sun2000|huawei|\\bhwe\\b|\\bhwe ?\\d|fusionsolar|smartlogger", "Huawei");
 		brands.put("dmegc|\\bdm\\d{3}", "DMEGC");
 		brands.put("jinko|jkm", "JinkoSolar");
 		brands.put("\\bja ?solar|jam\\d", "JA Solar");

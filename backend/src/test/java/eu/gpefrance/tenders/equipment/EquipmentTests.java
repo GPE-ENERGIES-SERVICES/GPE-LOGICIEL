@@ -79,6 +79,8 @@ class EquipmentTests {
 		assertThat(EquipmentService.guess("Coffret AC 100kW.pdf").category()).isEqualTo("ELECTRICAL_BOX");
 		assertThat(EquipmentService.guess("Dispositifs d'arrêt d'urgence bris de glace.pdf").category()).isEqualTo("SAFETY");
 		assertThat(EquipmentService.guess("Annexe 3 – FT- SUN2000-115KTL-M2.pdf").reference()).isEqualTo("SUN2000-115KTL-M2");
+		assertThat(EquipmentService.guess("HWE3152972_FICHE_1.pdf"))
+			.isEqualTo(new EquipmentService.Guess("INVERTER", "Huawei", "HWE3152972 FICHE 1"));
 		assertThat(EquipmentService.guess("Notice de montage.pdf").category()).isEqualTo("OTHER");
 	}
 
