@@ -193,7 +193,8 @@ public class TechnicalChoiceService {
 				.multiply(BigDecimal.valueOf(100))
 				.divide(choices.requestedKwc(), 1, RoundingMode.HALF_UP);
 			if (gap.abs().compareTo(GAP_WARNING) > 0) {
-				warnings.add("La puissance installée (" + installed.stripTrailingZeros().toPlainString() + " kWc) s'écarte de "
+				warnings.add("La puissance installée (" + installed.stripTrailingZeros().toPlainString().replace('.', ',')
+						+ " kWc) s'écarte de "
 						+ gap.toPlainString().replace('.', ',') + " % de la puissance demandée ("
 						+ choices.requestedKwc().stripTrailingZeros().toPlainString().replace('.', ',') + " kWc).");
 			}

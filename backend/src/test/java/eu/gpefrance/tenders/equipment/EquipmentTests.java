@@ -73,6 +73,7 @@ class EquipmentTests {
 			.isEqualTo(new EquipmentService.Guess("MONITORING", "Huawei", "Logiciel FusionSolar"));
 		assertThat(EquipmentService.guess("SOPRASOLAR FIX EVO TILT.pdf").category()).isEqualTo("MOUNTING");
 		assertThat(EquipmentService.guess("dome-solar-helios-b2-brochure.pdf").brand()).isEqualTo("Dome Solar");
+		assertThat(EquipmentService.guess("K2 DOME 6.pdf").brand()).isEqualTo("K2 Systems");
 		assertThat(EquipmentService.guess("Cables DC H1Z2Z2-K.pdf").category()).isEqualTo("CABLE_DC");
 		assertThat(EquipmentService.guess("Cables U1000R2V.pdf").category()).isEqualTo("CABLE_AC");
 		assertThat(EquipmentService.guess("STAUBLI CONNECTEUR MC4.pdf").category()).isEqualTo("CONNECTOR");
@@ -190,7 +191,7 @@ class EquipmentTests {
 			.isEqualTo("Marie Durand");
 		// Changed after: to validate again.
 		assertThat(put(choices.replace("\"inverterCount\": 2", "\"inverterCount\": 3"))).bodyJson()
-			.isLenientlyEqualTo("{\"validatedBy\": null, \"sizing\": {\"dcAcRatio\": 1.20, \"warnings\": [\"La puissance installée (179.4 kWc) s'écarte de 10,2 % de la puissance demandée (162,84 kWc).\"]}}");
+			.isLenientlyEqualTo("{\"validatedBy\": null, \"sizing\": {\"dcAcRatio\": 1.20, \"warnings\": [\"La puissance installée (179,4 kWc) s'écarte de 10,2 % de la puissance demandée (162,84 kWc).\"]}}");
 
 		assertThat(put("{\"valorisation\": \"VENTE\"}")).hasStatus(HttpStatus.BAD_REQUEST);
 		assertThat(put("{\"moduleCount\": 0}")).hasStatus(HttpStatus.BAD_REQUEST);

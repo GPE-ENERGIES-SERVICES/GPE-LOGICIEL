@@ -258,9 +258,10 @@ public class EquipmentService {
 		brands.put("\\bja ?solar|jam\\d", "JA Solar");
 		brands.put("longi", "LONGi");
 		brands.put("soprasolar|fix evo", "Soprasolar");
+		// Before Dome Solar: « K2 DOME 6 » is a system of K2.
+		brands.put("\\bk2\\b", "K2 Systems");
 		brands.put("dome|helios|kogysun|s360", "Dome Solar");
 		brands.put("novotegra", "Novotegra");
-		brands.put("\\bk2\\b", "K2 Systems");
 		brands.put("jorisolar|opti.roof", "JoriSolar");
 		brands.put("webdyn", "Webdyn");
 		brands.put("staubli|mc4", "Stäubli");
