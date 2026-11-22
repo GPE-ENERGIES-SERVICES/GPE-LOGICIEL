@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
 import { DomainFilter } from "@/components/DomainFilter";
+import { Pager, pageOf } from "@/components/Pager";
 import { formatMoney } from "@/lib/estimate";
 import { ACTIVITY_LABELS, formatDate, normalizeText } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
@@ -30,6 +31,7 @@ export default function PriceLibraryPage() {
   const [domain, setDomain] = useState("");
   const [listDomain, setListDomain] = useState("");
   const [listFilter, setListFilter] = useState("");
+  const [listPage, setListPage] = useState(0);
   const listWords = normalizeText(listFilter).split(/\s+/).filter(Boolean);
   const listed = (imports.data ?? []).filter(
     (entry) =>
@@ -140,10 +142,19 @@ export default function PriceLibraryPage() {
         <h2>DPGF de la bibliothèque</h2>
         {imports.data && imports.data.length > 0 && (
           <div className="inline-form">
-            <DomainFilter value={listDomain} onChange={setListDomain} />
+            <DomainFilter
+              value={listDomain}
+              onChange={(value) => {
+                setListDomain(value);
+                setListPage(0);
+              }}
+            />
             <input
               value={listFilter}
-              onChange={(event) => setListFilter(event.target.value)}
+              onChange={(event) => {
+                setListFilter(event.target.value);
+                setListPage(0);
+              }}
               placeholder="Affaire, fichier…"
               aria-label="Filtrer les DPGF"
             />
@@ -171,7 +182,7 @@ export default function PriceLibraryPage() {
               </tr>
             </thead>
             <tbody>
-              {listed.map((entry) => (
+              {pageOf(listed, listPage).map((entry) => (
                 <tr key={entry.id}>
                   <td>
                     {entry.label}
@@ -203,6 +214,7 @@ export default function PriceLibraryPage() {
             </tbody>
           </table>
         )}
+        <Pager page={listPage} total={listed.length} label="Pages des DPGF" onChange={setListPage} />
         {admin && (
           <form className="inline-form" onSubmit={add}>
             <label>

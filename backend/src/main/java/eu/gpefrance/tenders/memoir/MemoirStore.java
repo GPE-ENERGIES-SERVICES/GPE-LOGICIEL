@@ -391,13 +391,17 @@ class MemoirStore {
 	}
 
 	/**
-	 * Excerpts of the former memoirs chosen for the AI, the most recent first.
+	 * Excerpts of the former memoirs chosen for the AI: those of the domains of
+	 * the tender first (a PV memoir for a PV tender), then the most recent.
+	 * @param tenderId the tender of the memoir written, or null
 	 */
-	List<String> libraryExcerpts(int count, int length) {
+	List<String> libraryExcerpts(int count, int length, Long tenderId) {
 		return jdbc.queryForList("""
 				SELECT title || coalesce(' (' || context || ')', '') || E'\\n' || left(text, ?) FROM memoir_library
-				WHERE use_for_ai AND text IS NOT NULL ORDER BY written_on DESC NULLS LAST, id DESC LIMIT ?""",
-				String.class, length, count);
+				WHERE use_for_ai AND text IS NOT NULL
+				ORDER BY EXISTS (SELECT 1 FROM tender t WHERE t.id = ? AND memoir_library.activity_code = ANY (t.activities)) DESC,
+				    written_on DESC NULLS LAST, id DESC
+				LIMIT ?""", String.class, length, tenderId, count);
 	}
 
 	// Mapping

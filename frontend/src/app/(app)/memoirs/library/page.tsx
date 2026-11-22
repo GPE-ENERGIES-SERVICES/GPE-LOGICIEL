@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 
 import { DomainFilter } from "@/components/DomainFilter";
+import { Pager, pageOf } from "@/components/Pager";
 import { ACTIVITY_LABELS, formatDate, normalizeText } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { deleteFormerMemoir, formerMemoirUrl, getLibrary, importFormerMemoir, updateFormerMemoir } from "@/services/memoirApi";
@@ -18,6 +19,7 @@ export default function MemoirLibraryPage() {
   const [error, setError] = useState<string | null>(null);
   const [domain, setDomain] = useState("");
   const [filter, setFilter] = useState("");
+  const [page, setPage] = useState(0);
   const words = normalizeText(filter).split(/\s+/).filter(Boolean);
   const listed = (library.data ?? []).filter(
     (entry) =>
@@ -67,10 +69,19 @@ export default function MemoirLibraryPage() {
         </p>
         {library.data && library.data.length > 0 && (
           <div className="inline-form">
-            <DomainFilter value={domain} onChange={setDomain} />
+            <DomainFilter
+              value={domain}
+              onChange={(value) => {
+                setDomain(value);
+                setPage(0);
+              }}
+            />
             <input
               value={filter}
-              onChange={(event) => setFilter(event.target.value)}
+              onChange={(event) => {
+                setFilter(event.target.value);
+                setPage(0);
+              }}
               placeholder="Affaire, acheteur, fichier…"
               aria-label="Filtrer les mémoires"
             />
@@ -97,7 +108,7 @@ export default function MemoirLibraryPage() {
               </tr>
             </thead>
             <tbody>
-              {listed.map((entry) => (
+              {pageOf(listed, page).map((entry) => (
                 <tr key={entry.id}>
                   <td>
                     {entry.title}
@@ -156,6 +167,7 @@ export default function MemoirLibraryPage() {
             </tbody>
           </table>
         )}
+        <Pager page={page} total={listed.length} label="Pages des mémoires" onChange={setPage} />
 
         <h3>Ajouter un mémoire</h3>
         <form onSubmit={submit}>

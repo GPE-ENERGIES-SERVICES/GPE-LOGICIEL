@@ -6,6 +6,7 @@ import { formatMoney, formatRate } from "@/lib/estimate";
 import { formatDate } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { addOffer, getOfferPage, OFFER_PAGE_SIZE } from "@/services/estimateApi";
+import { Pager } from "@/components/Pager";
 import type { Supplier } from "@/types/estimate";
 
 const SOURCE_LABELS: Record<string, string> = { IMPORT: "Fichier", MANUAL: "À la main" };
@@ -231,18 +232,8 @@ export function OfferCatalogue({ suppliers, onChanged }: { suppliers: Supplier[]
           </tbody>
         </table>
       )}
-      {data && pages > 1 && (
-        <div className="inline-form" role="navigation" aria-label="Pages des tarifs">
-          <button type="button" disabled={page === 0 || offers.loading} onClick={() => setPage(page - 1)}>
-            ← Précédent
-          </button>
-          <span className="muted">
-            Page {page + 1} sur {pages}
-          </span>
-          <button type="button" disabled={page + 1 >= pages || offers.loading} onClick={() => setPage(page + 1)}>
-            Suivant →
-          </button>
-        </div>
+      {data && (
+        <Pager page={page} total={data.total} size={OFFER_PAGE_SIZE} busy={offers.loading} label="Pages des tarifs" onChange={setPage} />
       )}
     </>
   );

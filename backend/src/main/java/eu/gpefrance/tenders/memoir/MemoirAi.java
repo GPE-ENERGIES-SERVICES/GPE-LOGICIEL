@@ -197,7 +197,7 @@ class MemoirAi {
 				.put("exigence", requirement.text())
 				.put("ponderation", requirement.weight()));
 		content.set("entreprise", JSON.valueToTree(company.snapshot(LocalDate.now(clock))));
-		store.libraryExcerpts(properties.libraryExcerpts(), properties.excerptLength())
+		store.libraryExcerpts(properties.libraryExcerpts(), properties.excerptLength(), memoir.tenderId())
 			.forEach(excerpt -> content.withArray("anciens_memoires_de_reference").add(excerpt));
 		JsonNode root = root(ai.ask("MEMOIR_SECTION", VERSION, writingInstructions(), context(memoir) + content,
 				writingSchema(), 6000, user).text());

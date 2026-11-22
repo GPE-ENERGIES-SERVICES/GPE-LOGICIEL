@@ -176,7 +176,9 @@ export function RecordTable({ list, columns, fields, noun, empty, filter, fixed,
         </div>
       )}
       {error && <p className="banner error">{error}</p>}
-      {rows.data && shown.length === 0 && <p className="muted">{empty}</p>}
+      {rows.data && shown.length === 0 && (
+        <p className="muted">{rows.data.length === 0 || fixed ? empty : "Aucune ligne ne correspond à ce filtre."}</p>
+      )}
       {shown.length > 0 && (
         <table>
           <thead>

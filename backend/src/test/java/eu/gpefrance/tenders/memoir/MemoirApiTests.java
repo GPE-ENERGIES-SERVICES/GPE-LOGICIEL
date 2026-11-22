@@ -63,6 +63,30 @@ class MemoirApiTests {
 		jdbc.update("INSERT INTO lot (tender_id, position, number, title) VALUES (?, 1, '2', 'Électricité')", tenderId);
 	}
 
+	@Autowired
+	private MemoirStore store;
+
+	@Test
+	void givesTheAiTheFormerMemoirsOfTheDomainOfTheTenderFirst() {
+		jdbc.update("UPDATE tender SET activities = '{PHOTOVOLTAIC}' WHERE id = ?", tenderId);
+		for (String[] memoir : new String[][] { { "CFO récent", "ELECTRICITY", "2026-01-01" },
+				{ "PV ancien", "PHOTOVOLTAIC", "2020-01-01" }, { "Sans domaine", null, "2025-01-01" },
+				{ "PV écarté", "PHOTOVOLTAIC", "2026-06-01" } }) {
+			jdbc.update("""
+					INSERT INTO memoir_library (title, written_on, activity_code, use_for_ai, file_name, storage_path,
+					    size_bytes, text, uploaded_at)
+					VALUES (?, CAST(? AS date), ?, ?, 'mt.docx', 'x', 1, 'texte', now())""", memoir[0], memoir[2], memoir[1],
+					!memoir[0].endsWith("écarté"));
+		}
+
+		// The PV memoir first although older; the memoir set aside by a user never.
+		assertThat(store.libraryExcerpts(2, 100, tenderId)).extracting((excerpt) -> excerpt.lines().findFirst().orElseThrow())
+			.containsExactly("PV ancien", "CFO récent");
+		// Without tender: the most recent.
+		assertThat(store.libraryExcerpts(3, 100, null)).extracting((excerpt) -> excerpt.lines().findFirst().orElseThrow())
+			.containsExactly("CFO récent", "Sans domaine", "PV ancien");
+	}
+
 	@Test
 	void buildsAndValidatesTheOutline() {
 		assertThat(post("/api/memoirs", "{\"tenderId\": " + tenderId + ", \"lotNumber\": \"2\"}"))
