@@ -1,93 +1,125 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/AuthProvider";
-import { CollectStatus } from "@/components/CollectStatus";
 import { DeadlineBadge } from "@/components/DeadlineBadge";
-import { formatAmount, formatDate, formatDateTime, FOLLOW_UP_LABELS } from "@/lib/format";
-import { alertResultsHref, tenderHref } from "@/lib/navigation";
-import { useLoader } from "@/lib/useLoader";
-import { getAlerts, markAlertViewed } from "@/services/alertApi";
-import { getAwardedContracts } from "@/services/awardApi";
-import { available } from "@/services/http";
-import { getStatusCounts, getTenderCounts, getTenders } from "@/services/tenderApi";
-import type { TenderSummary } from "@/types/tender";
 import { Icon } from "@/components/Icon";
+import { formatDate } from "@/lib/format";
+import { tenderHref } from "@/lib/navigation";
+import { useLoader } from "@/lib/useLoader";
+import { getRecentEstimates } from "@/services/estimateApi";
+import { getMemoirs } from "@/services/memoirApi";
+import { getResponses } from "@/services/responseApi";
+import { getTenderCounts, getTenders } from "@/services/tenderApi";
+import type { ListedEstimate } from "@/types/estimate";
+import type { Memoir } from "@/types/memoir";
+import type { ResponseSummary } from "@/types/response";
+import type { TenderSummary } from "@/types/tender";
 
-/** Consultations published since yesterday. */
-const RECENT_QUERY = "publishedWithinDays=1";
 /** Open consultations whose deadline is within a week and on which the team may still answer. */
 const DEADLINES_QUERY = "tab=ALL&status=NEW,TO_STUDY,RESPONDING&maxDaysLeft=7";
-const OPPORTUNITIES_QUERY = "tab=NEW&sort=-published";
-const LIST_SIZE = 8;
+/** Consultations matching the criteria on which nobody decided yet. */
+const TO_DECIDE_QUERY = "tab=NEW&sort=-published";
+const LIST_SIZE = 5;
 
-function TenderLink({ tender }: { tender: TenderSummary }) {
-  return (
-    <>
-      <Link href={tenderHref(tender.id, "/")}>{tender.title}</Link>
-      <div className="small muted">{tender.buyer ?? "Acheteur non indiqué"}</div>
-    </>
-  );
+type Badge = { label: string; className: string };
+
+/** What is left to do on a consultation the team answers: estimate, technical memoir, pieces. */
+function progress(
+  tender: TenderSummary,
+  estimates: ListedEstimate[],
+  memoirs: Memoir[],
+  responses: ResponseSummary[],
+): Badge[] {
+  if (tender.followUpStatus !== "RESPONDING") {
+    return [{ label: "Réponse à décider", className: "badge urgent" }];
+  }
+  const estimate = estimates.find((listed) => listed.tenderId === tender.id && listed.estimate.status !== "SUPERSEDED");
+  const memoir = memoirs.find((item) => item.tenderId === tender.id);
+  const response = responses.find((item) => item.tenderId === tender.id);
+  return [
+    !estimate
+      ? { label: "Chiffrage à faire", className: "badge urgent" }
+      : estimate.estimate.status === "VALIDATED"
+        ? { label: "Chiffrage validé", className: "badge verified" }
+        : { label: "Chiffrage en brouillon", className: "badge" },
+    !memoir
+      ? { label: "Mémoire à faire", className: "badge urgent" }
+      : memoir.status === "DONE"
+        ? { label: "Mémoire terminé", className: "badge verified" }
+        : { label: "Mémoire en cours", className: "badge" },
+    !response || response.total === 0
+      ? { label: "Pièces à préparer", className: "badge urgent" }
+      : {
+          label: `Pièces ${response.ready}/${response.total}`,
+          className: response.ready === response.total ? "badge verified" : "badge",
+        },
+  ];
 }
 
-/** What calls for an action today, then the latest news of the market. */
-export default function DashboardPage() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const recent = useLoader(() => getTenderCounts(RECENT_QUERY), "recent");
-  const counts = useLoader(() => getTenderCounts(), "counts");
-  const statuses = useLoader(() => getStatusCounts("tab=ALL"), "statuses");
-  const deadlines = useLoader(() => getTenders(`${DEADLINES_QUERY}&size=${LIST_SIZE}`), "deadlines");
-  const opportunities = useLoader(() => getTenders(`${OPPORTUNITIES_QUERY}&size=${LIST_SIZE}`), "opportunities");
-  const alerts = useLoader(() => (available("alerts") ? getAlerts() : Promise.resolve([])), "alerts");
-  const awards = useLoader(() => (available("awards") ? getAwardedContracts("size=5") : Promise.resolve(null)), "awards");
-  const error = [recent, counts, statuses, deadlines, opportunities, alerts, awards].find((loader) => loader.error)?.error;
+type Work = { key: string; kind: string; title: string; href: string; status: string; updatedAt: string };
 
-  // New consultations: those matching the company's criteria and those excluded by them.
-  const newCount = recent.data ? recent.data.ALL + recent.data.FILTERED_OUT : undefined;
-  const activeAlerts = alerts.data?.filter((alert) => alert.active) ?? [];
-  const today = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+/** What the user changed last and did not finish: draft estimates, memoirs not done. */
+function myWork(user: string, estimates: ListedEstimate[], memoirs: Memoir[]): Work[] {
+  const drafts: Work[] = estimates
+    .filter((listed) => listed.estimate.status === "DRAFT" && listed.estimate.updatedBy === user)
+    .map((listed) => ({
+      key: `e${listed.estimate.id}`,
+      kind: "Chiffrage",
+      title: listed.tenderTitle ?? `Chiffrage v${listed.estimate.version}`,
+      href: `/estimates/${listed.estimate.id}`,
+      status: listed.estimate.incompleteItems > 0 ? `${listed.estimate.incompleteItems} postes sans prix` : "Brouillon",
+      updatedAt: listed.estimate.updatedAt,
+    }));
+  const writing: Work[] = memoirs
+    .filter((memoir) => memoir.status !== "DONE" && (memoir.updatedBy === user || memoir.createdBy === user))
+    .map((memoir) => ({
+      key: `m${memoir.id}`,
+      kind: "Mémoire",
+      title: memoir.tenderTitle ?? memoir.title,
+      href: `/memoirs/${memoir.id}`,
+      status: "En cours",
+      updatedAt: memoir.updatedAt,
+    }));
+  return [...drafts, ...writing].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, LIST_SIZE);
+}
+
+/** What the user has to do today: answers due soon, consultations to decide, own work in progress. */
+export default function DashboardPage() {
+  const { user } = useAuth();
+  const counts = useLoader(() => getTenderCounts(), "counts");
+  const deadlines = useLoader(() => getTenders(`${DEADLINES_QUERY}&size=${LIST_SIZE}`), "deadlines");
+  const toDecide = useLoader(() => getTenders(`${TO_DECIDE_QUERY}&size=${LIST_SIZE}`), "to-decide");
+  const estimates = useLoader(() => getRecentEstimates(), "estimates");
+  const memoirs = useLoader(() => getMemoirs(), "memoirs");
+  const responses = useLoader(() => getResponses(), "responses");
+  const error = [counts, deadlines, toDecide, estimates, memoirs, responses].find((loader) => loader.error)?.error;
+  const work = myWork(user.displayName, estimates.data ?? [], memoirs.data ?? []);
 
   const figures = [
     {
-      value: newCount,
-      label: newCount === 1 ? "nouvelle opportunité depuis hier" : "nouvelles opportunités depuis hier",
-      detail: recent.data && `dont ${recent.data.ALL} correspondant à vos critères`,
-      href: `/tenders?tab=ALL&${RECENT_QUERY}`,
-      icon: "tenders" as const,
-      tone: newCount ? "success" : "muted",
-    },
-    { value: statuses.data?.TO_STUDY, label: "à analyser", href: "/tenders?tab=TO_PROCESS&status=TO_STUDY", icon: "clipboard" as const, tone: "accent" },
-    {
       value: deadlines.data?.totalElements,
-      label: "échéances dans les 7 prochains jours",
+      label: "à rendre sous 7 jours",
       href: `/tenders?${DEADLINES_QUERY}`,
       icon: "clock" as const,
       tone: deadlines.data?.totalElements ? "warning" : "muted",
     },
-    { value: counts.data?.FOLLOWED, label: "consultations suivies", href: "/follows", icon: "star" as const, tone: "accent" },
-    { value: counts.data?.FILTERED_OUT, label: "hors critères à vérifier", href: "/tenders?tab=FILTERED_OUT", icon: "eye" as const, tone: "muted" },
+    {
+      value: counts.data?.NEW,
+      label: "à trancher",
+      href: `/tenders?${TO_DECIDE_QUERY}`,
+      icon: "clipboard" as const,
+      tone: counts.data?.NEW ? "accent" : "muted",
+    },
+    { value: counts.data?.FOLLOWED, label: "suivies", href: "/follows", icon: "star" as const, tone: "accent" },
   ];
-
-  const openAlert = async (alertId: number) => {
-    try {
-      await markAlertViewed(alertId);
-    } catch {
-      // the results are shown all the same
-    }
-    router.push(alertResultsHref(alertId));
-  };
 
   return (
     <>
       <h1>Bonjour {user.displayName.split(" ")[0]}</h1>
-      <p className="muted">Voici la situation au {today}.</p>
-      <CollectStatus />
       {error && <p className="banner error">{error}</p>}
 
-      <h2>Aujourd&apos;hui</h2>
       <div className="stats">
         {figures.map((figure) => (
           <Link key={figure.href} href={figure.href} className={`card stat tone-${figure.tone}`}>
@@ -96,136 +128,95 @@ export default function DashboardPage() {
               <strong>{figure.value ?? "–"}</strong>
             </span>
             <span>{figure.label}</span>
-            {figure.detail && <span className="small muted">{figure.detail}</span>}
           </Link>
         ))}
       </div>
 
+      <section className="card">
+        <h2>À rendre bientôt</h2>
+        {deadlines.data?.content.length === 0 && <p className="muted">Rien à rendre dans les 7 jours.</p>}
+        {deadlines.data && deadlines.data.content.length > 0 && (
+          <table>
+            <tbody>
+              {deadlines.data.content.map((tender) => (
+                <tr key={tender.id}>
+                  <td>
+                    <Link href={tenderHref(tender.id, "/")}>{tender.title}</Link>
+                  </td>
+                  <td>
+                    <span className="badges">
+                      {progress(tender, estimates.data ?? [], memoirs.data ?? [], responses.data ?? []).map((badge) => (
+                        <span key={badge.label} className={badge.className}>
+                          {badge.label}
+                        </span>
+                      ))}
+                    </span>
+                  </td>
+                  <td className="nowrap">
+                    <DeadlineBadge deadline={tender.deadline} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {(deadlines.data?.totalElements ?? 0) > LIST_SIZE && (
+          <p>
+            <Link href={`/tenders?${DEADLINES_QUERY}`}>Tout voir</Link>
+          </p>
+        )}
+      </section>
+
       <div className="dashboard-grid">
         <section className="card">
-          <h2>Échéances proches</h2>
-          {deadlines.data?.content.length === 0 && <p className="muted">Aucune échéance dans les 7 prochains jours.</p>}
-          {deadlines.data && deadlines.data.content.length > 0 && (
+          <h2>À trancher</h2>
+          {toDecide.data?.content.length === 0 && <p className="muted">Rien à trancher.</p>}
+          {toDecide.data && toDecide.data.content.length > 0 && (
             <table>
               <tbody>
-                {deadlines.data.content.map((tender) => (
+                {toDecide.data.content.map((tender) => (
                   <tr key={tender.id}>
                     <td>
-                      <TenderLink tender={tender} />
+                      <Link href={tenderHref(tender.id, "/")}>{tender.title}</Link>
+                      {tender.buyer && <div className="small muted">{tender.buyer}</div>}
                     </td>
                     <td className="nowrap">
-                      {formatDateTime(tender.deadline)}
-                      <div>
-                        <DeadlineBadge deadline={tender.deadline} />
-                      </div>
+                      <DeadlineBadge deadline={tender.deadline} />
                     </td>
-                    <td className="nowrap">{FOLLOW_UP_LABELS[tender.followUpStatus]}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-          <p>
-            <Link href={`/tenders?${DEADLINES_QUERY}`}>Voir toutes les échéances proches</Link>
-          </p>
+          {(toDecide.data?.totalElements ?? 0) > LIST_SIZE && (
+            <p>
+              <Link href={`/tenders?${TO_DECIDE_QUERY}`}>Tout voir</Link>
+            </p>
+          )}
         </section>
 
         <section className="card">
-          <h2>Nouvelles opportunités</h2>
-          {opportunities.data?.content.length === 0 && <p className="muted">Aucune nouvelle opportunité.</p>}
-          {opportunities.data && opportunities.data.content.length > 0 && (
+          <h2>Mon travail en cours</h2>
+          {estimates.data && memoirs.data && work.length === 0 && <p className="muted">Rien en cours.</p>}
+          {work.length > 0 && (
             <table>
               <tbody>
-                {opportunities.data.content.map((tender) => (
-                  <tr key={tender.id}>
+                {work.map((item) => (
+                  <tr key={item.key}>
                     <td>
-                      <TenderLink tender={tender} />
+                      <Link href={item.href}>{item.title}</Link>
+                      <div className="small muted">
+                        {item.kind} · {item.status}
+                      </div>
                     </td>
-                    <td className="nowrap">{formatDate(tender.publishedAt)}</td>
-                    {available("relevance") && (
-                      <td className="nowrap">{tender.relevanceScore != null ? `${tender.relevanceScore} %` : "–"}</td>
-                    )}
+                    <td className="nowrap muted">{formatDate(item.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-          <p>
-            <Link href={`/tenders?${OPPORTUNITIES_QUERY}`}>Voir toutes les nouvelles opportunités</Link>
-          </p>
         </section>
       </div>
-
-      {(available("alerts") || available("awards")) && (
-        <div className="dashboard-grid">
-          {available("alerts") && (
-            <section className="card">
-              <h2>Mes veilles</h2>
-              {alerts.data && activeAlerts.length === 0 && <p className="muted">Aucune veille active.</p>}
-              {activeAlerts.length > 0 && (
-                <table>
-                  <tbody>
-                    {activeAlerts.map((alert) => (
-                      <tr key={alert.id}>
-                        <td>
-                          <button type="button" className="link-button" onClick={() => openAlert(alert.id)}>
-                            {alert.name}
-                          </button>
-                        </td>
-                        <td className="nowrap">
-                          {alert.newCount > 0 ? (
-                            <strong>
-                              {alert.newCount} nouvelle{alert.newCount > 1 ? "s" : ""}
-                            </strong>
-                          ) : (
-                            <span className="muted">Aucune nouvelle</span>
-                          )}
-                        </td>
-                        <td className="nowrap muted">{alert.matchCount} en cours</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              <p>
-                <Link href="/alerts">Gérer mes veilles</Link>
-              </p>
-            </section>
-          )}
-
-          {available("awards") && (
-            <section className="card">
-              <h2>Derniers marchés attribués</h2>
-              {awards.data?.content.length === 0 && <p className="muted">Aucune attribution.</p>}
-              {awards.data && awards.data.content.length > 0 && (
-                <table>
-                  <tbody>
-                    {awards.data.content.map((award) => (
-                      <tr key={award.id}>
-                        <td>
-                          {award.tenderId ? (
-                            <Link href={tenderHref(award.tenderId, "/")}>{award.title}</Link>
-                          ) : (
-                            award.title
-                          )}
-                          <div className="small muted">
-                            {award.winner} · {award.buyer}
-                          </div>
-                        </td>
-                        <td className="nowrap">{formatAmount(award.amount)}</td>
-                        <td className="nowrap">{formatDate(award.awardedAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              <p>
-                <Link href="/awards">Voir les marchés attribués</Link>
-              </p>
-            </section>
-          )}
-        </div>
-      )}
     </>
   );
 }

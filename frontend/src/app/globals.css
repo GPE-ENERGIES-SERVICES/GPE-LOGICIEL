@@ -768,6 +768,72 @@ select {
   cursor: pointer;
 }
 
+/* The open list in the colours of the app, where the browser lets it be styled
+   (Chrome, Edge); elsewhere it stays the list of the system. */
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select:not([multiple]) {
+    display: inline-flex;
+    align-items: center;
+    padding-right: 0.65rem;
+    background-image: none;
+  }
+
+  select::picker-icon {
+    content: "";
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-left: auto;
+    padding-left: 0.6rem;
+    background: var(--chevron) center / contain no-repeat;
+    transition: rotate var(--transition);
+  }
+
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+
+  ::picker(select) {
+    margin-top: 0.25rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--foreground);
+    box-shadow: var(--shadow-lg);
+  }
+
+  option {
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  option:hover,
+  option:focus-visible {
+    background: var(--row-hover);
+    outline: none;
+  }
+
+  option:checked {
+    background: var(--primary-soft);
+    font-weight: 500;
+  }
+
+  option::checkmark {
+    color: var(--primary);
+  }
+
+  /* Its icon takes the room the drawn chevron needed. */
+  .tender-table select:not([multiple]) {
+    padding-right: 0.5rem;
+  }
+}
+
 input[type="checkbox"],
 input[type="radio"] {
   min-height: 0;
@@ -878,10 +944,11 @@ legend {
   margin: 1rem 0 0.25rem;
 }
 
+/* Bottom edges: a button lines up with the field under its label, not with the label. */
 .inline-form {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
@@ -1310,8 +1377,8 @@ td.number {
   background: var(--row-hover);
 }
 
-.tender-table th:first-child,
-.tender-table td:first-child {
+/* The star column only: the other tables start with the title, which needs the room. */
+.tender-table .follow-cell {
   width: 2.5rem;
   padding-right: 0;
 }
@@ -1323,7 +1390,7 @@ td.number {
 }
 
 .tender-title {
-  min-width: 12.5rem;
+  min-width: 18rem;
 }
 
 .tender-title a {
@@ -2694,6 +2761,12 @@ th.number {
   white-space: nowrap;
 }
 
+/* A typed cell is the field itself: its focus frame fills the whole cell, as in a spreadsheet. */
+.estimate-grid td:has(> input),
+.estimate-grid td.col-number:has(> input) {
+  padding: 0;
+}
+
 .estimate-grid .col-actions {
   width: 13rem;
   padding: 0 0.3rem;
@@ -3060,7 +3133,7 @@ th.number {
 .memoir-header-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.5rem;
 }
 
@@ -4279,4 +4352,16 @@ select.status-dismissed {
     align-items: flex-start;
     padding-top: 4rem;
   }
+}
+
+/* Administratif: the forms of a tender, one under the other */
+.admin-forms {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-forms > li {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 0;
 }

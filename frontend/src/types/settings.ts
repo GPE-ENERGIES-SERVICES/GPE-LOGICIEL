@@ -40,6 +40,8 @@ export type FilterCriteria = {
   excludedKeywords: string[];
   minAmount: number | null;
   maxAmount: number | null;
+  /** Domains (ELECTRICITY, PHOTOVOLTAIC), one of which a tender must belong to; empty for any. */
+  activities?: string[];
   updatedAt?: string;
   updatedBy?: string | null;
 };

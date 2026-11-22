@@ -52,7 +52,14 @@ public final class AnalysisReport {
 	 * an estimate, not the invoice of the provider; null when prices are not
 	 * set
 	 */
-	public record Consumption(long inputTokens, long outputTokens, BigDecimal estimatedCost) {
+	public record Consumption(long inputTokens, long outputTokens, BigDecimal estimatedCost, List<Use> byUse) {
+	}
+
+	/**
+	 * @param kind kind of analysis (DCE_SUMMARY...) or of assistance (ESTIMATE_SUPPLY, MEMOIR_SECTION...)
+	 * @param estimatedCost null when prices are not set
+	 */
+	public record Use(String kind, long inputTokens, long outputTokens, BigDecimal estimatedCost) {
 	}
 
 	/**

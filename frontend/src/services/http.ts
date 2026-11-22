@@ -23,7 +23,7 @@ export type Feature =
   | "awards"
   /** Search in the text of the documents of a consultation. */
   | "documentSearch"
-  /** Type of works filter, from the activities of the company. */
+  /** Domain filter (CFO / CFA, PV), classified by rules at the collect and confirmed by the AI. */
   | "activity"
   /** Distance from the headquarters: filter and sort. */
   | "distance"
@@ -35,7 +35,6 @@ export type Feature =
 const NOT_IN_BACKEND = new Set<Feature>([
   "awards",
   "documentSearch",
-  "activity",
   "distance",
   "relevance",
   "noticeDetails",

@@ -257,11 +257,133 @@ class FormServiceTests {
 	}
 
 	@Test
+	void aFormFilledByTheAiWaitsForAUserWhoValidatesIt() {
+		Long piece = piece();
+		assertThat(service.view(piece).status()).isEqualTo("TODO");
+		assertThat(service.start(piece, "2", true, "Marie").status()).isEqualTo("TO_VALIDATE");
+
+		FormResponse validated = service.review(piece, FormService.Decision.VALIDATE, null, "Paul");
+
+		assertThat(validated.status()).isEqualTo("VALIDATED");
+		assertThat(validated.reviewedBy()).isEqualTo("Paul");
+		ResponseService.PieceResponse joined = responses.view(tenderId).pieces().getFirst();
+		assertThat(joined.fileName()).isEqualTo("26-13-AE - lot 2 - rempli.docx");
+		assertThat(joined.state()).isEqualTo(ResponseService.PieceState.READY);
+		// Locked until reopened.
+		Long siret = field(validated, "SIRET : …").id();
+		assertThat(org.assertj.core.api.Assertions.catchThrowable(() -> service.change(siret, "1", false)))
+			.hasMessageContaining("rouvrez-le");
+		assertThat(org.assertj.core.api.Assertions.catchThrowable(() -> service.start(piece, "2", true, "Marie")))
+			.hasMessageContaining("rouvrez-le");
+
+		assertThat(service.review(piece, FormService.Decision.REOPEN, null, "Paul").status()).isEqualTo("IN_PROGRESS");
+		assertThat(responses.view(tenderId).pieces().getFirst().state()).isEqualTo(ResponseService.PieceState.TO_CHECK);
+		assertThat(service.change(siret, "99999999900011", false).value()).isEqualTo("99999999900011");
+	}
+
+	@Test
+	void aRejectionSaysWhyAndTheAiReadsItWhenItFillsAgain() {
+		Long piece = piece();
+		service.start(piece, null, true, "Marie");
+		assertThat(org.assertj.core.api.Assertions
+			.catchThrowable(() -> service.review(piece, FormService.Decision.REJECT, " ", "Paul")))
+			.hasMessageContaining("pourquoi");
+
+		FormResponse rejected = service.review(piece, FormService.Decision.REJECT, "Le lot est le 3", "Paul");
+		assertThat(rejected.status()).isEqualTo("REJECTED");
+		assertThat(rejected.reviewComment()).isEqualTo("Le lot est le 3");
+		assertThat(org.assertj.core.api.Assertions
+			.catchThrowable(() -> service.review(piece, FormService.Decision.VALIDATE, null, "Paul")))
+			.hasMessageContaining("refusé");
+
+		assertThat(service.start(piece, "3", true, "Marie").status()).isEqualTo("TO_VALIDATE");
+		ArgumentCaptor<ExtractionRequest> sent = ArgumentCaptor.forClass(ExtractionRequest.class);
+		verify(client, org.mockito.Mockito.times(2)).complete(sent.capture());
+		assertThat(sent.getAllValues().getFirst().documents()).doesNotContain("remarque_du_relecteur");
+		assertThat(sent.getValue().documents()).contains("\"remarque_du_relecteur\":\"Le lot est le 3\"");
+	}
+
+	@Test
+	void aFormFilledByHandIsInProgressAndACorrectionAfterARejectionToo() {
+		Long piece = piece();
+		FormResponse form = service.start(piece, null, false, "Marie");
+		assertThat(form.status()).isEqualTo("IN_PROGRESS");
+		assertThat(form.filledByAi()).isFalse();
+		assertThat(org.assertj.core.api.Assertions
+			.catchThrowable(() -> service.review(piece, FormService.Decision.REJECT, "Non", "Paul")))
+			.hasMessageContaining("à valider");
+
+		service.start(piece, null, true, "Marie");
+		service.review(piece, FormService.Decision.REJECT, "Adresse fausse", "Paul");
+		service.change(field(service.view(piece), "SIRET : …").id(), SIRET, false);
+
+		assertThat(service.view(piece).status()).isEqualTo("IN_PROGRESS");
+		assertThat(service.view(piece).filledByAi()).isTrue();
+		assertThat(service.review(piece, FormService.Decision.VALIDATE, null, "Paul").status()).isEqualTo("VALIDATED");
+	}
+
+	@Test
+	void listsTheFormsToFillOfEveryAnswerWithWhereTheyStand() {
+		Long form = piece();
+		responses.add(tenderId, ResponsePiece.Category.APPLICATION, "Extrait Kbis", "Marie");
+		service.start(form, null, true, "Marie");
+
+		assertThat(service.overview(null)).singleElement().satisfies((line) -> {
+			assertThat(line.pieceId()).isEqualTo(form);
+			assertThat(line.tenderTitle()).isEqualTo("Toiture");
+			assertThat(line.status()).isEqualTo("TO_VALIDATE");
+			// No e-mail, an unknown key, no validated estimate, the advance to choose.
+			assertThat(line.missing()).isEqualTo(4);
+			assertThat(line.toCheck()).isEqualTo(1);
+		});
+		assertThat(service.overview(tenderId + 1)).isEmpty();
+		assertThat(mvc.get()
+			.uri("/api/administrative-forms?tenderId={id}", tenderId)
+			.with(TestUsers.user())).hasStatusOk().bodyJson().extractingPath("$[0].status").isEqualTo("TO_VALIDATE");
+		assertThat(mvc.post()
+			.uri("/api/response-pieces/{id}/form/review", form)
+			.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+			.content("{\"decision\": \"REJECT\", \"comment\": \"Lot faux\"}")
+			.with(TestUsers.user())
+			.with(csrf())).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("REJECTED");
+	}
+
+	@Test
+	void findsTheOtherFormsInTheFileByTheWordsOfTheirLabel() {
+		var honour = document("DCE/05_Declaration_sur_honneur.docx");
+		var visit = document("DCE/Attestation de visite.doc");
+		var engagement = document("DCE/26-13-AE.docx");
+		List<eu.gpefrance.tenders.document.Document> file = List.of(engagement, visit, honour);
+
+		assertThat(FormService.closest("Déclaration sur l'honneur", file)).contains(honour);
+		assertThat(FormService.closest("Attestation de visite du site", file)).contains(visit);
+		// Not half of its words in any name: nothing rather than a wrong form.
+		assertThat(FormService.closest("Fiche de liaison sous-traitance", file)).isEmpty();
+		assertThat(FormService.closest("Formulaire", file)).isEmpty();
+	}
+
+	private static eu.gpefrance.tenders.document.Document document(String name) {
+		var document = org.mockito.Mockito.mock(eu.gpefrance.tenders.document.Document.class);
+		given(document.getFileName()).willReturn(name);
+		return document;
+	}
+
+	@Test
 	void recognisesTheFormsItCanFill() {
 		assertThat(FormService.fillable("Formulaire DC1")).isTrue();
 		assertThat(FormService.fillable("Acte d'engagement")).isTrue();
 		assertThat(FormService.fillable("DUME")).isFalse();
 		assertThat(FormService.fillable("Extrait Kbis")).isFalse();
+		// The other documents of the buyer to fill.
+		assertThat(FormService.fillable("Déclaration sur l'honneur")).isTrue();
+		assertThat(FormService.fillable("Attestation de visite")).isTrue();
+		assertThat(FormService.fillable("Cadre de réponse administratif")).isTrue();
+		assertThat(FormService.fillable("Fiche de liaison")).isTrue();
+		// Not a form: an official document of the company, the prices, the memoir.
+		assertThat(FormService.fillable("Déclaration des moyens humains")).isFalse();
+		assertThat(FormService.fillable("Attestation d'assurance décennale")).isFalse();
+		assertThat(FormService.fillable("DPGF")).isFalse();
+		assertThat(FormService.fillable("Mémoire technique")).isFalse();
 		assertThat(FormService.outputName("DCE/26-13-DC2.doc", null)).isEqualTo("26-13-DC2 - rempli.docx");
 	}
 

@@ -82,7 +82,7 @@ export function TenderResults({ data, loading, params, onNavigate, caption, empt
           <table className="tender-table">
             <thead>
               <tr>
-                <th aria-label="Suivi" />
+                <th aria-label="Suivi" className="follow-cell" />
                 <th>Appel d&apos;offres</th>
                 <th>Lieu</th>
                 <th>Travaux</th>

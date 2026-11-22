@@ -95,7 +95,12 @@ public class AnalysisReports {
 						properties.maxConcurrentRequests(), properties.maxAttempts(),
 						properties.requestTimeout().toSeconds(), properties.monthlyBudget(), properties.pricesSet()),
 				queue, new Consumption(month.getInput(), month.getOutput(),
-						properties.cost(month.getInput(), month.getOutput())));
+						properties.cost(month.getInput(), month.getOutput()),
+						gate.monthToDateByKind()
+							.stream()
+							.map(use -> new AnalysisReport.Use(use.getKind(), use.getInput(), use.getOutput(),
+									properties.cost(use.getInput(), use.getOutput())))
+							.toList()));
 	}
 
 	@Transactional(readOnly = true)

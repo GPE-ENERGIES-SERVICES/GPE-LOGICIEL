@@ -1,4 +1,12 @@
-import type { FormField, PieceCategory, ResponseForm, ResponseSummary, ResponseView } from "@/types/response";
+import type {
+  AdministrativeForm,
+  FormDecision,
+  FormField,
+  PieceCategory,
+  ResponseForm,
+  ResponseSummary,
+  ResponseView,
+} from "@/types/response";
 
 import { api, upload } from "./http";
 
@@ -39,6 +47,16 @@ export function uploadPieceFile(id: number, file: File): Promise<ResponseView> {
   const form = new FormData();
   form.append("file", file);
   return upload(`/api/response-pieces/${id}/file`, form);
+}
+
+/** The forms to fill of every answer begun, or of one tender. */
+export function getAdministrativeForms(tenderId?: number): Promise<AdministrativeForm[]> {
+  return api(`/api/administrative-forms${tenderId ? `?tenderId=${tenderId}` : ""}`);
+}
+
+/** Validating writes the Word, joins it and checks the piece; a rejection needs its reason. */
+export function reviewForm(pieceId: number, body: { decision: FormDecision; comment?: string }): Promise<ResponseForm> {
+  return api(`/api/response-pieces/${pieceId}/form/review`, { method: "POST", body });
 }
 
 export function getForm(pieceId: number): Promise<ResponseForm> {

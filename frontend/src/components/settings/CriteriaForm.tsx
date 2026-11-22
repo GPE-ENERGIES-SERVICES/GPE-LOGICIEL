@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
-import { formatDateTime, MARKET_TYPE_LABELS } from "@/lib/format";
+import { ACTIVITY_LABELS, formatDateTime, MARKET_TYPE_LABELS } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { getFilterCriteria, saveFilterCriteria } from "@/services/settingsApi";
 import type { FilterCriteria } from "@/types/settings";
@@ -23,6 +23,7 @@ function toNumber(text: string): number | null {
 function CriteriaFields({ criteria, onSaved }: { criteria: FilterCriteria; onSaved: () => void }) {
   const [departments, setDepartments] = useState(criteria.departments.join(", "));
   const [marketTypes, setMarketTypes] = useState<MarketType[]>(criteria.marketTypes);
+  const [activities, setActivities] = useState<string[]>(criteria.activities ?? []);
   const [minDays, setMinDays] = useState(criteria.minDaysBeforeDeadline?.toString() ?? "");
   const [cpvPrefixes, setCpvPrefixes] = useState(criteria.cpvPrefixes.join(", "));
   const [keywords, setKeywords] = useState(criteria.keywords.join("\n"));
@@ -34,6 +35,8 @@ function CriteriaFields({ criteria, onSaved }: { criteria: FilterCriteria; onSav
 
   const toggleMarketType = (type: MarketType) =>
     setMarketTypes((current) => (current.includes(type) ? current.filter((t) => t !== type) : [...current, type]));
+  const toggleActivity = (code: string) =>
+    setActivities((current) => (current.includes(code) ? current.filter((c) => c !== code) : [...current, code]));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -43,6 +46,7 @@ function CriteriaFields({ criteria, onSaved }: { criteria: FilterCriteria; onSav
       await saveFilterCriteria({
         departments: toList(departments),
         marketTypes,
+        activities,
         minDaysBeforeDeadline: toNumber(minDays),
         cpvPrefixes: toList(cpvPrefixes),
         keywords: toList(keywords),
@@ -88,6 +92,17 @@ function CriteriaFields({ criteria, onSaved }: { criteria: FilterCriteria; onSav
                   onChange={() => toggleMarketType(type)}
                 />
                 {MARKET_TYPE_LABELS[type]}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="field">
+          <span>Domaines</span>
+          <div className="checkboxes">
+            {Object.entries(ACTIVITY_LABELS).map(([code, label]) => (
+              <label key={code} className="inline">
+                <input type="checkbox" checked={activities.includes(code)} onChange={() => toggleActivity(code)} />
+                {label}
               </label>
             ))}
           </div>

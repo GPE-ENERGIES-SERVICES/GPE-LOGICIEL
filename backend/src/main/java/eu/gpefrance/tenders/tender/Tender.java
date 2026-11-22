@@ -108,6 +108,15 @@ public class Tender {
 
 	private Boolean retained;
 
+	/** Domains of GPE (ELECTRICITY, PHOTOVOLTAIC), see the filter's DomainRules. */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(nullable = false)
+	private List<String> activities = new ArrayList<>();
+
+	/** RULES, AI or MANUAL; null while never classified. A user wins over the AI, the AI over the rules. */
+	@Column(name = "activities_source")
+	private String activitiesSource;
+
 	@Column(name = "filter_reason")
 	private String filterReason;
 
@@ -290,6 +299,36 @@ public class Tender {
 		this.retained = retained;
 		this.filterReason = reason;
 		this.filteredAt = now;
+	}
+
+	/** The domains found by the rules, unless the AI or a user already gave them. */
+	public void classifyByRules(List<String> domains) {
+		if (activitiesSource == null || "RULES".equals(activitiesSource)) {
+			activities = new ArrayList<>(domains);
+			activitiesSource = "RULES";
+		}
+	}
+
+	/** The domains read by the AI in the consultation file: they replace those of the rules, not a user's. */
+	public void classifyByAi(List<String> domains) {
+		if (!"MANUAL".equals(activitiesSource)) {
+			activities = new ArrayList<>(domains);
+			activitiesSource = "AI";
+		}
+	}
+
+	/** The domains chosen by a user: nothing replaces them afterwards. */
+	public void classifyByHand(List<String> domains) {
+		activities = new ArrayList<>(domains);
+		activitiesSource = "MANUAL";
+	}
+
+	public List<String> getActivities() {
+		return Collections.unmodifiableList(activities);
+	}
+
+	public String getActivitiesSource() {
+		return activitiesSource;
 	}
 
 	public void followUp(FollowUpStatus status, String comment, String user, Instant now) {

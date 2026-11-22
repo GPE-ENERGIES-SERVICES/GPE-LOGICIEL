@@ -53,7 +53,7 @@ export function TenderRow({ tender, href, onFollowUp, onFollowChanged, busy }: P
 
   return (
     <tr>
-      <td>
+      <td className="follow-cell">
         <FollowButton
           key={String(tender.followed)}
           tenderId={tender.id}

@@ -202,7 +202,7 @@ const PROJECTS: Project[] = [
       "d'autoconsommation collective, avec la personne morale organisatrice et le suivi de production.",
   },
   {
-    activities: ["EV_CHARGING", "ELECTRICITY"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Déploiement de bornes de recharge pour véhicules électriques sur l'espace public de {city}",
     buyers: ["commune", "intercommunality", "energySyndicate"],
@@ -214,7 +214,7 @@ const PROJECTS: Project[] = [
       "associé, signalétique, supervision interopérable et maintenance.",
   },
   {
-    activities: ["EV_CHARGING"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Installation de bornes de recharge pour la flotte de véhicules {site}",
     sites: ["technical", "hospital", "fireStation"],
@@ -226,7 +226,7 @@ const PROJECTS: Project[] = [
       "pour limiter la puissance souscrite et badges d'identification des agents.",
   },
   {
-    activities: ["HEATING"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Remplacement de la chaufferie {site}",
     sites: ["school", "college", "lycee", "gym", "pool", "housing", "hospital"],
@@ -238,7 +238,7 @@ const PROJECTS: Project[] = [
       "réseaux hydrauliques en chaufferie, régulation communicante et raccordement à la GTB.",
   },
   {
-    activities: ["HEATING", "ENERGY_RENOVATION"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Installation de pompes à chaleur air/eau {site}",
     sites: ["school", "college", "townhall", "nursery", "library"],
@@ -250,7 +250,7 @@ const PROJECTS: Project[] = [
       "reprise des émetteurs et de la régulation, éligible aux certificats d'économies d'énergie.",
   },
   {
-    activities: ["AIR_CONDITIONING"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Rafraîchissement des salles de classe {site}",
     sites: ["school", "college", "lycee"],
@@ -262,7 +262,7 @@ const PROJECTS: Project[] = [
       "en toiture, alimentation électrique dédiée et régulation par sondes de température.",
   },
   {
-    activities: ["AIR_CONDITIONING"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Remplacement des groupes froids {site}",
     sites: ["hospital", "library", "pool", "townhall"],
@@ -274,7 +274,7 @@ const PROJECTS: Project[] = [
       "frigorigène à faible potentiel de réchauffement, avec maintien de la production pendant les travaux.",
   },
   {
-    activities: ["ENERGY_RENOVATION", "HEATING", "ELECTRICITY"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Rénovation énergétique {site}",
     sites: ["school", "college", "lycee", "gym", "townhall", "library"],
@@ -286,7 +286,7 @@ const PROJECTS: Project[] = [
       "par l'extérieur, menuiseries, ventilation double flux, production de chaleur et éclairage LED.",
   },
   {
-    activities: ["ENERGY_RENOVATION", "HEATING"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Réhabilitation thermique {site}",
     sites: ["housing"],
@@ -298,7 +298,7 @@ const PROJECTS: Project[] = [
       "des menuiseries, ventilation hygroréglable et remplacement des chaudières individuelles.",
   },
   {
-    activities: ["PUBLIC_LIGHTING"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Rénovation de l'éclairage public en LED de {city}",
     buyers: ["commune", "intercommunality", "energySyndicate"],
@@ -310,7 +310,7 @@ const PROJECTS: Project[] = [
       "nuit, remplacement des armoires de commande et mise à jour de la cartographie du réseau.",
   },
   {
-    activities: ["NETWORKS", "PUBLIC_LIGHTING"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Enfouissement des réseaux secs du centre ancien de {city}",
     buyers: ["commune", "energySyndicate"],
@@ -322,7 +322,7 @@ const PROJECTS: Project[] = [
       "branchements des riverains et pose d'un nouvel éclairage public.",
   },
   {
-    activities: ["VRD", "NETWORKS"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Aménagement VRD de la zone d'activités de {city}",
     buyers: ["commune", "intercommunality"],
@@ -334,7 +334,7 @@ const PROJECTS: Project[] = [
       "d'une extension de zone d'activités d'une dizaine d'hectares.",
   },
   {
-    activities: ["VRD"],
+    activities: ["ELECTRICITY"],
     marketType: "WORKS",
     title: "Requalification de l'avenue Jean Jaurès à {city}",
     buyers: ["commune", "intercommunality"],
@@ -346,7 +346,7 @@ const PROJECTS: Project[] = [
       "réseaux et de l'éclairage public, avec maintien de la circulation par demi-chaussée.",
   },
   {
-    activities: ["MAINTENANCE", "ELECTRICITY", "HEATING"],
+    activities: ["ELECTRICITY"],
     marketType: "SERVICES",
     title: "Maintenance des installations électriques et de chauffage des bâtiments de {city}",
     buyers: ["commune"],
@@ -358,7 +358,7 @@ const PROJECTS: Project[] = [
       "communal, sous forme d'accord-cadre à bons de commande d'une durée de quatre ans.",
   },
   {
-    activities: ["MAINTENANCE", "PHOTOVOLTAIC"],
+    activities: ["ELECTRICITY", "PHOTOVOLTAIC"],
     marketType: "SERVICES",
     title: "Maintenance préventive et corrective des installations photovoltaïques",
     buyers: ["commune", "intercommunality", "department"],
@@ -370,7 +370,7 @@ const PROJECTS: Project[] = [
       "thermographie, suivi de production et remplacement des onduleurs défaillants.",
   },
   {
-    activities: ["MAINTENANCE", "EV_CHARGING"],
+    activities: ["ELECTRICITY"],
     marketType: "SERVICES",
     title: "Exploitation et maintenance des bornes de recharge",
     buyers: ["intercommunality", "energySyndicate"],
@@ -382,7 +382,7 @@ const PROJECTS: Project[] = [
       "et assistance aux usagers 24 h/24.",
   },
   {
-    activities: ["STUDIES", "ENERGY_RENOVATION"],
+    activities: ["ELECTRICITY"],
     marketType: "SERVICES",
     title: "Mission de maîtrise d'œuvre pour la rénovation énergétique {site}",
     sites: ["school", "college", "lycee", "gym"],
@@ -394,7 +394,7 @@ const PROJECTS: Project[] = [
       "rénovation énergétique, avec simulation thermique dynamique.",
   },
   {
-    activities: ["STUDIES"],
+    activities: ["ELECTRICITY"],
     marketType: "SERVICES",
     title: "Audit énergétique du patrimoine bâti de {city}",
     buyers: ["commune"],
@@ -406,7 +406,7 @@ const PROJECTS: Project[] = [
       "pour les déclarations sur la plateforme OPERAT.",
   },
   {
-    activities: ["STUDIES", "PHOTOVOLTAIC"],
+    activities: ["ELECTRICITY", "PHOTOVOLTAIC"],
     marketType: "SERVICES",
     title: "Étude de faisabilité photovoltaïque sur le patrimoine de {city}",
     buyers: ["commune", "intercommunality"],

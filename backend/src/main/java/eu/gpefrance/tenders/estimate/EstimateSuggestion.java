@@ -26,6 +26,9 @@ public class EstimateSuggestion {
 		/** An offer of the catalogues for an item, with its quantity per unit. */
 		SUPPLY,
 
+		/** A unit price of the price library for an item, updated to this year. */
+		PRICE,
+
 		/** A point to check. */
 		CHECK
 
@@ -56,6 +59,13 @@ public class EstimateSuggestion {
 
 	@Column(updatable = false)
 	private BigDecimal quantity;
+
+	@Column(name = "library_item_id", updatable = false)
+	private Long libraryItemId;
+
+	/** The price proposed (PRICE), already updated. */
+	@Column(updatable = false)
+	private BigDecimal price;
 
 	@Column(nullable = false, updatable = false)
 	private String text;
@@ -91,6 +101,16 @@ public class EstimateSuggestion {
 		this.createdAt = now;
 	}
 
+	/** A price of the library for an item. */
+	static EstimateSuggestion price(Long estimateId, Long itemId, Long libraryItemId, BigDecimal price, String text,
+			String model, Instant now) {
+		EstimateSuggestion suggestion = new EstimateSuggestion(estimateId, itemId, Kind.PRICE, null, null, text, model,
+				now);
+		suggestion.libraryItemId = libraryItemId;
+		suggestion.price = price;
+		return suggestion;
+	}
+
 	void decide(Status status, String user, Instant now) {
 		this.status = status;
 		this.decidedBy = user;
@@ -98,11 +118,13 @@ public class EstimateSuggestion {
 	}
 
 	public record Response(Long id, Long itemId, Kind kind, Long offerId, BigDecimal quantity, String text,
-			Status status, String model, Instant createdAt, String decidedBy, Instant decidedAt) {
+			Status status, String model, Instant createdAt, String decidedBy, Instant decidedAt, Long libraryItemId,
+			BigDecimal price) {
 	}
 
 	Response response() {
-		return new Response(id, itemId, kind, offerId, quantity, text, status, model, createdAt, decidedBy, decidedAt);
+		return new Response(id, itemId, kind, offerId, quantity, text, status, model, createdAt, decidedBy, decidedAt,
+				libraryItemId, price);
 	}
 
 	public Long getId() {
@@ -123,6 +145,18 @@ public class EstimateSuggestion {
 
 	public Long getOfferId() {
 		return offerId;
+	}
+
+	public Long getLibraryItemId() {
+		return libraryItemId;
+	}
+
+	public BigDecimal getPrice() {
+		return price;
+	}
+
+	public String getText() {
+		return text;
 	}
 
 	public BigDecimal getQuantity() {

@@ -230,9 +230,9 @@ class AnalysisApiTests {
 					{"done": 1, "failed": 0, "totalCost": 0.006, "averageCost": 0.006}""");
 		assertThat(mvc.get().uri("/api/analyses/quality").with(TestUsers.admin()))
 			.bodyJson()
-			.extractingPath("$.fields[0]")
-			.isEqualTo(Map.of("key", "deadline", "label", "Date et heure limite de remise des offres",
-					"answers", 1, "verified", 1, "notIndicated", 0, "validated", 1, "corrected", 0, "rejected", 0));
+			.extractingPath("$.fields[?(@.key == 'deadline')]")
+			.isEqualTo(List.of(Map.of("key", "deadline", "label", "Date et heure limite de remise des offres",
+					"answers", 1, "verified", 1, "notIndicated", 0, "validated", 1, "corrected", 0, "rejected", 0)));
 	}
 
 	private MvcTestResult decide(Long fieldId, String body) {

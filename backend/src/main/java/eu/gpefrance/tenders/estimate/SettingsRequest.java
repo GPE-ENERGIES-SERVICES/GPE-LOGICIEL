@@ -14,6 +14,7 @@ import jakarta.validation.constraints.NotNull;
  * @param agencyFeeRate agency fees, a share of the sale price
  * @param overheadRate overheads, a share of the sale price
  * @param serviceFeeRate service fees, a share of the sale price
+ * @param priceIndexRate annual rate updating the prices of the library from their year
  */
 public record SettingsRequest(
 		@DecimalMin("0") @DecimalMax(value = "1", inclusive = false) @Digits(integer = 1,
@@ -25,7 +26,9 @@ public record SettingsRequest(
 		@DecimalMin("0") @DecimalMax(value = "1", inclusive = false) @Digits(integer = 1,
 				fraction = 4) BigDecimal overheadRate,
 		@DecimalMin("0") @DecimalMax(value = "1", inclusive = false) @Digits(integer = 1,
-				fraction = 4) BigDecimal serviceFeeRate) {
+				fraction = 4) BigDecimal serviceFeeRate,
+		@DecimalMin(value = "-1", inclusive = false) @DecimalMax(value = "1", inclusive = false) @Digits(integer = 1,
+				fraction = 4) BigDecimal priceIndexRate) {
 
 	Map<ComponentType, BigDecimal> coefficientsOrEmpty() {
 		return coefficients == null ? Map.of() : coefficients;

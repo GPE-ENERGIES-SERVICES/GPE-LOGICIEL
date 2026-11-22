@@ -6,7 +6,10 @@ import { Fragment, Suspense, useRef, useState, useSyncExternalStore, type ReactN
 
 import { PRODUCT_NAME } from "@/lib/brand";
 import { useLoader } from "@/lib/useLoader";
+import { getAlerts } from "@/services/alertApi";
 import { getDuplicateGroups } from "@/services/duplicateApi";
+import { getAdministrativeForms } from "@/services/responseApi";
+import { available } from "@/services/http";
 
 import { useAuth } from "./AuthProvider";
 import { CollectDelayAlert } from "./CollectDelayAlert";
@@ -31,9 +34,11 @@ const SECTIONS: Section[] = [
   { href: "/awards", label: "Marchés attribués", icon: "award", group: "Appels d'offres" },
   { href: "/archives", label: "Archives", icon: "archive", group: "Appels d'offres" },
   { href: "/estimates", label: "Chiffrages", icon: "calculator", group: "Chiffrage" },
+  { href: "/price-library", label: "Bibliothèque de prix", icon: "archive", group: "Chiffrage" },
   { href: "/suppliers", label: "Tarifs fournisseurs", icon: "tag", group: "Chiffrage", admin: true },
   { href: "/memoirs", label: "Mémoires", icon: "file", group: "Mémoire technique" },
   { href: "/memoirs/library", label: "Bibliothèque", icon: "archive", group: "Mémoire technique" },
+  { href: "/administrative", label: "Administratif", icon: "clipboard", group: "Réponse" },
   { href: "/responses", label: "Dossiers de réponse", icon: "archive", group: "Réponse" },
   { href: "/company", label: "Entreprise", icon: "building", separator: true },
   { href: "/supervision", label: "Supervision", icon: "eye", admin: true, separator: true },
@@ -179,7 +184,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sections = SECTIONS.filter((section) => !section.admin || admin);
   // shortcut: read when the application opens, not again after each decision; a reload updates it.
   const duplicates = useLoader(() => (admin ? getDuplicateGroups() : Promise.resolve([])), "nav-duplicates");
-  const badges = { "/supervision": duplicates.data?.length ?? 0 };
+  // shortcut: same as the duplicates, read when the application opens; a reload updates it.
+  const alerts = useLoader(() => (available("alerts") ? getAlerts() : Promise.resolve([])), "nav-alerts");
+  // shortcut: same as the duplicates, read when the application opens; a reload updates it.
+  const forms = useLoader(() => getAdministrativeForms(), "nav-administrative");
+  const badges = {
+    "/administrative": (forms.data ?? []).filter((form) => form.status === "TO_VALIDATE").length,
+    "/supervision": duplicates.data?.length ?? 0,
+    "/alerts": (alerts.data ?? []).filter((alert) => alert.active).reduce((sum, alert) => sum + alert.newCount, 0),
+  };
   // The navigation is a drawer on small screens only.
   const [menuOpen, setMenuOpen] = useState(false);
   // On large screens: the menu reduced to its icons, or unfolded.

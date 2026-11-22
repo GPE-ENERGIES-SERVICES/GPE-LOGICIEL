@@ -35,6 +35,7 @@ final class TenderFilter {
 		checkMarketType(tender, criteria, reasons, failures);
 		checkTimeLeft(tender, criteria, now, reasons, failures);
 		checkAmount(tender, criteria, reasons, failures);
+		checkDomains(tender, criteria, reasons, failures);
 
 		TextMatcher text = new TextMatcher(searchableText(tender));
 		List<String> excluded = criteria.getExcludedKeywords().stream().filter(text::contains).toList();
@@ -70,8 +71,8 @@ final class TenderFilter {
 	 * Unlike the criteria of the company, information missing from the
 	 * tender does not let it pass: the result is then indeterminate, unless
 	 * another criterion already fails. Keywords are looked for as for the
-	 * company; the types of works (activities) are not known for a tender yet,
-	 * so a saved search using them is indeterminate at best.
+	 * company; the domains are those classified at the filtering, unknown for
+	 * a tender not filtered yet.
 	 */
 	static AlertMatch matchAlert(Tender tender, AlertCriteria criteria) {
 		List<String> reasons = new ArrayList<>();
@@ -100,7 +101,15 @@ final class TenderFilter {
 		}
 
 		if (!criteria.activities().isEmpty()) {
-			unknown.add("types de travaux non évalués");
+			if (tender.getActivitiesSource() == null) {
+				unknown.add("domaine pas encore classé");
+			}
+			else if (tender.getActivities().stream().noneMatch(criteria.activities()::contains)) {
+				failures.add("hors domaine " + domainLabels(criteria.activities()));
+			}
+			else {
+				reasons.add("domaine");
+			}
 		}
 
 		if (criteria.minAmount() != null || criteria.maxAmount() != null) {
@@ -244,10 +253,31 @@ final class TenderFilter {
 		}
 	}
 
+	/** The tender must belong to one of the domains required, as classified before the filtering. */
+	private static void checkDomains(Tender tender, FilterCriteria criteria, List<String> reasons,
+			List<String> failures) {
+		if (criteria.getActivities().isEmpty()) {
+			return;
+		}
+		List<String> matched = tender.getActivities().stream().filter(criteria.getActivities()::contains).toList();
+		if (matched.isEmpty()) {
+			failures.add("hors domaines " + domainLabels(criteria.getActivities()));
+		}
+		else {
+			reasons.add("domaine " + domainLabels(matched));
+		}
+	}
+
+	private static String domainLabels(List<String> domains) {
+		return domains.stream()
+			.map(domain -> DomainRules.PHOTOVOLTAIC.equals(domain) ? "PV" : "CFO / CFA")
+			.collect(Collectors.joining(", "));
+	}
+
 	/**
 	 * Keywords are looked for in the title, the description and the lots.
 	 */
-	private static String searchableText(Tender tender) {
+	static String searchableText(Tender tender) {
 		StringBuilder text = new StringBuilder(tender.getTitle());
 		if (tender.getDescription() != null) {
 			text.append('\n').append(tender.getDescription());

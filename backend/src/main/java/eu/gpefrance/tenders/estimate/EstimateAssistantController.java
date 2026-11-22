@@ -21,8 +21,29 @@ public class EstimateAssistantController {
 
 	private final EstimateAssistant assistant;
 
-	public EstimateAssistantController(EstimateAssistant assistant) {
+	private final LibraryPriceService libraryPrices;
+
+	public EstimateAssistantController(EstimateAssistant assistant, LibraryPriceService libraryPrices) {
 		this.assistant = assistant;
+		this.libraryPrices = libraryPrices;
+	}
+
+	/** For every item still without price, the same work in the price library, chosen by the AI. */
+	@PostMapping("/api/estimates/{id}/library-price-suggestions")
+	public List<EstimateSuggestion.Response> suggestLibraryPrices(@PathVariable Long id,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return libraryPrices.suggest(id, user.displayName());
+	}
+
+	public record LibraryPick(@jakarta.validation.constraints.NotNull Long libraryItemId) {
+	}
+
+	/** A line of the price library picked by a user: its price, brought to this year, becomes the item's. */
+	@PostMapping("/api/estimate-items/{itemId}/library-price")
+	public EstimateResponse pickLibraryPrice(@PathVariable Long itemId,
+			@jakarta.validation.Valid @org.springframework.web.bind.annotation.RequestBody LibraryPick pick,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return libraryPrices.pick(itemId, pick.libraryItemId(), user.displayName());
 	}
 
 	@GetMapping("/api/estimate-assistant")

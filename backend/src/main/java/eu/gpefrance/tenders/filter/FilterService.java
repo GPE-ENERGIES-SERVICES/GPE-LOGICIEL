@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import eu.gpefrance.tenders.tender.Tender;
+import eu.gpefrance.tenders.tender.TenderNotFoundException;
 import eu.gpefrance.tenders.tender.TenderRepository;
 
 /**
@@ -94,7 +95,23 @@ public class FilterService {
 					request.minDaysBeforeDeadline(), request.cleanCpvPrefixes(), request.cleanKeywords(),
 					request.cleanExcludedKeywords(), request.minAmount(), request.maxAmount(), updatedBy,
 					clock.instant());
+			criteria.requireActivities(request.cleanActivities());
 			return criteria;
+		});
+	}
+
+	/**
+	 * Gives a tender the domains chosen by a user and filters it again at once:
+	 * a tender left out may come back among the new ones.
+	 */
+	public void classifyByHand(Long tenderId, List<String> domains) {
+		transaction.executeWithoutResult(status -> {
+			Tender tender = tenders.findById(tenderId).orElseThrow(() -> new TenderNotFoundException(tenderId));
+			tender.classifyByHand(domains);
+			if (!Tender.MANUAL_SOURCE.equals(tender.getSource())) {
+				FilterResult result = TenderFilter.apply(tender, criteriaRepository.getCurrent(), clock.instant());
+				tender.applyFilter(result.retained(), result.reason(), clock.instant());
+			}
 		});
 	}
 
@@ -105,6 +122,7 @@ public class FilterService {
 			if (Tender.MANUAL_SOURCE.equals(tender.getSource())) {
 				continue;
 			}
+			tender.classifyByRules(DomainRules.of(tender));
 			FilterResult result = TenderFilter.apply(tender, criteria, now);
 			tender.applyFilter(result.retained(), result.reason(), now);
 		}

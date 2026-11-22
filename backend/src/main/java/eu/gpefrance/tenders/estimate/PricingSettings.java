@@ -49,6 +49,10 @@ public class PricingSettings {
 	@Column(name = "service_fee_rate", nullable = false)
 	private BigDecimal serviceFeeRate;
 
+	/** Annual rate updating a price of the library from its year: 0.03 for 3 % a year. */
+	@Column(name = "price_index_rate", nullable = false)
+	private BigDecimal priceIndexRate;
+
 	@Column(name = "updated_by")
 	private String updatedBy;
 
@@ -70,6 +74,9 @@ public class PricingSettings {
 		}
 		if (request.serviceFeeRate() != null) {
 			this.serviceFeeRate = request.serviceFeeRate();
+		}
+		if (request.priceIndexRate() != null) {
+			this.priceIndexRate = request.priceIndexRate();
 		}
 		this.coefficients.putAll(request.coefficientsOrEmpty());
 		this.updatedBy = user;
@@ -94,6 +101,10 @@ public class PricingSettings {
 
 	public BigDecimal getServiceFeeRate() {
 		return serviceFeeRate;
+	}
+
+	public BigDecimal getPriceIndexRate() {
+		return priceIndexRate;
 	}
 
 	public String getUpdatedBy() {

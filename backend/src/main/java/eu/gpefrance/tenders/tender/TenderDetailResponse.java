@@ -11,6 +11,8 @@ import java.util.List;
  * when unknown
  * @param followed followed by the logged-in user
  * @param mergedIntoId the tender this duplicate was merged into, null otherwise
+ * @param activities domains of GPE (ELECTRICITY, PHOTOVOLTAIC)
+ * @param activitiesSource RULES, AI or MANUAL, null while never classified
  */
 public record TenderDetailResponse(Long id, String source, String externalId, String title, String description,
 		String buyer, String reference, String location, List<String> departments, List<MarketType> marketTypes,
@@ -18,7 +20,8 @@ public record TenderDetailResponse(Long id, String source, String externalId, St
 		Instant deadline, String noticeUrl, String platformUrl, TenderStatus status, Boolean retained,
 		String filterReason, FollowUpStatus followUpStatus, String followUpComment, String followUpBy,
 		Instant followUpAt, List<LotResponse> lots, List<NoticeResponse> notices, ResultResponse result,
-		boolean followed, List<MatchResponse> matches, Long mergedIntoId) {
+		boolean followed, List<MatchResponse> matches, Long mergedIntoId, List<String> activities,
+		String activitiesSource) {
 
 	/**
 	 * @param matches the tenders of other sources proposed or confirmed as the
@@ -41,7 +44,8 @@ public record TenderDetailResponse(Long id, String source, String externalId, St
 					.map(notice -> new NoticeResponse(notice.getSource(), notice.getExternalId(), notice.getKind(),
 							notice.getPublishedAt(), notice.getDeadline(), notice.getDetails()))
 					.toList(),
-				ResultResponse.of(tender), followed, matches, tender.getMergedIntoId());
+				ResultResponse.of(tender), followed, matches, tender.getMergedIntoId(), tender.getActivities(),
+				tender.getActivitiesSource());
 	}
 
 	/**

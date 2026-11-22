@@ -62,10 +62,15 @@ export function PricingPanel() {
       }
       fees[fee.key] = value;
     }
+    const priceIndexRate = parsePercent(String(form.get("priceIndexRate") ?? ""));
+    if (priceIndexRate === null || Number.isNaN(priceIndexRate) || priceIndexRate <= -1 || priceIndexRate >= 1) {
+      setError("Taux d'actualisation des prix invalide.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      await updatePricingSettings({ vatRate, coefficients, ...fees });
+      await updatePricingSettings({ vatRate, coefficients, ...fees, priceIndexRate });
       setMessage("Paramètres enregistrés : ils s'appliquent aux prochains chiffrages.");
       settings.reload();
     } catch (err) {
@@ -111,6 +116,19 @@ export function PricingPanel() {
                 <input name={fee.key} required inputMode="decimal" defaultValue={percentInput(settings.data?.[fee.key])} />
               </label>
             ))}
+          </div>
+          <h3>Bibliothèque de prix</h3>
+          <div className="form-grid">
+            <label>
+              Actualisation par an (%)
+              <input
+                name="priceIndexRate"
+                required
+                inputMode="decimal"
+                defaultValue={percentInput(settings.data.priceIndexRate)}
+                title="Un prix de 2020 repris en 2026 à 3 % par an est multiplié par 1,03⁶"
+              />
+            </label>
           </div>
           <p className="hint">
             Prix de vente = coût × coefficient (frais généraux et marge compris). Les frais ne changent aucun prix :

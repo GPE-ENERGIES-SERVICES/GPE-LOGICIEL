@@ -41,13 +41,14 @@ import jakarta.validation.constraints.PositiveOrZero;
  * @param buyer text contained in the name of the buyer
  * @param year year of publication
  * @param result outcomes of the consultation, see {@link Result}
+ * @param activity domains of GPE (ELECTRICITY, PHOTOVOLTAIC), as classified
  */
 public record TenderSearch(String q, List<String> department, String region, String city,
 		List<MarketType> marketType, List<ProcedureType> procedure, List<FollowUpStatus> status,
 		@PositiveOrZero Integer minDaysLeft, @PositiveOrZero Integer maxDaysLeft,
 		@PositiveOrZero Integer publishedWithinDays, @PositiveOrZero BigDecimal minAmount,
 		@PositiveOrZero BigDecimal maxAmount, Boolean hasLots, String buyer, @Positive Integer year,
-		List<Result> result, @Positive Long alert) {
+		List<Result> result, @Positive Long alert, List<String> activity) {
 
 	/**
 	 * Outcome of a consultation, read as in the detail: AWARDED once an award
@@ -63,12 +64,12 @@ public record TenderSearch(String q, List<String> department, String region, Str
 
 	static TenderSearch none() {
 		return new TenderSearch(null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-				null, null, null);
+				null, null, null, null);
 	}
 
 	TenderSearch withStatus(List<FollowUpStatus> statuses) {
 		return new TenderSearch(q, department, region, city, marketType, procedure, statuses, minDaysLeft,
-				maxDaysLeft, publishedWithinDays, minAmount, maxAmount, hasLots, buyer, year, result, alert);
+				maxDaysLeft, publishedWithinDays, minAmount, maxAmount, hasLots, buyer, year, result, alert, activity);
 	}
 
 	/**
@@ -97,6 +98,11 @@ public record TenderSearch(String q, List<String> department, String region, Str
 			if (marketType != null && !marketType.isEmpty()) {
 				predicates.add(cb.or(marketType.stream()
 					.map(type -> hcb.collectionContains(root.<List<String>>get("marketTypes"), type.name()))
+					.toArray(Predicate[]::new)));
+			}
+			if (activity != null && !activity.isEmpty()) {
+				predicates.add(cb.or(activity.stream()
+					.map(domain -> hcb.collectionContains(root.<List<String>>get("activities"), domain))
 					.toArray(Predicate[]::new)));
 			}
 			if (procedure != null && !procedure.isEmpty()) {

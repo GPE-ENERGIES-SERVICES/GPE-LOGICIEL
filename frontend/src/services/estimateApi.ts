@@ -116,7 +116,7 @@ export function getPricingSettings(): Promise<PricingSettings> {
 }
 
 export function updatePricingSettings(
-  input: Pick<EstimateInput, "vatRate" | "coefficients"> & FeeRates,
+  input: Pick<EstimateInput, "vatRate" | "coefficients"> & FeeRates & { priceIndexRate: number },
 ): Promise<PricingSettings> {
   return api("/api/pricing-settings", { method: "PUT", body: input });
 }
@@ -220,6 +220,16 @@ export function suggestSupplies(itemId: number): Promise<Suggestion[]> {
   return api(`/api/estimate-items/${itemId}/supply-suggestions`, { method: "POST" });
 }
 
+/** For every item without price, the same work in the price library, chosen by the AI. */
+export function suggestLibraryPrices(estimateId: number): Promise<Suggestion[]> {
+  return api(`/api/estimates/${estimateId}/library-price-suggestions`, { method: "POST" });
+}
+
+/** A line of the price library picked by hand: its price, brought to this year, becomes the item's. */
+export function pickLibraryPrice(itemId: number, libraryItemId: number): Promise<Estimate> {
+  return api(`/api/estimate-items/${itemId}/library-price`, { method: "POST", body: { libraryItemId } });
+}
+
 export function reviewEstimate(estimateId: number): Promise<Suggestion[]> {
   return api(`/api/estimates/${estimateId}/review`, { method: "POST" });
 }
@@ -230,4 +240,9 @@ export function acceptSuggestion(id: number): Promise<Estimate> {
 
 export function rejectSuggestion(id: number): Promise<void> {
   return api(`/api/estimate-suggestions/${id}/rejection`, { method: "POST" });
+}
+
+/** What to check in the filled price schedule before sending it, and its total excluding tax. */
+export function checkFilledSchedule(estimateId: number, documentId: number): Promise<{ problems: string[]; total: number | null }> {
+  return api(`/api/estimates/${estimateId}/schedules/${documentId}/check`);
 }

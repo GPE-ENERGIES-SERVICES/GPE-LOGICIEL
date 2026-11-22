@@ -248,6 +248,14 @@ public class AnalysisWorker {
 						proposal.documentId(), proposal.page(), proposal.state()));
 				analysis.recordDecision(decision);
 				analysis.finish(usage.inputTokens(), usage.outputTokens(), clock.instant());
+				// The domain read in the file replaces the one the rules found on the notice.
+				proposals.stream()
+					.filter(proposal -> ExtractionGrid.DOMAIN.equals(proposal.key()) && proposal.value() != null
+							&& (proposal.state() == FieldState.VERIFIED || proposal.state() == FieldState.UNVERIFIED)
+							&& ExtractionGrid.DOMAIN_CHOICES.containsKey(proposal.value()))
+					.findFirst()
+					.ifPresent(proposal -> tenders.findById(analysis.getTenderId())
+						.ifPresent(tender -> tender.classifyByAi(ExtractionGrid.DOMAIN_CHOICES.get(proposal.value()))));
 			});
 			log.info("Analysis {} done ({} fields, {} / {} tokens)", analysisId, proposals.size(), usage.inputTokens(),
 					usage.outputTokens());

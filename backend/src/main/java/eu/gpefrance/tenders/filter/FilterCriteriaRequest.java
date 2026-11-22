@@ -22,7 +22,13 @@ public record FilterCriteriaRequest(
 		@NotNull List<@NotNull @Size(max = 100) String> keywords,
 		@NotNull List<@NotNull @Size(max = 100) String> excludedKeywords,
 		@PositiveOrZero BigDecimal minAmount,
-		@PositiveOrZero BigDecimal maxAmount) {
+		@PositiveOrZero BigDecimal maxAmount,
+		List<@NotNull @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC", message = "domaine inconnu") String> activities) {
+
+	/** The domains required, none when not given. */
+	List<String> cleanActivities() {
+		return activities == null ? List.of() : activities.stream().distinct().toList();
+	}
 
 	@AssertTrue(message = "le montant minimum dépasse le maximum")
 	boolean isAmountRangeValid() {

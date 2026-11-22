@@ -107,11 +107,19 @@ public class AnalysisGate {
 	 * failed ones included: they were paid.
 	 */
 	public TokenTotals monthToDate() {
-		Instant start = ZonedDateTime.now(clock.withZone(ClockConfiguration.ZONE))
+		return analyses.sumTokensSince(monthStart());
+	}
+
+	/** The same tokens, by what they were spent on. */
+	public List<AnalysisRepository.KindTokens> monthToDateByKind() {
+		return analyses.sumTokensByKindSince(monthStart());
+	}
+
+	private Instant monthStart() {
+		return ZonedDateTime.now(clock.withZone(ClockConfiguration.ZONE))
 			.withDayOfMonth(1)
 			.truncatedTo(ChronoUnit.DAYS)
 			.toInstant();
-		return analyses.sumTokensSince(start);
 	}
 
 	/**

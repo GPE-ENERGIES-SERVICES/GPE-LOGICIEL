@@ -43,8 +43,9 @@ public final class PriceScheduleChecker {
 	private static final BigDecimal HALF_CENT = new BigDecimal("0.005");
 
 	private static final Map<Role, Pattern> HEADERS = new EnumMap<>(Map.of(
-			Role.UNIT_PRICE, Pattern.compile("\\bp ?u\\b|prix unit|unitaire"),
-			Role.AMOUNT, Pattern.compile("montant|prix total|\\btotal\\b|\\bmt\\b"),
+			// "Prix U. H.T." and "Prix H.T." too, as in the frames of many project managers.
+			Role.UNIT_PRICE, Pattern.compile("\\bp ?u\\b|prix unit|unitaire|^prix u\\b|\\bunit\\b"),
+			Role.AMOUNT, Pattern.compile("montant|prix total|\\btotal\\b|\\bmt\\b|^prix h ?t\\b"),
 			Role.QUANTITY, Pattern.compile("quantite|\\bqte\\b|\\bqt\\b|\\bquant\\b|\\bnombre\\b"),
 			Role.UNIT, Pattern.compile("^u$|^un$|^unite|\\bunite\\b"),
 			Role.DESIGNATION, Pattern.compile("designation|libelle|description|intitule|nature|ouvrage|prestation"),
@@ -64,7 +65,7 @@ public final class PriceScheduleChecker {
 	private PriceScheduleChecker() {
 	}
 
-	static List<PriceCheck> check(Long documentId, String fileName, Spreadsheet spreadsheet) {
+	public static List<PriceCheck> check(Long documentId, String fileName, Spreadsheet spreadsheet) {
 		List<PriceCheck> checks = new ArrayList<>();
 		for (Sheet sheet : spreadsheet.sheets()) {
 			if (!sheet.rows().isEmpty()) {
@@ -94,6 +95,8 @@ public final class PriceScheduleChecker {
 		BigDecimal section = null;
 		List<Total> totals = new ArrayList<>();
 		BigDecimal lastHt = null;
+		// A line is checked with the quantity of the company when the frame has one (« Quant. Entreprise »).
+		Integer companyColumn = fillColumns(sheet).map(FillColumns::companyQuantity).orElse(null);
 		BigDecimal lastVat = null;
 		for (Row row : sheet.rows()) {
 			if (row.number() <= header.row() || isHeader(row)) {
@@ -123,7 +126,8 @@ public final class PriceScheduleChecker {
 				}
 				continue;
 			}
-			Cell quantity = cell(row, header, Role.QUANTITY);
+			Cell company = companyColumn == null ? null : row.cell(companyColumn);
+			Cell quantity = company != null && company.numeric() != null ? company : cell(row, header, Role.QUANTITY);
 			Cell unitPrice = cell(row, header, Role.UNIT_PRICE);
 			Cell amount = cell(row, header, Role.AMOUNT);
 			boolean described = cell(row, header, Role.DESIGNATION) != null || cell(row, header, Role.REFERENCE) != null;
@@ -181,11 +185,12 @@ public final class PriceScheduleChecker {
 	 * @param chapter the last title above it, or null
 	 * @param quantity null when none is written or readable (BPU)
 	 * @param textPrice a price written as words (PM, inclus...), or null
+	 * @param unitPrice the unit price written, read only to keep the prices of GPE (price library), never as a cost
 	 * @param complete false when a value of the line could not be read (formula
 	 * without saved value, cell in error)
 	 */
 	public record ScheduleLine(int row, String chapter, String reference, String designation, String unit,
-			BigDecimal quantity, String textPrice, boolean complete) {
+			BigDecimal quantity, String textPrice, boolean complete, BigDecimal unitPrice) {
 	}
 
 	/**
@@ -229,9 +234,56 @@ public final class PriceScheduleChecker {
 			BigDecimal q = value(quantity);
 			lines.add(new ScheduleLine(row.number(), chapter, reference,
 					designation == null ? reference : designation, unit, q == null || q.signum() < 0 ? null : q,
-					textPrice, complete && (quantity == null || q != null)));
+					textPrice, complete && (quantity == null || q != null), value(unitPrice)));
 		}
 		return List.copyOf(lines);
+	}
+
+	private static final Pattern COMPANY = Pattern.compile("entrepr|\\bentr\\b|titulaire|candidat|soumission");
+
+	/**
+	 * The columns where a price schedule is filled, as indexes from 0; null when
+	 * the frame has none.
+	 * @param quantity the quantity of the project manager
+	 * @param companyQuantity the quantity of the company (« Quant. Entreprise »)
+	 */
+	public record FillColumns(Integer quantity, Integer companyQuantity, Integer unitPrice, Integer amount) {
+	}
+
+	/** Empty when the header of the columns is not recognised. */
+	public static java.util.Optional<FillColumns> fillColumns(Sheet sheet) {
+		Header header = header(sheet);
+		if (header == null) {
+			return java.util.Optional.empty();
+		}
+		Integer quantity = null;
+		Integer companyQuantity = null;
+		Row headerRow = sheet.rows().stream().filter(row -> row.number() == header.row()).findFirst().orElseThrow();
+		for (Cell cell : headerRow.cells()) {
+			if (cell.type() != Spreadsheet.CellType.TEXT) {
+				continue;
+			}
+			String text = normalize(cell.text());
+			if (HEADERS.get(Role.QUANTITY).matcher(text).find()) {
+				if (COMPANY.matcher(text).find()) {
+					companyQuantity = companyQuantity == null ? cell.column() : companyQuantity;
+				}
+				else {
+					quantity = quantity == null ? cell.column() : quantity;
+				}
+			}
+		}
+		return java.util.Optional.of(new FillColumns(quantity, companyQuantity, index(header, Role.UNIT_PRICE),
+				index(header, Role.AMOUNT)));
+	}
+
+	private static Integer index(Header header, Role role) {
+		return header.columns()
+			.stream()
+			.filter(column -> column.role() == role)
+			.findFirst()
+			.map(column -> columnIndex(column.ref()))
+			.orElse(null);
 	}
 
 	/** The value of a cell as shown: its text, or its number written plainly. */
@@ -362,13 +414,44 @@ public final class PriceScheduleChecker {
 	}
 
 	private static Cell cell(Row row, Header header, Role role) {
-		return header.columns()
+		Cell found = header.columns()
 			.stream()
 			.filter(column -> column.role() == role)
 			.findFirst()
 			.map(column -> row.cell(columnIndex(column.ref())))
 			.filter(cell -> cell.type() != Spreadsheet.CellType.TEXT || !cell.text().isBlank())
 			.orElse(null);
+		return found == null && role == Role.DESIGNATION ? indentedDesignation(row, header) : found;
+	}
+
+	/**
+	 * A designation written further right than its header, as the frames that
+	 * indent the lines under their titles: the first text before the next
+	 * column of the header.
+	 */
+	private static Cell indentedDesignation(Row row, Header header) {
+		int start = header.columns()
+			.stream()
+			.filter(column -> column.role() == Role.DESIGNATION)
+			.mapToInt(column -> columnIndex(column.ref()))
+			.findFirst()
+			.orElse(-1);
+		if (start < 0) {
+			return null;
+		}
+		int end = header.columns()
+			.stream()
+			.mapToInt(column -> columnIndex(column.ref()))
+			.filter(index -> index > start)
+			.min()
+			.orElse(start + 4);
+		for (int index = start + 1; index < end; index++) {
+			Cell cell = row.cell(index);
+			if (cell != null && cell.type() == Spreadsheet.CellType.TEXT && !cell.text().isBlank()) {
+				return cell;
+			}
+		}
+		return null;
 	}
 
 	private static BigDecimal value(Cell cell) {

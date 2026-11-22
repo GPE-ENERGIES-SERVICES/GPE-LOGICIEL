@@ -51,6 +51,11 @@ public class FilterCriteria {
 	@Column(name = "excluded_keywords", nullable = false)
 	private List<String> excludedKeywords = new ArrayList<>();
 
+	/** Domains of GPE, one of which a tender must belong to; empty for any. */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(nullable = false)
+	private List<String> activities = new ArrayList<>();
+
 	@Column(name = "min_amount")
 	private BigDecimal minAmount;
 
@@ -87,6 +92,14 @@ public class FilterCriteria {
 		this.maxAmount = maxAmount;
 		this.updatedBy = updatedBy;
 		this.updatedAt = now;
+	}
+
+	public void requireActivities(List<String> activities) {
+		this.activities = new ArrayList<>(activities);
+	}
+
+	public List<String> getActivities() {
+		return Collections.unmodifiableList(activities);
 	}
 
 	public List<String> getDepartments() {

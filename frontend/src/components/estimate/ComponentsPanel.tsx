@@ -23,12 +23,14 @@ import {
   getOfferAvailability,
   getSupplierConnectors,
   lookupOffer,
+  pickLibraryPrice,
   refreshOffers,
   rejectSuggestion,
   searchOffers,
   suggestSupplies,
   updateComponent,
 } from "@/services/estimateApi";
+import { searchPriceLibrary, type PriceLibraryItem } from "@/services/priceLibraryApi";
 import type {
   Availability,
   ComponentInput,
@@ -40,6 +42,97 @@ import type {
   Suggestion,
   SupplierOffer,
 } from "@/types/estimate";
+
+/**
+ * A price of the price library picked by hand for the item: searched by its
+ * words (its designation to start with), brought to this year by the server.
+ */
+function LibraryPricePicker({
+  item,
+  busy,
+  run,
+}: {
+  item: EstimateItem;
+  busy: boolean;
+  run: (action: () => Promise<Estimate | void>) => Promise<boolean>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [results, setResults] = useState<PriceLibraryItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const search = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    try {
+      setResults(await searchPriceLibrary(String(new FormData(event.currentTarget).get("q") ?? ""), ""));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Recherche impossible.");
+    }
+  };
+
+  if (!open) {
+    return (
+      <p>
+        <button type="button" className="secondary" onClick={() => setOpen(true)}>
+          Prendre un prix de la bibliothèque
+        </button>
+      </p>
+    );
+  }
+  return (
+    <div className="sheet-panel">
+      <form className="inline-form" onSubmit={search}>
+        <label>
+          Ouvrage de la bibliothèque
+          <input name="q" required minLength={2} defaultValue={item.designation.split(/[^\p{L}\d,./]+/u).filter((word) => word.length >= 4).slice(0, 2).join(" ")}
+            size={40} />
+        </label>
+        <button type="submit" className="primary">
+          Chercher
+        </button>
+        <button type="button" className="secondary" onClick={() => setOpen(false)}>
+          Fermer
+        </button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {results && results.length === 0 && <p className="muted">Aucun ouvrage : raccourcissez la recherche (ex. « PC encastrée »).</p>}
+      {results && results.length > 0 && (
+        <table>
+          <tbody>
+            {results.map((line) => (
+              <tr key={line.id}>
+                <td>
+                  {line.designation}
+                  <div className="small muted">
+                    {line.label}
+                    {line.priceYear && ` · ${line.priceYear}`}
+                  </div>
+                </td>
+                <td>{line.unit ?? "–"}</td>
+                <td className="number nowrap">{formatMoney(line.unitPrice)}</td>
+                <td className="row-actions">
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={busy}
+                    title="Prix actualisé à l'année en cours, puis modifiable"
+                    onClick={async () => {
+                      if (await run(() => pickLibraryPrice(item.id, line.id))) {
+                        setOpen(false);
+                      }
+                    }}
+                  >
+                    Prendre
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
 
 type Props = {
   estimate: Estimate;
@@ -91,6 +184,7 @@ export function ComponentsPanel({
 
   return (
     <div className="estimate-components">
+      {editable && <LibraryPricePicker item={item} busy={busy} run={run} />}
       {item.components.length === 0 ? (
         <p className="muted">Aucun coût : ajoutez la fourniture, la main-d&apos;œuvre… d&apos;une unité de ce poste.</p>
       ) : (

@@ -144,6 +144,8 @@ export type FeeRates = {
 
 export type PricingSettings = FeeRates & {
   vatRate: number;
+  /** Annual rate updating the prices of the library from their year: 0.03 for 3 % a year. */
+  priceIndexRate: number;
   coefficients: Record<ComponentType, number>;
   updatedBy: string | null;
   updatedAt: string;
@@ -263,9 +265,12 @@ export type OfferImport = {
 export type Suggestion = {
   id: number;
   itemId: number | null;
-  kind: "SUPPLY" | "CHECK";
+  kind: "SUPPLY" | "CHECK" | "PRICE";
   offerId: number | null;
   quantity: number | null;
+  /** PRICE: the line of the price library and its price brought to this year. */
+  libraryItemId?: number | null;
+  price?: number | null;
   text: string;
   status: "PENDING" | "ACCEPTED" | "REJECTED";
   model: string | null;

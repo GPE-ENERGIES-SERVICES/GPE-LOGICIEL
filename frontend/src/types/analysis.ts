@@ -203,7 +203,13 @@ export type AnalysisConfiguration = {
   };
   queue: Record<AnalysisStatus, number>;
   /** Tokens counted by GPE; the cost is an estimate, not the invoice of the provider. */
-  monthToDate: { inputTokens: number; outputTokens: number; estimatedCost: number | null };
+  monthToDate: {
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCost: number | null;
+    /** By kind of analysis (DCE_SUMMARY…) or of assistance (ESTIMATE_SUPPLY, MEMOIR_SECTION…). */
+    byUse: { kind: string; inputTokens: number; outputTokens: number; estimatedCost: number | null }[];
+  };
 };
 
 /** Checks of one sheet of a price schedule, made by the software without AI. */

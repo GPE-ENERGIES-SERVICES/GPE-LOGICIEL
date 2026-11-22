@@ -900,7 +900,11 @@ l'honneur », « signature », « acceptation de l'offre » sont verrouillés : 
 les emplacements et les noms des valeurs connues ; l'IA répond CLE, TEXTE, COCHER, NE_PAS_COCHER, MANQUANT ou IGNORER. Pour
 CLE le logiciel écrit la valeur : l'IA ne voit ni l'IBAN ni le SIRET (`CompanyProfile.formValues`, hors `snapshot`). Les
 montants viennent du chiffrage validé du lot. Tables `response_form` et `response_form_field` (V42) ; source MANUAL jamais
-écrasée. Limite : un emplacement mal repéré ou mal verrouillé reste possible sur un formulaire de mise en page inhabituelle,
+écrasée. Relecture (V50) : `response_form.status` IN_PROGRESS (à la main), TO_VALIDATE (après l'IA), VALIDATED
+(Word écrit, joint et pièce cochée ; champs, remplissage et aperçu refusés jusqu'à REOPEN) ou REJECTED (motif dans
+`review_comment`, envoyé à l'IA comme `remarque_du_relecteur` ; une correction à la main repasse IN_PROGRESS).
+`GET /api/administrative-forms[?tenderId=]` liste les pièces remplissables avec leur état (TODO sans formulaire),
+`POST /api/response-pieces/{id}/form/review` porte VALIDATE, REJECT ou REOPEN. Limite : un emplacement mal repéré ou mal verrouillé reste possible sur un formulaire de mise en page inhabituelle,
 d'où la relecture du Word généré.
 
 ## DCE : liens, fichiers et récupération future

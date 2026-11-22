@@ -145,11 +145,16 @@ Une pièce est **prête** quand un fichier est joint et que vous avez coché « 
 ou le document enlève la coche. Un document expiré est signalé. Le ZIP contient les fichiers joints, rangés
 en Candidature et Offre, avec un avertissement si des pièces ne sont pas prêtes. L'export du chiffrage, qui
 contient vos coûts, n'en fait jamais partie : reportez vos prix sur le bordereau de l'acheteur et déposez-le.
-Le DC1, le DC2 et l'acte d'engagement du DCE se remplissent depuis leur pièce : « Remplir » lit le formulaire Word du
-DCE. Avec l'IA, chaque valeur affiche sa source : Entreprise ou Chiffrage (recopiée telle quelle par le logiciel), « IA :
-à vérifier », ou « Manquant » avec ce qu'il faut fournir. Vous pouvez aussi tout remplir à la main. Corrigez ici ce qu'il
-faut : relancer l'IA ne change jamais vos modifications. « Générer le Word » joint le document à la pièce, à vérifier
-ensuite. Un formulaire par lot : ajoutez une pièce pour chaque lot. Le montant vient du chiffrage validé du lot. Les
+Les formulaires du DCE (DC1, DC2, acte d'engagement, déclarations, attestation de visite, cadre de réponse, fiche
+de liaison…) se remplissent dans l'onglet **Administratif** de l'appel d'offres, si le DCE les donne en Word ; le
+menu « Administratif » liste ceux de tous les appels d'offres, avec leur état (à faire, en cours, à valider, validé,
+refusé) et, dans le menu, le nombre à valider. Pour chacun, lisant le formulaire Word du DCE : « Remplir à la main », ou
+« Déléguer à l'IA ». Avec l'IA, chaque valeur affiche sa source : Entreprise ou Chiffrage (recopiée telle quelle par le
+logiciel), « IA : à vérifier », ou « Manquant » avec ce qu'il faut fournir ; le formulaire attend alors votre décision.
+**Valider** écrit le Word, le joint à la pièce et la coche « Vérifiée » ; le formulaire est verrouillé jusqu'à « Rouvrir ».
+**Refuser** demande pourquoi : corrigez à la main, ou relancez l'IA, qui lit votre remarque. Relancer l'IA ne change
+jamais vos modifications ; « Aperçu Word » génère le document sans valider. Un formulaire par lot : ajoutez une pièce
+pour chaque lot. Le montant vient du chiffrage validé du lot. Les
 déclarations sur l'honneur, le lieu, la date et la signature restent à compléter sur le document. Le mémoire s'exporte en Word depuis sa page (« Exporter en Word ») : ce qui reste à rédiger y est signalé
 entre crochets ; relisez-le, puis déposez sa version finale. La signature et le dépôt restent de votre côté.
 

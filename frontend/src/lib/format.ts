@@ -175,18 +175,10 @@ export const TENDER_TAB_LABELS: Record<TenderTab, string> = {
 };
 
 /** Kinds of work the company answers; the list will grow with the business. */
+/** The two domains of GPE; the same codes as AlertService.ACTIVITIES on the server. */
 export const ACTIVITY_LABELS: Record<string, string> = {
-  ELECTRICITY: "Électricité",
-  PHOTOVOLTAIC: "Photovoltaïque",
-  EV_CHARGING: "IRVE (bornes de recharge)",
-  HEATING: "Chauffage",
-  AIR_CONDITIONING: "Climatisation",
-  ENERGY_RENOVATION: "Rénovation énergétique",
-  PUBLIC_LIGHTING: "Éclairage public",
-  NETWORKS: "Réseaux",
-  VRD: "VRD",
-  MAINTENANCE: "Maintenance",
-  STUDIES: "Études",
+  ELECTRICITY: "CFO / CFA",
+  PHOTOVOLTAIC: "Photovoltaïque (PV)",
 };
 
 export const NOTICE_KIND_LABELS: Record<NoticeKind, string> = {

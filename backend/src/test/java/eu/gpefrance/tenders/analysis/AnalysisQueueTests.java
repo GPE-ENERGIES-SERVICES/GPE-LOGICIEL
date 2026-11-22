@@ -90,7 +90,7 @@ class AnalysisQueueTests {
 	@BeforeEach
 	void cleanDatabase() {
 		jdbc.execute("TRUNCATE extracted_field, analysis_document, analysis, document_page, document, dossier, "
-				+ "tender_notice, lot, tender RESTART IDENTITY CASCADE");
+				+ "tender_notice, lot, tender, ai_call RESTART IDENTITY CASCADE");
 		given(client.provider()).willReturn("test");
 		given(client.model()).willReturn("test-model");
 		given(client.complete(any(ExtractionRequest.class))).willAnswer(invocation -> answer(invocation.getArgument(0)));
@@ -332,6 +332,23 @@ class AnalysisQueueTests {
 			.extractingPath("$.latest.documents[?(@.analysed == false)].fileName")
 			.asArray()
 			.containsExactly("CCTP.pdf");
+	}
+
+	/** Prices: 3 € per million input tokens, 15 € per million output tokens. */
+	@Test
+	void splitsTheSpendingOfTheMonthByUse() {
+		jdbc.update("""
+				INSERT INTO ai_call (kind, model, input_tokens, output_tokens, created_by, created_at) VALUES
+				('MEMOIR_SECTION', 'm', 1000000, 0, 'Marie', now()),
+				('MEMOIR_SECTION', 'm', 0, 100000, 'Marie', now()),
+				('ESTIMATE_SUPPLY', 'm', 0, 200000, 'Marie', now()),
+				('ESTIMATE_SUPPLY', 'm', 0, 999999, 'Marie', now() - interval '40 days')""");
+
+		assertThat(mvc.get().uri("/api/analyses/configuration").with(TestUsers.admin())).bodyJson()
+			.isLenientlyEqualTo("""
+					{"monthToDate": {"inputTokens": 1000000, "outputTokens": 300000, "estimatedCost": 7.5000,
+					 "byUse": [{"kind": "ESTIMATE_SUPPLY", "outputTokens": 200000, "estimatedCost": 3.0000},
+					           {"kind": "MEMOIR_SECTION", "inputTokens": 1000000, "estimatedCost": 4.5000}]}}""");
 	}
 
 	@Test

@@ -55,6 +55,22 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 			    select input_tokens, output_tokens from ai_call where created_at >= :since) t""")
 	TokenTotals sumTokensSince(Instant since);
 
+	/** The same tokens by what they were spent on: kind of analysis or of assistance. */
+	@Query(nativeQuery = true, value = """
+			select t.kind as kind, coalesce(sum(t.input_tokens), 0) as input, coalesce(sum(t.output_tokens), 0) as output
+			from (
+			    select kind, input_tokens, output_tokens from analysis where created_at >= :since
+			    union all
+			    select kind, input_tokens, output_tokens from ai_call where created_at >= :since) t
+			group by t.kind order by t.kind""")
+	List<KindTokens> sumTokensByKindSince(Instant since);
+
+	interface KindTokens extends TokenTotals {
+
+		String getKind();
+
+	}
+
 	List<Analysis> findByStatus(AnalysisStatus status);
 
 	interface TokenTotals {

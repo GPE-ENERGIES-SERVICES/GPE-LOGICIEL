@@ -14,14 +14,15 @@ public record TenderSummaryResponse(Long id, String title, String buyer, String 
 		List<String> departments, List<MarketType> marketTypes, ProcedureType procedureType, String source,
 		BigDecimal estimatedAmount, LocalDate publishedAt, Instant deadline, int lotCount, TenderStatus status,
 		FollowUpStatus followUpStatus, Boolean retained, String filterReason,
-		TenderDetailResponse.ResultResponse result, boolean followed) {
+		TenderDetailResponse.ResultResponse result, boolean followed, List<String> activities) {
 
 	static TenderSummaryResponse from(Tender tender, boolean followed) {
 		return new TenderSummaryResponse(tender.getId(), tender.getTitle(), tender.getBuyer(), tender.getReference(),
 				tender.getLocation(), tender.getDepartments(), tender.getMarketTypes(), tender.getProcedureType(),
 				tender.getSource(), tender.getEstimatedAmount(), tender.getPublishedAt(), tender.getDeadline(),
 				tender.getLots().size(), tender.getStatus(), tender.getFollowUpStatus(), tender.getRetained(),
-				tender.getFilterReason(), TenderDetailResponse.ResultResponse.of(tender), followed);
+				tender.getFilterReason(), TenderDetailResponse.ResultResponse.of(tender), followed,
+				tender.getActivities());
 	}
 
 }

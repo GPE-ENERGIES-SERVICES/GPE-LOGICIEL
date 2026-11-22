@@ -179,12 +179,12 @@ class MemoirApiTests {
 					TestFiles.pdf("Mémoire technique GPE : éclairage public, méthodologie de dépose et repose.")))
 			.param("title", "Éclairage public Marignane")
 			.param("writtenOn", "2025-03-01")
-			.param("activityCode", "PUBLIC_LIGHTING")
+			.param("activityCode", "ELECTRICITY")
 			.with(csrf())
 			.with(TestUsers.user())).hasStatus(HttpStatus.CREATED)
 			.bodyJson()
 			.isLenientlyEqualTo("{\"id\": 1, \"title\": \"Éclairage public Marignane\", \"useForAi\": true, "
-					+ "\"activityCode\": \"PUBLIC_LIGHTING\"}");
+					+ "\"activityCode\": \"ELECTRICITY\"}");
 		assertThat(jdbc.queryForObject("SELECT text FROM memoir_library WHERE id = 1", String.class))
 			.contains("méthodologie de dépose");
 		assertThat(put("/api/memoir-library/1", "{\"title\": \"Éclairage public Marignane\", \"useForAi\": false}"))

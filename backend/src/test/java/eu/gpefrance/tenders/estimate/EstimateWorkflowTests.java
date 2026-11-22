@@ -199,6 +199,25 @@ class EstimateWorkflowTests {
 			.isLenientlyEqualTo("[{\"kind\": \"IMPORTED\", \"detail\": \"6 poste(s) importé(s) de « DPGF.xlsx »\"}, "
 					+ "{\"kind\": \"CREATED\"}]");
 
+		// The frame given back filled: the quantity of the company and the price on their row, the formulas kept.
+		put("/api/estimate-items/1", """
+				{"designation": "Décapage de terre végétale", "unit": "m2", "quantity": 1000, "priceMode": "FIXED",
+				 "fixedUnitPrice": 3.10}""", TestUsers.user()).exchange();
+		put("/api/estimate-items/3", """
+				{"designation": "Évacuation des déblais", "unit": "m3", "quantity": 350, "priceMode": "FIXED",
+				 "fixedUnitPrice": 15}""", TestUsers.user()).exchange();
+		byte[] filled = mvc.get().uri("/api/estimates/1/schedules/1").with(TestUsers.user()).exchange().getResponse()
+			.getContentAsByteArray();
+		try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(filled))) {
+			org.apache.poi.ss.usermodel.Sheet sheet = workbook.getSheet("DPGF Lot 1");
+			assertThat(sheet.getRow(3).getCell(3).getNumericCellValue()).isEqualTo(1000.0);
+			assertThat(sheet.getRow(3).getCell(4).getNumericCellValue()).isEqualTo(3.1);
+			assertThat(sheet.getRow(3).getCell(5).getCellFormula()).isEqualTo("D4*E4");
+			assertThat(sheet.getRow(3).getCell(5).getNumericCellValue()).isEqualTo(3100.0);
+			assertThat(sheet.getRow(5).getCell(5).getNumericCellValue()).isEqualTo(5250.0);
+			assertThat(sheet.getRow(6).getCell(5).getNumericCellValue()).isEqualTo(3100.0 + 350 * 18.4 + 5250);
+		}
+
 		long other = jdbc.queryForObject("""
 				INSERT INTO tender (source, external_id, title, status, created_at, updated_at)
 				VALUES ('BOAMP', '26-2', 'Autre', 'ACTIVE', now(), now()) RETURNING id""", Long.class);

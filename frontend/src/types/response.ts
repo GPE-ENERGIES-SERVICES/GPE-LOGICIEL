@@ -49,6 +49,33 @@ export type ResponseForm = {
   fields: FormField[];
   /** To complete on the document itself: declarations, signature. */
   lockedCount: number;
+  status: FormStatus;
+  filledByAi: boolean;
+  /** Why a user rejected it; the AI reads it when it fills the form again. */
+  reviewComment: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+};
+
+/** TODO: nothing filled yet; TO_VALIDATE: filled by the AI, waiting for a user. */
+export type FormStatus = "TODO" | "IN_PROGRESS" | "TO_VALIDATE" | "VALIDATED" | "REJECTED";
+
+export type FormDecision = "VALIDATE" | "REJECT" | "REOPEN";
+
+/** A form to fill for an answer, with where it stands. */
+export type AdministrativeForm = {
+  pieceId: number;
+  tenderId: number;
+  tenderTitle: string;
+  buyer: string | null;
+  deadline: string | null;
+  label: string;
+  status: FormStatus;
+  filledByAi: boolean;
+  missing: number;
+  toCheck: number;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
 };
 
 export type ResponseStep = { title: string; ready: boolean; detail: string; anchor: string };

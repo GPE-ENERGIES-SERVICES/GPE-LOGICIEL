@@ -17,6 +17,7 @@ import eu.gpefrance.tenders.analysis.PriceCheck.Column;
 import eu.gpefrance.tenders.analysis.PriceCheck.Issue;
 import eu.gpefrance.tenders.analysis.PriceCheck.Role;
 import eu.gpefrance.tenders.analysis.PriceCheck.Total;
+import eu.gpefrance.tenders.analysis.PriceScheduleChecker.ScheduleLine;
 import eu.gpefrance.tenders.document.Spreadsheet;
 import eu.gpefrance.tenders.document.Spreadsheet.Cell;
 import eu.gpefrance.tenders.document.Spreadsheet.CellType;
@@ -82,6 +83,41 @@ class PriceScheduleCheckerTests {
 		assertThat(ods.items()).isEqualTo(1);
 		assertThat(ods.computedTotal()).isEqualByComparingTo("1402");
 		assertThat(ods.issues()).isEmpty();
+	}
+
+	/** As the frame of Istres: « Prix U. H.T. », « Prix H.T. », headers repeated on each page. */
+	@Test
+	void readsTheWrittenPricesOfAFrameWithItsHeaderOnEachPage() {
+		Row header = row(9, text("A9", "N°"), text("B9", "Désignation"), text("C9", "U"), text("D9", "Quant."),
+				text("E9", "Quant. Entreprise"), text("F9", "Prix U. H.T."), text("G9", "Prix H.T."));
+		Sheet sheet = sheet(header, row(12, text("A12", "3.1.7"), text("B12", "APPAREILLAGE")),
+				row(13, text("B13", "- PC 2x10/16A encastrée"), text("C13", "U"), number("D13", "73"), number("E13", "73"),
+						number("F13", "28.70"), number("G13", "2095.10")),
+				row(14, text("B14", "Sous total  Chapitre 3.1.7"), number("G14", "2095.10")),
+				row(63, text("A63", "N°"), text("B63", "Désignation"), text("C63", "U"), text("D63", "Quant."),
+						text("E63", "Quant. Entreprise"), text("F63", "Prix U. H.T."), text("G63", "Prix H.T.")),
+				row(64, text("B64", "* 3 x 1,5 mm²"), text("C64", "ml"), number("D64", "3550"), number("E64", "3000"),
+						number("F64", "2.90"), number("G64", "8700")));
+
+		assertThat(PriceScheduleChecker.lines(sheet)).extracting(ScheduleLine::designation, ScheduleLine::unitPrice)
+			.containsExactly(tuple("- PC 2x10/16A encastrée", new BigDecimal("28.70")),
+					tuple("* 3 x 1,5 mm²", new BigDecimal("2.90")));
+	}
+
+	/** As the frame of the Palais de la Bourse: lines indented under their titles, right of their header. */
+	@Test
+	void readsADesignationWrittenRightOfItsHeader() {
+		Sheet sheet = sheet(
+				row(10, text("A10", "Article"), text("B10", "DESIGNATION DES OUVRAGES"), text("E10", "U"),
+						text("F10", "Quantités"), text("H10", "PU"), text("I10", "TOTAL")),
+				row(39, text("A39", "3.6."), text("C39", "INTERVENTION SUR INSTALLATIONS ELECTRIQUES EXISTANTES")),
+				row(40, text("D40", "Interventions dans armoires electriques R+1"), text("E40", "U"), number("F40", "3"),
+						number("H40", "659.05"), number("I40", "1977.15")));
+
+		assertThat(PriceScheduleChecker.lines(sheet))
+			.extracting(ScheduleLine::chapter, ScheduleLine::designation, ScheduleLine::unitPrice)
+			.containsExactly(tuple("3.6. INTERVENTION SUR INSTALLATIONS ELECTRIQUES EXISTANTES",
+					"Interventions dans armoires electriques R+1", new BigDecimal("659.05")));
 	}
 
 	@Test

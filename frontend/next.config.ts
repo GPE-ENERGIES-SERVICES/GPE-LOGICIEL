@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     // The proxy buffers request bodies and truncates them above this size:
     // consultation files (DCE) are uploaded through it. Same limit as the backend.
     proxyClientMaxBodySize: "500mb",
+    // A whole price schedule priced by the AI takes minutes: the proxy waits for it.
+    proxyTimeout: 600_000,
   },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];

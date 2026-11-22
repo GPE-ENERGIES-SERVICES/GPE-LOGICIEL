@@ -1,18 +1,24 @@
 package eu.gpefrance.tenders.response;
 
+import java.util.List;
+
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import eu.gpefrance.tenders.response.FormService.Decision;
 import eu.gpefrance.tenders.response.FormService.FieldResponse;
 import eu.gpefrance.tenders.response.FormService.FormResponse;
+import eu.gpefrance.tenders.response.FormService.Overview;
 import eu.gpefrance.tenders.response.ResponseService.ResponseView;
 import eu.gpefrance.tenders.user.AppUserPrincipal;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -37,6 +43,22 @@ public class FormController {
 	}
 
 	public record FieldRequest(@Size(max = 4000) String value, boolean checked) {
+	}
+
+	/** @param comment why it is rejected; required for a rejection */
+	public record ReviewRequest(@NotNull Decision decision, @Size(max = 4000) String comment) {
+	}
+
+	/** The forms to fill of every answer begun, or of one tender. */
+	@GetMapping("/api/administrative-forms")
+	public List<Overview> overview(@RequestParam(required = false) Long tenderId) {
+		return forms.overview(tenderId);
+	}
+
+	@PostMapping("/api/response-pieces/{pieceId}/form/review")
+	public FormResponse review(@PathVariable Long pieceId, @Valid @RequestBody ReviewRequest request,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return forms.review(pieceId, request.decision(), request.comment(), user.displayName());
 	}
 
 	@GetMapping("/api/response-pieces/{pieceId}/form")

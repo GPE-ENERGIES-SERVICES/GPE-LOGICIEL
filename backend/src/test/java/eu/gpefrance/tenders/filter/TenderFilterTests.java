@@ -34,6 +34,45 @@ class TenderFilterTests {
 	}
 
 	@Test
+	void findsTheDomainsByCpvOrByWords() {
+		assertThat(DomainRules.of(tender().cpv("45310000").build())).containsExactly("ELECTRICITY");
+		assertThat(DomainRules.of(tender().cpv("09331200").build())).containsExactly("PHOTOVOLTAIC");
+		assertThat(DomainRules.of(tender().title("Ombrières photovoltaïques et SSI du collège").build()))
+			.containsExactly("ELECTRICITY", "PHOTOVOLTAIC");
+		assertThat(DomainRules.of(tender().title("Nettoyage des locaux").cpv("90910000").build())).isEmpty();
+	}
+
+	@Test
+	void aUserWinsOverTheAiWhichWinsOverTheRules() {
+		Tender tender = tender().title("Travaux d'électricité").build();
+		tender.classifyByRules(DomainRules.of(tender));
+		tender.classifyByAi(List.of("PHOTOVOLTAIC"));
+		tender.classifyByRules(List.of("ELECTRICITY"));
+		assertThat(tender.getActivities()).containsExactly("PHOTOVOLTAIC");
+
+		tender.classifyByHand(List.of());
+		tender.classifyByAi(List.of("ELECTRICITY"));
+		tender.classifyByRules(List.of("ELECTRICITY"));
+		assertThat(tender.getActivities()).isEmpty();
+		assertThat(tender.getActivitiesSource()).isEqualTo("MANUAL");
+	}
+
+	@Test
+	void requiresOneOfTheDomainsOfTheCompany() {
+		FilterCriteria none = new FilterCriteria(List.of(), List.of(), null, List.of(), List.of(), List.of(), null,
+				null, NOW);
+		none.requireActivities(List.of("PHOTOVOLTAIC"));
+		Tender solar = tender().title("Centrale solaire en toiture").build();
+		solar.classifyByRules(DomainRules.of(solar));
+		Tender cleaning = tender().title("Nettoyage des locaux").build();
+		cleaning.classifyByRules(DomainRules.of(cleaning));
+
+		assertThat(TenderFilter.apply(solar, none, NOW).reason()).contains("domaine PV");
+		assertThat(TenderFilter.apply(cleaning, none, NOW).retained()).isFalse();
+		assertThat(TenderFilter.apply(cleaning, none, NOW).reason()).contains("hors domaines PV");
+	}
+
+	@Test
 	void excludesATenderOutsideTheZone() {
 		FilterResult result = TenderFilter.apply(tender().departments("13").cpv("45310000").build(), criteria, NOW);
 

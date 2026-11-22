@@ -69,8 +69,11 @@ public class EstimateAssistant {
 
 	private final Clock clock;
 
+	private final LibraryPriceService libraryPrices;
+
 	public EstimateAssistant(EstimateService estimates, EstimateSuggestionRepository suggestions,
-			SupplierCatalog catalog, AiAssistant ai, Clock clock) {
+			SupplierCatalog catalog, AiAssistant ai, Clock clock, LibraryPriceService libraryPrices) {
+		this.libraryPrices = libraryPrices;
 		this.estimates = estimates;
 		this.suggestions = suggestions;
 		this.catalog = catalog;
@@ -202,6 +205,10 @@ public class EstimateAssistant {
 					null, null, null, null, null, offer.id()), user);
 			estimates.record(estimates.found(suggestion.getEstimateId()), EstimateEvent.Kind.SUGGESTION_ACCEPTED,
 					"Offre " + offer.supplierRef() + " (" + offer.supplierName() + ") proposée par l'IA", user);
+		}
+		else if (suggestion.getKind() == Kind.PRICE) {
+			response = libraryPrices.apply(suggestion.getItemId(), suggestion.getPrice(),
+					suggestion.getText() + " (proposé par l'IA)", user);
 		}
 		else {
 			response = EstimateResponse.from(draft(suggestion.getEstimateId()));

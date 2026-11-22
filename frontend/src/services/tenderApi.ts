@@ -36,6 +36,11 @@ export function getTender(id: number | string): Promise<TenderDetail> {
 }
 
 /** Status shared by the team, with a comment; a missing comment keeps the previous one. */
+/** Domains chosen by a user (ELECTRICITY, PHOTOVOLTAIC; none for neither): they win over the rules and the AI. */
+export function setTenderActivities(id: number, activities: string[]): Promise<TenderDetail> {
+  return api(`/api/tenders/${id}/activities`, { method: "PUT", body: { activities } });
+}
+
 export function updateFollowUp(id: number, status: FollowUpStatus, comment?: string): Promise<TenderDetail> {
   return api(`/api/tenders/${id}/follow-up`, { method: "PUT", body: { status, comment } });
 }

@@ -36,6 +36,9 @@ public class SecurityConfiguration {
 			.requestMatchers(HttpMethod.GET, "/api/pricing-settings", "/api/pricing-rates", "/api/suppliers")
 				.authenticated()
 			.requestMatchers("/api/pricing-settings", "/api/pricing-rates/**", "/api/suppliers/**").hasRole("ADMIN")
+			// The price library: read by every user, filled by an administrator.
+			.requestMatchers(HttpMethod.GET, "/api/price-library", "/api/price-library/**").authenticated()
+			.requestMatchers("/api/price-library/**").hasRole("ADMIN")
 			// The company: read by every user (estimates, bids), changed by an administrator.
 			.requestMatchers(HttpMethod.GET, "/api/company/**").authenticated()
 			.requestMatchers("/api/company/**").hasRole("ADMIN")

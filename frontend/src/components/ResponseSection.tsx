@@ -17,8 +17,6 @@ import {
 } from "@/services/responseApi";
 import type { DocumentChoice, PieceCategory, PieceState, ResponsePiece, ResponseView } from "@/types/response";
 
-import { FormPanel } from "./FormPanel";
-
 const STATE_LABELS: Record<PieceState, string> = {
   MISSING: "Manquante",
   EXPIRED: "Expirée",
@@ -44,15 +42,12 @@ function documentLabel(document: DocumentChoice): string {
 function PieceRow({
   piece,
   documents,
-  lots,
   run,
 }: {
   piece: ResponsePiece;
   documents: DocumentChoice[];
-  lots: { number: string; title: string | null }[];
   run: (action: () => Promise<ResponseView>) => void;
 }) {
-  const [filling, setFilling] = useState(false);
   const change = (next: Partial<{ label: string; notNeeded: boolean; companyDocumentId: number | null }>) =>
     run(() =>
       changePiece(piece.id, {
@@ -133,9 +128,9 @@ function PieceRow({
       </td>
       <td className="response-actions">
         {piece.fillable && (
-          <button type="button" className="link-button" aria-expanded={filling} onClick={() => setFilling(!filling)}>
-            {filling ? "Fermer le formulaire" : "Remplir"}
-          </button>
+          <a href="#administratif" className="link-button">
+            Remplir (Administratif)
+          </a>
         )}
         <label>
           <input
@@ -168,13 +163,6 @@ function PieceRow({
         )}
       </td>
     </tr>
-    {filling && (
-      <tr className="form-row">
-        <td colSpan={4}>
-          <FormPanel pieceId={piece.id} lots={lots} onGenerated={run} />
-        </td>
-      </tr>
-    )}
     </>
   );
 }
@@ -183,13 +171,11 @@ function PieceTable({
   title,
   pieces,
   documents,
-  lots,
   run,
 }: {
   title: string;
   pieces: ResponsePiece[];
   documents: DocumentChoice[];
-  lots: { number: string; title: string | null }[];
   run: (action: () => Promise<ResponseView>) => void;
 }) {
   if (pieces.length === 0) {
@@ -209,7 +195,7 @@ function PieceTable({
         </thead>
         <tbody>
           {pieces.map((piece) => (
-            <PieceRow key={piece.id} piece={piece} documents={documents} lots={lots} run={run} />
+            <PieceRow key={piece.id} piece={piece} documents={documents} run={run} />
           ))}
         </tbody>
       </table>
@@ -221,7 +207,7 @@ function PieceTable({
  * The answer to a tender, its last step: the pieces asked by the buyer, what
  * the logiciel proposes for each, and what a user changes and checks.
  */
-export function ResponseSection({ tenderId, lots }: { tenderId: number; lots: { number: string; title: string | null }[] }) {
+export function ResponseSection({ tenderId }: { tenderId: number }) {
   const loaded = useLoader(() => getResponse(tenderId), `response-${tenderId}`);
   // The state returned by the last change, until the next reload.
   const [saved, setSaved] = useState<ResponseView | null>(null);
@@ -289,14 +275,12 @@ export function ResponseSection({ tenderId, lots }: { tenderId: number; lots: { 
         title="Pièces de candidature"
         pieces={data.pieces.filter((piece) => piece.category === "APPLICATION")}
         documents={data.documents}
-        lots={lots}
         run={run}
       />
       <PieceTable
         title="Pièces de l'offre"
         pieces={data.pieces.filter((piece) => piece.category === "OFFER")}
         documents={data.documents}
-        lots={lots}
         run={run}
       />
 

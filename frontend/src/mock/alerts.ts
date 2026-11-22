@@ -42,7 +42,7 @@ export const MOCK_ALERTS: Alert[] = [
     region: null,
     departments: [],
     marketTypes: ["WORKS", "SERVICES"],
-    activities: ["EV_CHARGING"],
+    activities: ["ELECTRICITY"],
     cpvPrefixes: [],
     minAmount: null,
     maxAmount: null,

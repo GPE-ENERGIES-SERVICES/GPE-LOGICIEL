@@ -13,13 +13,13 @@ import { EstimatesSection } from "@/components/estimate/EstimatesSection";
 import { MemoirsSection } from "@/components/memoir/MemoirsSection";
 import { NoticeHistory } from "@/components/NoticeHistory";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
+import { AdministrativeSection } from "@/components/AdministrativeSection";
 import { ResponseSection } from "@/components/ResponseSection";
 import { Tabs } from "@/components/Tabs";
 import { FollowButton } from "@/components/FollowButton";
 import { FollowUpForm } from "@/components/FollowUpForm";
 import { Fold } from "@/components/Fold";
 import {
-  ACTIVITY_LABELS,
   formatAmount,
   formatDate,
   formatDateTime,
@@ -35,7 +35,7 @@ import { useJourney } from "@/lib/useJourney";
 import { useLoader } from "@/lib/useLoader";
 import { getTenderAwards } from "@/services/awardApi";
 import { available } from "@/services/http";
-import { getTender, MANUAL_SOURCE } from "@/services/tenderApi";
+import { getTender, MANUAL_SOURCE, setTenderActivities } from "@/services/tenderApi";
 import type { AwardedContract } from "@/types/award";
 import type { TenderDetail } from "@/types/tender";
 
@@ -49,6 +49,62 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
       <dt>{label}</dt>
       <dd>{children}</dd>
     </div>
+  );
+}
+
+const DOMAIN_CHOICES = [
+  { value: "ELECTRICITY", label: "CFO / CFA" },
+  { value: "PHOTOVOLTAIC", label: "PV" },
+  { value: "ELECTRICITY,PHOTOVOLTAIC", label: "CFO / CFA et PV" },
+  { value: "", label: "Hors domaines GPE" },
+];
+
+const DOMAIN_SOURCES: Record<string, string> = {
+  RULES: "d'après l'avis",
+  AI: "lu dans le DCE",
+  MANUAL: "choisi à la main",
+};
+
+/** The domains of the tender, which a user may correct: the choice wins over the rules and the AI. */
+function DomainPicker({ tender, onSaved }: { tender: TenderDetail; onSaved: (tender: TenderDetail) => void }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const current = (tender.activities ?? []).join(",");
+
+  const choose = async (value: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      onSaved(await setTenderActivities(tender.id, value ? value.split(",") : []));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <select
+        aria-label="Domaine"
+        value={tender.activitiesSource ? current : "UNSET"}
+        disabled={saving}
+        onChange={(event) => choose(event.target.value)}
+      >
+        {!tender.activitiesSource && (
+          <option value="UNSET" disabled>
+            Pas encore classé
+          </option>
+        )}
+        {DOMAIN_CHOICES.map((choice) => (
+          <option key={choice.value} value={choice.value}>
+            {choice.label}
+          </option>
+        ))}
+      </select>
+      {tender.activitiesSource && <span className="small muted"> {DOMAIN_SOURCES[tender.activitiesSource]}</span>}
+      {error && <span className="error"> {error}</span>}
+    </>
   );
 }
 
@@ -102,7 +158,6 @@ function TenderDetails() {
 
   const back = backLink(searchParams.get("from"), tender.status !== "ACTIVE");
   const marketTypes = tender.marketTypes.map((type) => MARKET_TYPE_LABELS[type]).join(", ");
-  const activities = (tender.activities ?? []).map((code) => ACTIVITY_LABELS[code] ?? code).join(", ");
   const procedure = tender.procedureType ? PROCEDURE_LABELS[tender.procedureType] : null;
   const area = tender.postalCode ?? (tender.departments.length ? tender.departments.join(", ") : null);
   const place = [tender.location, area && `(${area})`].filter(Boolean).join(" ");
@@ -287,7 +342,7 @@ function TenderDetails() {
                             <>
                               <List
                                 items={criteria.map((criterion) =>
-                                  criterion.weight === null ? `${criterion.label} (non pondéré)` : `${criterion.label} : ${criterion.weight} %`,
+                                  criterion.weight === null ? `${criterion.label} (non pondéré)` : `${criterion.label} : ${criterion.weight} %`,
                                 )}
                               />
                               {allWeighted && weightTotal !== 100 && (
@@ -343,9 +398,11 @@ function TenderDetails() {
                       </Fact>
                       <Fact label="Départements">{tender.departments.join(", ")}</Fact>
                       <Fact label="Type de marché">{marketTypes}</Fact>
-                      <Fact label="Type de travaux">{activities}</Fact>
+                      <Fact label="Domaine">
+                        <DomainPicker tender={tender} onSaved={setSaved} />
+                      </Fact>
                       <Fact label="Publication">{tender.publishedAt && formatDate(tender.publishedAt)}</Fact>
-                      <Fact label="Pertinence">{tender.relevanceScore != null && `${tender.relevanceScore} %`}</Fact>
+                      <Fact label="Pertinence">{tender.relevanceScore != null && `${tender.relevanceScore} %`}</Fact>
                       <Fact label="Codes CPV">
                         {cpv.length > 0 && <List items={cpv.map((item) => `${item.code}${item.label ? ` – ${item.label}` : ""}`)} />}
                       </Fact>
@@ -416,13 +473,23 @@ function TenderDetails() {
             ),
           },
           {
+            id: "administratif",
+            label: "Administratif",
+            content: (
+              <section className="card">
+                <h2>Administratif</h2>
+                <AdministrativeSection tenderId={tender.id} lots={tender.lots} />
+              </section>
+            ),
+          },
+          {
             id: "reponse",
             label: "Dossier de réponse",
             step: journey.response,
             content: (
               <section className="card">
                 <h2>Dossier de réponse</h2>
-                <ResponseSection tenderId={tender.id} lots={tender.lots} />
+                <ResponseSection tenderId={tender.id} />
               </section>
             ),
           },

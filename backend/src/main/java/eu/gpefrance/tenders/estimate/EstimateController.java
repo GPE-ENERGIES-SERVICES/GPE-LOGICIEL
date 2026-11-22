@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.estimate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.springframework.http.ContentDisposition;
@@ -38,12 +39,32 @@ public class EstimateController {
 
 	private final EstimateSupplierPriceService supplierPrices;
 
+	private final DpgfFillService dpgf;
+
 	public EstimateController(EstimateService service, EstimateImportService imports, EstimateExportService exports,
-			EstimateSupplierPriceService supplierPrices) {
+			EstimateSupplierPriceService supplierPrices, DpgfFillService dpgf) {
 		this.service = service;
 		this.imports = imports;
 		this.exports = exports;
 		this.supplierPrices = supplierPrices;
+		this.dpgf = dpgf;
+	}
+
+	/** The filled schedule checked before sending: totals not adding up, VAT, amounts, cells in error. */
+	@GetMapping("/api/estimates/{id}/schedules/{documentId}/check")
+	public DpgfFillService.Checked checkSchedule(@PathVariable Long id, @PathVariable Long documentId) {
+		return dpgf.check(id, documentId);
+	}
+
+	/** The price schedule of the project manager, filled with the quantities and prices of the estimate. */
+	@GetMapping("/api/estimates/{id}/schedules/{documentId}")
+	public ResponseEntity<byte[]> fillSchedule(@PathVariable Long id, @PathVariable Long documentId) {
+		DpgfFillService.Filled filled = dpgf.fill(id, documentId);
+		return ResponseEntity.ok()
+			.header(HttpHeaders.CONTENT_DISPOSITION,
+					ContentDisposition.attachment().filename(filled.fileName(), StandardCharsets.UTF_8).build().toString())
+			.contentType(MediaType.parseMediaType(filled.contentType()))
+			.body(filled.content());
 	}
 
 	@GetMapping("/api/estimates")

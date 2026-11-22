@@ -23,6 +23,7 @@ import { useLoader } from "@/lib/useLoader";
 import { getDossiers } from "@/services/documentApi";
 import {
   acceptSuggestion,
+  checkFilledSchedule,
   checkSupplierPrices,
   copyRatesAgain,
   copySupplierPrices,
@@ -38,6 +39,7 @@ import {
   newEstimateVersion,
   rejectSuggestion,
   reviewEstimate,
+  suggestLibraryPrices,
   updateEstimate,
   validateEstimate,
 } from "@/services/estimateApi";
@@ -103,6 +105,7 @@ export function EstimateEditor({ id }: { id: number }) {
     }
   };
   const checks = (suggestions.data ?? []).filter((suggestion) => suggestion.kind === "CHECK" && suggestion.status === "PENDING");
+  const prices = (suggestions.data ?? []).filter((suggestion) => suggestion.kind === "PRICE" && suggestion.status === "PENDING");
   const show = (name: Panel) => setPanel((current) => (current === name ? null : name));
 
   return (
@@ -152,6 +155,7 @@ export function EstimateEditor({ id }: { id: number }) {
             Exporter Excel
           </a>
         )}
+        {!DEMO_DATA && <FilledScheduleLinks estimate={estimate} />}
         {editable && (
           <button type="button" aria-pressed={panel === "import"} onClick={() => show("import")}>
             Importer un DPGF
@@ -170,6 +174,17 @@ export function EstimateEditor({ id }: { id: number }) {
         <button type="button" className="secondary" aria-pressed={panel === "history"} onClick={() => show("history")}>
           Historique
         </button>
+        {editable && (
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            title="Pour chaque ligne sans prix (hors forfaits) : le même ouvrage de la bibliothèque GPE, trouvé par le logiciel, puis par l'IA pour les cas ambigus"
+            onClick={() => run(() => suggestLibraryPrices(estimate.id).then(() => undefined))}
+          >
+            Prix bibliothèque
+          </button>
+        )}
         {aiAvailable && (
           <button type="button" className="secondary" disabled={busy} onClick={() => run(() => reviewEstimate(estimate.id).then(() => undefined))}>
             Relecture IA
@@ -233,6 +248,60 @@ export function EstimateEditor({ id }: { id: number }) {
         </div>
       )}
       {error && <p className="banner error">{error}</p>}
+
+      {prices.length > 0 && (
+        <div className="sheet-panel">
+          <strong>Prix proposés depuis la bibliothèque ({prices.length})</strong>
+          <span className="muted"> · rien n&apos;est appliqué sans votre accord</span>
+          {editable && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              onClick={async () => {
+                for (const proposal of prices) {
+                  if (!(await run(() => acceptSuggestion(proposal.id)))) {
+                    break;
+                  }
+                }
+              }}
+            >
+              Tout accepter
+            </button>
+          )}
+          <table>
+            <tbody>
+              {prices.map((proposal) => {
+                const item = estimate.items.find((candidate) => candidate.id === proposal.itemId);
+                return (
+                  <tr key={proposal.id}>
+                    <td>
+                      {item ? `${item.reference ? `${item.reference} ` : ""}${item.designation}` : "Ligne supprimée"}
+                      <div className="small muted">
+                        <span className={proposal.model ? "badge" : "badge verified"}>{proposal.model ? "IA" : "Logiciel"}</span>{" "}
+                        {proposal.text}
+                      </div>
+                    </td>
+                    <td className="number nowrap">{formatMoney(proposal.price)}</td>
+                    <td className="row-actions">
+                      {editable && (
+                        <>
+                          <button type="button" className="secondary" disabled={busy} onClick={() => run(() => acceptSuggestion(proposal.id))}>
+                            Accepter
+                          </button>
+                          <button type="button" className="secondary" disabled={busy} onClick={() => run(() => rejectSuggestion(proposal.id))}>
+                            Refuser
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {checks.length > 0 && (
         <div className="sheet-panel">
@@ -418,6 +487,76 @@ function SettingsForm({ estimate, onSaved }: { estimate: Estimate; onSaved: (est
         {error && <span className="error">{error}</span>}
       </div>
     </form>
+  );
+}
+
+/**
+ * The Excel price schedules the items were imported from, each to download
+ * filled with the quantities and prices of the estimate, in the project
+ * manager's own frame.
+ */
+function FilledScheduleLinks({ estimate }: { estimate: Estimate }) {
+  const sources = new Set(estimate.items.map((item) => item.sourceDocumentId).filter((id) => id !== null));
+  const dossiers = useLoader(
+    () => (sources.size > 0 ? getDossiers(estimate.tenderId) : Promise.resolve([])),
+    String(estimate.tenderId),
+  );
+  const schedules = (dossiers.data ?? [])
+    .flatMap((dossier) => dossier.documents)
+    .filter((document) => sources.has(document.id) && /\.(xlsx|xlsm|xls)$/i.test(document.fileName));
+
+  return schedules.map((document) => <FilledSchedule key={document.id} estimate={estimate} document={document} many={schedules.length > 1} />);
+}
+
+/**
+ * One filled schedule: checked by the application (totals, VAT, amounts),
+ * then downloaded; a problem found is shown, never hidden.
+ */
+function FilledSchedule({ estimate, document, many }: { estimate: Estimate; document: { id: number; fileName: string }; many: boolean }) {
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<{ problems: string[]; total: number | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const href = `/api/estimates/${estimate.id}/schedules/${document.id}`;
+
+  const check = async () => {
+    setChecking(true);
+    setError(null);
+    try {
+      setResult(await checkFilledSchedule(estimate.id, document.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Contrôle impossible.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <>
+      <a className="button" href={href} download title={`« ${document.fileName} » rempli avec les quantités et les prix de ce chiffrage`}>
+        {many ? `DPGF rempli : ${document.fileName}` : "DPGF du MOE rempli"}
+      </a>
+      <button type="button" className="secondary" disabled={checking} onClick={check}>
+        {checking ? "Contrôle…" : "Contrôler le DPGF rempli"}
+      </button>
+      {error && <span className="error">{error}</span>}
+      {result && (
+        <div className={result.problems.length > 0 ? "banner warning" : "banner info"}>
+          {result.problems.length === 0 ? (
+            <>Totaux, TVA et montants cohérents{result.total !== null && ` · total des lignes ${formatMoney(result.total)} HT`}.</>
+          ) : (
+            <>
+              <strong>{result.problems.length} point(s) à vérifier avant l&apos;envoi</strong>
+              {result.total !== null && ` · total des lignes ${formatMoney(result.total)} HT`}
+              <ul className="plain-list">
+                {result.problems.map((problem) => (
+                  <li key={problem}>{problem}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 

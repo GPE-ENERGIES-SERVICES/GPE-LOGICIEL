@@ -67,12 +67,17 @@ class AlertMatcherTests {
 	}
 
 	@Test
-	void typesOfWorksAreNotEvaluatedYet() {
-		AlertMatch match = AlertMatcher.match(tender("Travaux d'électricité", List.of("13"), "45310000", null),
-				criteria(List.of("électricité"), null, List.of(), List.of(), List.of("ELECTRICITY"), List.of(), null, null));
+	void usesTheDomainsOnceClassified() {
+		Tender tender = tender("Travaux d'électricité", List.of("13"), "45310000", null);
+		AlertCriteria electricity = criteria(List.of("électricité"), null, List.of(), List.of(), List.of("ELECTRICITY"),
+				List.of(), null, null);
+		AlertCriteria solar = criteria(List.of(), null, List.of(), List.of(), List.of("PHOTOVOLTAIC"), List.of(), null,
+				null);
 
-		assertThat(match.outcome()).isEqualTo(Outcome.INDETERMINATE);
-		assertThat(match.reason()).isEqualTo("types de travaux non évalués");
+		assertThat(AlertMatcher.match(tender, electricity).reason()).isEqualTo("domaine pas encore classé");
+		tender.classifyByRules(DomainRules.of(tender));
+		assertThat(AlertMatcher.match(tender, electricity).outcome()).isNotEqualTo(Outcome.INDETERMINATE);
+		assertThat(AlertMatcher.match(tender, solar).reason()).isEqualTo("hors domaine PV");
 	}
 
 	@Test

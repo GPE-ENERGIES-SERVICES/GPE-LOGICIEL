@@ -33,13 +33,13 @@ public class PricingService {
 	}
 
 	public record SettingsResponse(BigDecimal vatRate, Map<ComponentType, BigDecimal> coefficients,
-			BigDecimal agencyFeeRate, BigDecimal overheadRate, BigDecimal serviceFeeRate, String updatedBy,
-			Instant updatedAt) {
+			BigDecimal agencyFeeRate, BigDecimal overheadRate, BigDecimal serviceFeeRate, BigDecimal priceIndexRate,
+			String updatedBy, Instant updatedAt) {
 
 		static SettingsResponse from(PricingSettings settings) {
 			return new SettingsResponse(settings.getVatRate(), settings.getCoefficients(),
 					settings.getAgencyFeeRate(), settings.getOverheadRate(), settings.getServiceFeeRate(),
-					settings.getUpdatedBy(), settings.getUpdatedAt());
+					settings.getPriceIndexRate(), settings.getUpdatedBy(), settings.getUpdatedAt());
 		}
 
 	}

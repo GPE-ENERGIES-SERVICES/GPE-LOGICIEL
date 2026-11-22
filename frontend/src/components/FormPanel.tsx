@@ -2,9 +2,26 @@
 
 import { useState } from "react";
 
+import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
-import { changeFormField, generateForm, getForm, startForm } from "@/services/responseApi";
-import type { FormField, FormFieldSource, ResponseForm, ResponseView } from "@/types/response";
+import { changeFormField, generateForm, getForm, reviewForm, startForm } from "@/services/responseApi";
+import type { FormDecision, FormField, FormFieldSource, FormStatus, ResponseForm, ResponseView } from "@/types/response";
+
+export const FORM_STATUS_LABELS: Record<FormStatus, string> = {
+  TODO: "À faire",
+  IN_PROGRESS: "En cours",
+  TO_VALIDATE: "À valider",
+  VALIDATED: "Validé",
+  REJECTED: "Refusé",
+};
+
+export const FORM_STATUS_CLASSES: Record<FormStatus, string> = {
+  TODO: "badge muted-badge",
+  IN_PROGRESS: "badge",
+  TO_VALIDATE: "badge urgent",
+  VALIDATED: "badge verified",
+  REJECTED: "badge urgent",
+};
 
 const SOURCE_LABELS: Record<FormFieldSource, string> = {
   COMPANY: "Entreprise",
@@ -31,7 +48,17 @@ function shortLabel(label: string): string {
   return label.length <= 130 ? label : `…${label.slice(-130)}`;
 }
 
-function FieldRow({ field, onSaved, onError }: { field: FormField; onSaved: (field: FormField) => void; onError: (message: string) => void }) {
+function FieldRow({
+  field,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  field: FormField;
+  disabled: boolean;
+  onSaved: (field: FormField) => void;
+  onError: (message: string) => void;
+}) {
   const save = async (value: string | null, checked: boolean) => {
     try {
       onSaved(await changeFormField(field.id, { value, checked }));
@@ -46,12 +73,19 @@ function FieldRow({ field, onSaved, onError }: { field: FormField; onSaved: (fie
       <div className="form-field-value">
         {field.kind === "CHECK" ? (
           <label>
-            <input type="checkbox" checked={field.checked} onChange={(event) => save(field.value, event.target.checked)} /> Cocher
+            <input
+              type="checkbox"
+              checked={field.checked}
+              disabled={disabled}
+              onChange={(event) => save(field.value, event.target.checked)}
+            />{" "}
+            Cocher
           </label>
         ) : (
           <input
             key={field.value ?? ""}
             defaultValue={field.value ?? ""}
+            disabled={disabled}
             aria-label={shortLabel(field.label)}
             onBlur={(event) => {
               const value = event.target.value.trim();
@@ -77,10 +111,13 @@ export function FormPanel({
   pieceId,
   lots,
   onGenerated,
+  onChange,
 }: {
   pieceId: number;
   lots: { number: string; title: string | null }[];
   onGenerated: (action: () => Promise<ResponseView>) => void;
+  /** After a filling or a decision: where the form stands has changed. */
+  onChange?: () => void;
 }) {
   const loaded = useLoader(() => getForm(pieceId), `form-${pieceId}`);
   const [saved, setSaved] = useState<ResponseForm | null>(null);
@@ -88,6 +125,8 @@ export function FormPanel({
   const [error, setError] = useState<string | null>(null);
   const [lot, setLot] = useState<string | null>(null);
   const [showOthers, setShowOthers] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
   const form = saved ?? loaded.data;
 
   if (!form) {
@@ -95,17 +134,23 @@ export function FormPanel({
   }
 
   const chosenLot = lot ?? form.lotNumber ?? "";
-  const start = async (useAi: boolean) => {
+  const act = async (action: () => Promise<ResponseForm>, failure: string) => {
     setBusy(true);
     setError(null);
     try {
-      setSaved(await startForm(pieceId, { lotNumber: chosenLot || null, useAi }));
+      setSaved(await action());
+      onChange?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Remplissage impossible.");
+      setError(err instanceof Error ? err.message : failure);
     } finally {
       setBusy(false);
     }
   };
+  const start = (useAi: boolean) =>
+    act(() => startForm(pieceId, { lotNumber: chosenLot || null, useAi }), "Remplissage impossible.");
+  const review = (decision: FormDecision, comment?: string) =>
+    act(() => reviewForm(pieceId, { decision, comment }), "Décision non enregistrée.");
+  const validated = form.status === "VALIDATED";
   const replace = (field: FormField) =>
     setSaved({ ...form, fields: form.fields.map((item) => (item.id === field.id ? field : item)) });
 
@@ -141,9 +186,11 @@ export function FormPanel({
                 <input value={chosenLot} maxLength={50} placeholder="Facultatif" onChange={(event) => setLot(event.target.value)} />
               </label>
             )}
-            <button type="button" className="primary" disabled={busy || !form.aiAvailable} onClick={() => start(true)}>
-              {busy ? "Remplissage…" : form.started ? "Relancer l'IA" : "Remplir avec l'IA"}
-            </button>
+            {!validated && (
+              <button type="button" className="primary" disabled={busy || !form.aiAvailable} onClick={() => start(true)}>
+                {busy ? "Patientez…" : form.started ? "Relancer l'IA" : "Déléguer à l'IA"}
+              </button>
+            )}
             {!form.started && (
               <button type="button" disabled={busy} onClick={() => start(false)}>
                 Remplir à la main
@@ -168,9 +215,22 @@ export function FormPanel({
             {missing > 0 && <span className="badge urgent">{missing} manquant{missing > 1 ? "s" : ""}</span>}
             {toCheck > 0 && <span className="badge urgent">{toCheck} à vérifier</span>}
           </p>
+          <p>
+            <span className={FORM_STATUS_CLASSES[form.status]}>{FORM_STATUS_LABELS[form.status]}</span>{" "}
+            <span className="muted">
+              {form.filledByAi ? "Proposé par l'IA, relu par un humain." : "Rempli à la main."}
+              {form.reviewedBy && form.reviewedAt && ` Dernière décision : ${form.reviewedBy}, le ${formatDateTime(form.reviewedAt)}.`}
+            </span>
+          </p>
+          {form.status === "REJECTED" && form.reviewComment && (
+            <p className="banner error">
+              Refusé : « {form.reviewComment} ». Corrigez les champs à la main, ou relancez l&apos;IA : elle tiendra compte de cette
+              remarque.
+            </p>
+          )}
           <div className="form-fields">
             {shown.map((field) => (
-              <FieldRow key={field.id} field={field} onSaved={replace} onError={setError} />
+              <FieldRow key={field.id} field={field} disabled={validated} onSaved={replace} onError={setError} />
             ))}
           </div>
           {others.length > 0 && (
@@ -183,7 +243,7 @@ export function FormPanel({
           {showOthers && (
             <div className="form-fields">
               {others.map((field) => (
-                <FieldRow key={field.id} field={field} onSaved={replace} onError={setError} />
+                <FieldRow key={field.id} field={field} disabled={validated} onSaved={replace} onError={setError} />
               ))}
             </div>
           )}
@@ -194,10 +254,66 @@ export function FormPanel({
             </p>
           )}
           <div className="form-actions">
-            <button type="button" className="primary" disabled={busy} onClick={() => onGenerated(() => generateForm(pieceId))}>
-              Générer le Word et le joindre
-            </button>
+            {validated ? (
+              <button type="button" disabled={busy} onClick={() => review("REOPEN")}>
+                Rouvrir pour modifier
+              </button>
+            ) : (
+              <>
+                {(form.status === "IN_PROGRESS" || form.status === "TO_VALIDATE") && (
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={busy}
+                    onClick={() => {
+                      const left = missing + toCheck;
+                      if (
+                        left === 0 ||
+                        window.confirm(`${missing} champ(s) manquant(s) et ${toCheck} à vérifier. Valider quand même ?`)
+                      ) {
+                        review("VALIDATE");
+                      }
+                    }}
+                  >
+                    Valider : joindre le Word au dossier
+                  </button>
+                )}
+                {form.status === "TO_VALIDATE" && (
+                  <button type="button" className="danger" disabled={busy} onClick={() => setRejecting(!rejecting)}>
+                    Refuser
+                  </button>
+                )}
+                <button type="button" disabled={busy} onClick={() => onGenerated(() => generateForm(pieceId))}>
+                  Aperçu Word, sans valider
+                </button>
+              </>
+            )}
           </div>
+          {rejecting && form.status === "TO_VALIDATE" && (
+            <form
+              className="inline-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setRejecting(false);
+                review("REJECT", reason.trim());
+                setReason("");
+              }}
+            >
+              <label>
+                Pourquoi ?{" "}
+                <input
+                  value={reason}
+                  required
+                  maxLength={4000}
+                  placeholder="ex. le lot est le 3, l'adresse est celle du siège"
+                  onChange={(event) => setReason(event.target.value)}
+                />
+              </label>
+              <button type="submit" className="danger" disabled={busy || !reason.trim()}>
+                Confirmer le refus
+              </button>
+            </form>
+          )}
         </>
       )}
     </div>

@@ -764,7 +764,7 @@ const ANALYSIS_CONFIGURATION: AnalysisConfiguration = {
     pricesSet: false,
   },
   queue: { PENDING: 0, PROCESSING: 0, DONE: 0, FAILED: 0, RETRY_WAITING: 0, CANCELLED: 0 },
-  monthToDate: { inputTokens: 0, outputTokens: 0, estimatedCost: null },
+  monthToDate: { inputTokens: 0, outputTokens: 0, estimatedCost: null, byUse: [] },
 };
 
 const NO_QUALITY: AnalysisQuality = { done: 0, failed: 0, totalCost: null, averageCost: null, fields: [] };
@@ -775,6 +775,7 @@ const PRICING_SETTINGS: PricingSettings = {
   agencyFeeRate: 0.05,
   overheadRate: 0.05,
   serviceFeeRate: 0.05,
+  priceIndexRate: 0.03,
   updatedBy: null,
   updatedAt: "2026-10-01T08:00:00Z",
 };
@@ -830,6 +831,7 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/memoirs$/, () => []],
   // Answers: none in the demonstration; their changes answer « indisponible ».
   ["GET", /^\/api\/responses$/, () => []],
+  ["GET", /^\/api\/administrative-forms$/, () => []],
   [
     "GET",
     /^\/api\/tenders\/(\d+)\/response$/,

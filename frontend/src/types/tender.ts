@@ -42,9 +42,9 @@ export type TenderSummary = {
   followed?: boolean;
   /** Outcome of a past consultation, null while it is open or when unknown. */
   result?: TenderResult | null;
-  // Provided by the simulated API; the backend does not send them yet.
-  /** Activity codes, see ACTIVITY_LABELS. */
+  /** Domains of GPE (ELECTRICITY, PHOTOVOLTAIC), see ACTIVITY_LABELS. */
   activities?: string[];
+  // Provided by the simulated API; the backend does not send them yet.
   /** Distance from the company's headquarters, null when the place is unknown. */
   distanceKm?: number | null;
   /** 0 to 100, null when not computed. */
@@ -78,6 +78,8 @@ export type TenderKeyInfo = {
 };
 
 export type TenderDetail = TenderSummary & {
+  /** RULES (notice), AI (DCE analysis) or MANUAL (a user); null while never classified. */
+  activitiesSource?: "RULES" | "AI" | "MANUAL" | null;
   source: string;
   externalId: string;
   description: string | null;

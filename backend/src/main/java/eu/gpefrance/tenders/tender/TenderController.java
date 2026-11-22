@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.tender;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -17,10 +18,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import eu.gpefrance.tenders.filter.FilterService;
 import eu.gpefrance.tenders.user.AppUserPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 
 /**
  * Tenders: list with tabs and filters, counts, details, decision of the team
@@ -33,8 +37,24 @@ public class TenderController {
 
 	private final TenderService tenderService;
 
-	public TenderController(TenderService tenderService) {
+	private final FilterService filterService;
+
+	public TenderController(TenderService tenderService, FilterService filterService) {
 		this.tenderService = tenderService;
+		this.filterService = filterService;
+	}
+
+	/** @param activities the domains chosen, empty for none of those of GPE */
+	public record ActivitiesRequest(
+			@NotNull List<@NotNull @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC", message = "domaine inconnu") String> activities) {
+	}
+
+	/** A user gives the domains of a tender: they win over the rules and the AI, and the tender is filtered again. */
+	@PutMapping("/{id}/activities")
+	public TenderDetailResponse classify(@PathVariable Long id, @Valid @RequestBody ActivitiesRequest request,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		filterService.classifyByHand(id, request.activities().stream().distinct().toList());
+		return tenderService.detail(id, user.id());
 	}
 
 	@GetMapping

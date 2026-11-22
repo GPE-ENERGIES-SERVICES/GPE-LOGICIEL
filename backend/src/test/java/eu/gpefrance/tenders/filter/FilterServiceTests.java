@@ -69,7 +69,7 @@ class FilterServiceTests {
 
 	private static FilterCriteriaRequest request(List<String> departments, List<String> keywords) {
 		return new FilterCriteriaRequest(departments, List.of(MarketType.WORKS), null, List.of(), keywords, List.of(),
-				null, null);
+				null, null, null);
 	}
 
 	private static Tender tender(String externalId, String title, String department) {

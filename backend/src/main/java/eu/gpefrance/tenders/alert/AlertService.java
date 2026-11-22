@@ -28,9 +28,11 @@ import eu.gpefrance.tenders.tender.Regions;
 @Service
 public class AlertService {
 
-	/** Types of works known by the interface (ACTIVITY_LABELS). */
-	public static final Set<String> ACTIVITIES = Set.of("ELECTRICITY", "PHOTOVOLTAIC", "EV_CHARGING", "HEATING",
-			"AIR_CONDITIONING", "ENERGY_RENOVATION", "PUBLIC_LIGHTING", "NETWORKS", "VRD", "MAINTENANCE", "STUDIES");
+	/**
+	 * The two domains of GPE, as in the interface (ACTIVITY_LABELS):
+	 * ELECTRICITY = CFO / CFA (courants forts et faibles), PHOTOVOLTAIC = PV.
+	 */
+	public static final Set<String> ACTIVITIES = Set.of("ELECTRICITY", "PHOTOVOLTAIC");
 
 	private static final Logger log = LoggerFactory.getLogger(AlertService.class);
 

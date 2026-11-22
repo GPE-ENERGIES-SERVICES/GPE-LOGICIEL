@@ -59,9 +59,9 @@ export function formatNumber(value: number | null | undefined): string {
   return value === null || value === undefined ? "—" : plain.format(value);
 }
 
-/** 0.2 shown as "20 %". */
+/** 0.2 shown as "20 %", the space unbreakable: the sign never goes alone to the next line. */
 export function formatRate(value: number | null | undefined): string {
-  return value === null || value === undefined ? "—" : `${plain.format(value * 100)} %`;
+  return value === null || value === undefined ? "—" : `${plain.format(value * 100)} %`;
 }
 
 /**
