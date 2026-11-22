@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { normalizeText } from "@/lib/format";
 import { refreshData, useLoader } from "@/lib/useLoader";
@@ -119,7 +119,14 @@ function Chooser({
  * techniques), it makes the equipment table of GPE and the AI writes the memoir
  * with it, beginning from the template memoir of its mounting system.
  */
-export function EquipmentSection({ tenderId }: { tenderId: number }) {
+export function EquipmentSection({
+  tenderId,
+  details,
+}: {
+  tenderId: number;
+  /** The quantity and power of each line, to show and change beside it (technical choices). */
+  details?: { of: (sheetId: number) => ReactNode };
+}) {
   const equipment = useLoader(
     () => getTenderEquipment(tenderId),
     `equipment-${tenderId}`,
@@ -133,7 +140,11 @@ export function EquipmentSection({ tenderId }: { tenderId: number }) {
     try {
       await chooseTenderEquipment(tenderId, ids);
       setChoosing(false);
-      refreshData(`equipment-${tenderId}`, `response-${tenderId}`, `technical-${tenderId}`);
+      refreshData(
+        `equipment-${tenderId}`,
+        `response-${tenderId}`,
+        `technical-${tenderId}`,
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Enregistrement impossible.",
@@ -160,6 +171,7 @@ export function EquipmentSection({ tenderId }: { tenderId: number }) {
               <th>Matériel</th>
               <th>Marque</th>
               <th>Référence</th>
+              {details && <th>Quantité · puissance unitaire · remarque</th>}
             </tr>
           </thead>
           <tbody>
@@ -179,6 +191,7 @@ export function EquipmentSection({ tenderId }: { tenderId: number }) {
                     {sheet.reference}
                   </a>
                 </td>
+                {details && <td>{details.of(sheet.id)}</td>}
               </tr>
             ))}
           </tbody>

@@ -293,7 +293,9 @@ export type OfferImport = {
 export type Suggestion = {
   id: number;
   itemId: number | null;
-  kind: "SUPPLY" | "CHECK" | "PRICE";
+  kind: "SUPPLY" | "LABOR" | "CHECK" | "PRICE";
+  /** LABOR: the rate of GPE the hours per unit (quantity) are counted at. */
+  rateCode?: string | null;
   offerId: number | null;
   quantity: number | null;
   /** PRICE: the line of the price library and its price brought to this year. */

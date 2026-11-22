@@ -2,7 +2,7 @@ import type { DocumentState, PieceType } from "./document";
 
 export type FieldKind = "TEXT" | "DATE" | "DATE_TIME" | "AMOUNT" | "CHOICE";
 
-export type SummarySection = "AT_A_GLANCE" | "ATTENTION" | "REQUESTED" | "TO_ANSWER";
+export type SummarySection = "AT_A_GLANCE" | "ATTENTION" | "REQUESTED" | "TO_ANSWER" | "TECHNICAL";
 
 export type FieldState = "VERIFIED" | "UNVERIFIED" | "NOT_INDICATED" | "AMBIGUOUS" | "CONTRADICTORY";
 

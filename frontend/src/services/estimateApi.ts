@@ -253,6 +253,11 @@ export function pickLibraryPrice(itemId: number, libraryItemId: number): Promise
   return api(`/api/estimate-items/${itemId}/library-price`, { method: "POST", body: { libraryItemId } });
 }
 
+/** A first estimate by the AI of the items without cost: supplies and labour, each proposal to accept. */
+export function draftEstimateWithAi(estimateId: number): Promise<Suggestion[]> {
+  return api(`/api/estimates/${estimateId}/ai-draft`, { method: "POST" });
+}
+
 export function reviewEstimate(estimateId: number): Promise<Suggestion[]> {
   return api(`/api/estimates/${estimateId}/review`, { method: "POST" });
 }

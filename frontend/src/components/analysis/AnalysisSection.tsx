@@ -15,7 +15,11 @@ import {
   formatValue,
   NOT_IN_DOCUMENTS,
 } from "@/lib/analysis";
-import { DOCUMENT_STATE_LABELS, formatDateTime, PIECE_TYPE_LABELS } from "@/lib/format";
+import {
+  DOCUMENT_STATE_LABELS,
+  formatDateTime,
+  PIECE_TYPE_LABELS,
+} from "@/lib/format";
 import { analysisProgress, readingProgress } from "@/lib/progress";
 import { refreshData, useLoader } from "@/lib/useLoader";
 import {
@@ -26,9 +30,19 @@ import {
   validateAnalysis,
 } from "@/services/analysisApi";
 import { getDossiers } from "@/services/documentApi";
-import type { Analysis, ExtractedField, GridField, SummarySection, TenderAnalysis } from "@/types/analysis";
+import type {
+  Analysis,
+  ExtractedField,
+  GridField,
+  SummarySection,
+  TenderAnalysis,
+} from "@/types/analysis";
 
-const costFormat = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 4 });
+const costFormat = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 4,
+});
 
 const SECTION_TITLES: Record<SummarySection, ReactNode> = {
   AT_A_GLANCE: (
@@ -51,6 +65,11 @@ const SECTION_TITLES: Record<SummarySection, ReactNode> = {
       Pour répondre
     </PartTitle>
   ),
+  TECHNICAL: (
+    <PartTitle icon="settings" tone="accent">
+      Données techniques
+    </PartTitle>
+  ),
 };
 
 /** A value long enough to need the whole width of the grid. */
@@ -60,7 +79,9 @@ const LONG_VALUE = 60;
 const SHORT_ITEM = 45;
 
 function isFound(fields: ExtractedField[]): boolean {
-  return fields.some((field) => field.state !== "NOT_INDICATED" || field.decision !== null);
+  return fields.some(
+    (field) => field.state !== "NOT_INDICATED" || field.decision !== null,
+  );
 }
 
 /** What the documents do not say, on one line: each name opens the form that gives its value. */
@@ -104,7 +125,14 @@ function MissingFields({
       {chosen && field && (
         <div className="field-filling">
           <strong>{chosen.label}</strong>
-          <FieldItem key={field.id} field={field} grid={chosen} readable={false} onChanged={onChanged} filling />
+          <FieldItem
+            key={field.id}
+            field={field}
+            grid={chosen}
+            readable={false}
+            onChanged={onChanged}
+            filling
+          />
         </div>
       )}
     </div>
@@ -121,8 +149,14 @@ function FieldGroup({
   onChanged: (analysis: TenderAnalysis) => void;
 }) {
   const fields = fieldsByKey(analysis).get(grid.key) ?? [];
-  const readable = new Set(analysis.documents.filter((document) => document.readable).map((document) => document.id));
-  const lengths = fields.map((field) => (effectiveValue(field) ?? field.value ?? "").length);
+  const readable = new Set(
+    analysis.documents
+      .filter((document) => document.readable)
+      .map((document) => document.id),
+  );
+  const lengths = fields.map(
+    (field) => (effectiveValue(field) ?? field.value ?? "").length,
+  );
   const classes = ["field-group"];
   if (fields.length > 2 || lengths.some((length) => length > LONG_VALUE)) {
     classes.push("wide");
@@ -134,7 +168,10 @@ function FieldGroup({
     <div className={classes.join(" ")}>
       <h4>{grid.label}</h4>
       {grid.key === "deadline" && analysis.noticeDeadline && (
-        <p className="hint">Date limite publiée dans l&apos;avis : {formatDateTime(analysis.noticeDeadline)}</p>
+        <p className="hint">
+          Date limite publiée dans l&apos;avis :{" "}
+          {formatDateTime(analysis.noticeDeadline)}
+        </p>
       )}
       {fields.length === 0 && <p className="muted">{NOT_IN_DOCUMENTS}</p>}
       <div className="field-values">
@@ -143,7 +180,9 @@ function FieldGroup({
             key={field.id}
             field={field}
             grid={grid}
-            readable={field.documentId !== null && readable.has(field.documentId)}
+            readable={
+              field.documentId !== null && readable.has(field.documentId)
+            }
             onChanged={onChanged}
           />
         ))}
@@ -173,12 +212,17 @@ function SummarySheet({
       .filter((item) => item.reason !== null)
       .map(({ field, reason }) => ({
         id: field.id,
-        text: grid.multiple && field.value ? `${grid.label} : ${formatValue(grid.kind, field.value)}` : grid.label,
+        text:
+          grid.multiple && field.value
+            ? `${grid.label} : ${formatValue(grid.kind, field.value)}`
+            : grid.label,
         reason,
       })),
   );
   const analysed = analysis.documents.filter((document) => document.analysed);
-  const notAnalysed = analysis.documents.filter((document) => !document.analysed);
+  const notAnalysed = analysis.documents.filter(
+    (document) => !document.analysed,
+  );
 
   const validate = async () => {
     setValidating(true);
@@ -196,11 +240,20 @@ function SummarySheet({
     const grids = data.grid.filter((grid) => grid.section === name);
     return (
       <>
-        <div className={name === "AT_A_GLANCE" ? "field-grid glance" : "field-grid"}>
+        <div
+          className={
+            name === "AT_A_GLANCE" ? "field-grid glance" : "field-grid"
+          }
+        >
           {grids
             .filter((grid) => isFound(groups.get(grid.key) ?? []))
             .map((grid) => (
-              <FieldGroup key={grid.key} grid={grid} analysis={analysis} onChanged={onChanged} />
+              <FieldGroup
+                key={grid.key}
+                grid={grid}
+                analysis={analysis}
+                onChanged={onChanged}
+              />
             ))}
         </div>
         <MissingFields
@@ -216,23 +269,32 @@ function SummarySheet({
   const found = (name: SummarySection) => {
     const grids = data.grid.filter((grid) => grid.section === name);
     const answered = grids.filter((grid) =>
-      (groups.get(grid.key) ?? []).some((field) => field.state !== "NOT_INDICATED" || field.decision !== null),
+      (groups.get(grid.key) ?? []).some(
+        (field) => field.state !== "NOT_INDICATED" || field.decision !== null,
+      ),
     ).length;
     return `${answered} sur ${grids.length} renseignée${grids.length > 1 ? "s" : ""}`;
   };
-  const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? "s" : ""}`;
+  const plural = (count: number, word: string) =>
+    `${count} ${word}${count > 1 ? "s" : ""}`;
 
   return (
     <div className="summary">
       <div className="sheet-state">
         {analysis.validatedBy ? (
           <span className="badge verified">
-            Fiche validée par {analysis.validatedBy} le {formatDateTime(analysis.validatedAt)}
+            Fiche validée par {analysis.validatedBy} le{" "}
+            {formatDateTime(analysis.validatedAt)}
           </span>
         ) : (
           <>
             <span className="badge urgent">Analysée, non vérifiée</span>
-            <button type="button" className="primary" onClick={validate} disabled={validating}>
+            <button
+              type="button"
+              className="primary"
+              onClick={validate}
+              disabled={validating}
+            >
               Valider la fiche
             </button>
           </>
@@ -240,17 +302,26 @@ function SummarySheet({
         {error && <p className="error">{error}</p>}
       </div>
       <p className="hint">
-        ✓ : extrait retrouvé dans le document ; l&apos;interprétation reste à confirmer en le lisant.
+        ✓ : extrait retrouvé dans le document ; l&apos;interprétation reste à
+        confirmer en le lisant.
       </p>
 
-      <Fold title={SECTION_TITLES.AT_A_GLANCE} count={found("AT_A_GLANCE")} open>
+      <Fold
+        title={SECTION_TITLES.AT_A_GLANCE}
+        count={found("AT_A_GLANCE")}
+        open
+      >
         {section("AT_A_GLANCE")}
       </Fold>
 
       <Fold
         open
         title={SECTION_TITLES.ATTENTION}
-        count={points.length > 0 ? plural(points.length, "point") + " à surveiller" : found("ATTENTION")}
+        count={
+          points.length > 0
+            ? plural(points.length, "point") + " à surveiller"
+            : found("ATTENTION")
+        }
       >
         {points.length > 0 && (
           <ul className="attention">
@@ -270,13 +341,34 @@ function SummarySheet({
         {section("TO_ANSWER")}
       </Fold>
 
+      {data.grid.some((grid) => grid.section === "TECHNICAL") && (
+        <Fold title={SECTION_TITLES.TECHNICAL} count={found("TECHNICAL")}>
+          <p className="hint">
+            Repris dans l&apos;onglet « Choix techniques », où chaque valeur
+            reste à vérifier et à valider.
+          </p>
+          {section("TECHNICAL")}
+        </Fold>
+      )}
+
       <Fold
         title={
-          <PartTitle icon="warning" tone={toCheck.length === 0 && notAnalysed.length === 0 ? "muted" : "warning"}>
+          <PartTitle
+            icon="warning"
+            tone={
+              toCheck.length === 0 && notAnalysed.length === 0
+                ? "muted"
+                : "warning"
+            }
+          >
             À vérifier
           </PartTitle>
         }
-        count={toCheck.length === 0 && notAnalysed.length === 0 ? "rien à signaler" : plural(toCheck.length, "point")}
+        count={
+          toCheck.length === 0 && notAnalysed.length === 0
+            ? "rien à signaler"
+            : plural(toCheck.length, "point")
+        }
       >
         {toCheck.length === 0 && notAnalysed.length === 0 ? (
           <p className="muted">Rien à signaler.</p>
@@ -289,8 +381,10 @@ function SummarySheet({
             ))}
             {notAnalysed.length > 0 && (
               <li>
-                {notAnalysed.length} document{notAnalysed.length > 1 ? "s" : ""} non analysé
-                {notAnalysed.length > 1 ? "s" : ""} : une information indiquée « non indiquée » peut s&apos;y trouver.
+                {notAnalysed.length} document{notAnalysed.length > 1 ? "s" : ""}{" "}
+                non analysé
+                {notAnalysed.length > 1 ? "s" : ""} : une information indiquée «
+                non indiquée » peut s&apos;y trouver.
               </li>
             )}
           </ul>
@@ -306,11 +400,14 @@ function SummarySheet({
         count={`${analysed.length} analysé${analysed.length > 1 ? "s" : ""} sur ${analysis.documents.length}`}
       >
         {notAnalysed.length === 0 ? (
-          <p className="muted">Tous les documents du dossier ont été analysés.</p>
+          <p className="muted">
+            Tous les documents du dossier ont été analysés.
+          </p>
         ) : (
           <>
             <p className="hint">
-              Non analysés : une information indiquée « non indiquée » peut s&apos;y trouver.
+              Non analysés : une information indiquée « non indiquée » peut
+              s&apos;y trouver.
             </p>
             <ul className="documents-read muted">
               {notAnalysed.map((document) => (
@@ -331,7 +428,9 @@ function notAnalysedReason(document: Analysis["documents"][number]): string {
   if (
     document.aiReason &&
     !["DPGF", "BPU", "DQE"].includes(document.pieceType) &&
-    !/^(Pièce essentielle|Document utile|Ajouté à la main)/.test(document.aiReason)
+    !/^(Pièce essentielle|Document utile|Ajouté à la main)/.test(
+      document.aiReason,
+    )
   ) {
     return document.aiReason;
   }
@@ -367,10 +466,14 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
   const data = saved ?? loaded.data;
   const analysis = data?.latest ?? null;
   const latestDossier = dossiers.data?.[0] ?? null;
-  const analysing = analysis?.status === "PENDING" || analysis?.status === "PROCESSING";
+  const analysing =
+    analysis?.status === "PENDING" || analysis?.status === "PROCESSING";
   // Not sent to the provider yet: can still be cancelled.
-  const waiting = analysis?.status === "PENDING" || analysis?.status === "RETRY_WAITING";
-  const reading = latestDossier?.status === "PENDING" || latestDossier?.status === "PROCESSING";
+  const waiting =
+    analysis?.status === "PENDING" || analysis?.status === "RETRY_WAITING";
+  const reading =
+    latestDossier?.status === "PENDING" ||
+    latestDossier?.status === "PROCESSING";
   const { reload: reloadAnalysis } = loaded;
   const { reload: reloadDossiers } = dossiers;
 
@@ -401,7 +504,9 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
       setSaved(null);
       refreshData(String(tenderId));
     } catch (err) {
-      setStartError(err instanceof Error ? err.message : "Impossible de lancer l'analyse.");
+      setStartError(
+        err instanceof Error ? err.message : "Impossible de lancer l'analyse.",
+      );
     } finally {
       setStarting(false);
     }
@@ -417,7 +522,9 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
       setSaved(await cancelAnalysis(analysis.id));
       refreshData(String(tenderId));
     } catch (err) {
-      setStartError(err instanceof Error ? err.message : "Impossible d'annuler l'analyse.");
+      setStartError(
+        err instanceof Error ? err.message : "Impossible d'annuler l'analyse.",
+      );
     } finally {
       setCancelling(false);
     }
@@ -429,86 +536,126 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
   if (!data) {
     return <p className="muted">Chargement…</p>;
   }
-  const readingNow = reading && latestDossier ? readingProgress(latestDossier) : null;
-  const analysisNow = analysis ? analysisProgress(analysis, data.history, now) : null;
+  const readingNow =
+    reading && latestDossier ? readingProgress(latestDossier) : null;
+  const analysisNow = analysis
+    ? analysisProgress(analysis, data.history, now)
+    : null;
 
   return (
     <div>
       {!data.configured && (
         <p className="banner info">
-          Analyse par IA indisponible : {data.unavailableReason ?? "aucun fournisseur d'IA n'est configuré."} Les
-          documents déposés restent consultables.
+          Analyse par IA indisponible :{" "}
+          {data.unavailableReason ?? "aucun fournisseur d'IA n'est configuré."}{" "}
+          Les documents déposés restent consultables.
         </p>
       )}
 
-      {!latestDossier && <p className="muted">Déposez le DCE ci-dessus pour obtenir la fiche de synthèse.</p>}
+      {!latestDossier && (
+        <p className="muted">
+          Déposez le DCE ci-dessus pour obtenir la fiche de synthèse.
+        </p>
+      )}
       {readingNow && <ProgressBar {...readingNow} />}
 
       {analysis && (
         <p className="analysis-meta">
-          <span className={analysis.status === "FAILED" ? "badge urgent" : "badge"}>
+          <span
+            className={analysis.status === "FAILED" ? "badge urgent" : "badge"}
+          >
             {ANALYSIS_STATUS_LABELS[analysis.status]}
           </span>{" "}
-          Dossier version {analysis.dossierVersion}, analyse du {formatDateTime(analysis.createdAt)}
-          {analysis.cost !== null && <> — coût {costFormat.format(analysis.cost)}</>}
+          Dossier version {analysis.dossierVersion}, analyse du{" "}
+          {formatDateTime(analysis.createdAt)}
+          {analysis.cost !== null && (
+            <> — coût {costFormat.format(analysis.cost)}</>
+          )}
           {data.history.length > 1 && (
             <span className="muted">
               {" "}
-              ({data.history.length - 1} analyse{data.history.length > 2 ? "s" : ""} précédente
-              {data.history.length > 2 ? "s" : ""} conservée{data.history.length > 2 ? "s" : ""})
+              ({data.history.length - 1} analyse
+              {data.history.length > 2 ? "s" : ""} précédente
+              {data.history.length > 2 ? "s" : ""} conservée
+              {data.history.length > 2 ? "s" : ""})
             </span>
           )}
         </p>
       )}
       {analysisNow && <ProgressBar {...analysisNow} />}
       {analysis?.errorMessage && (
-        <p className={analysis.status === "CANCELLED" ? "muted" : "error"}>{analysis.errorMessage}</p>
+        <p className={analysis.status === "CANCELLED" ? "muted" : "error"}>
+          {analysis.errorMessage}
+        </p>
       )}
       {analysis?.status === "RETRY_WAITING" && analysis.nextAttemptAt && (
         <p className="hint">
-          Tentative {analysis.attempts} échouée ; nouvelle tentative automatique après{" "}
-          {formatDateTime(analysis.nextAttemptAt)}.
+          Tentative {analysis.attempts} échouée ; nouvelle tentative automatique
+          après {formatDateTime(analysis.nextAttemptAt)}.
         </p>
       )}
       {waiting && (
         <div className="form-actions">
-          {analysis?.nextAttemptAt && new Date(analysis.nextAttemptAt).getTime() > now && (
-            <button
-              type="button"
-              className="primary"
-              onClick={async () => {
-                setStartError(null);
-                try {
-                  setSaved(await sendAnalysisNow(analysis.id));
-                  refreshData(String(tenderId));
-                } catch (err) {
-                  setStartError(err instanceof Error ? err.message : "Envoi impossible.");
-                }
-              }}
-            >
-              Lancer maintenant
-            </button>
-          )}
-          <button type="button" className="secondary" onClick={cancel} disabled={cancelling}>
+          {analysis?.nextAttemptAt &&
+            new Date(analysis.nextAttemptAt).getTime() > now && (
+              <button
+                type="button"
+                className="primary"
+                onClick={async () => {
+                  setStartError(null);
+                  try {
+                    setSaved(await sendAnalysisNow(analysis.id));
+                    refreshData(String(tenderId));
+                  } catch (err) {
+                    setStartError(
+                      err instanceof Error ? err.message : "Envoi impossible.",
+                    );
+                  }
+                }}
+              >
+                Lancer maintenant
+              </button>
+            )}
+          <button
+            type="button"
+            className="secondary"
+            onClick={cancel}
+            disabled={cancelling}
+          >
             Annuler l&apos;analyse
           </button>
         </div>
       )}
 
-      {data.configured && latestDossier?.status === "DONE" && !analysing && !waiting && (
-        <div className="form-actions">
-          <button type="button" className={analysis ? "secondary" : "primary"} onClick={start} disabled={starting}>
-            {analysis ? "Relancer l'analyse" : "Lancer l'analyse"}
-          </button>
-          {analysis && analysis.dossierId !== latestDossier.id && (
-            <span className="hint">Une version plus récente du dossier a été déposée.</span>
-          )}
-        </div>
-      )}
+      {data.configured &&
+        latestDossier?.status === "DONE" &&
+        !analysing &&
+        !waiting && (
+          <div className="form-actions">
+            <button
+              type="button"
+              className={analysis ? "secondary" : "primary"}
+              onClick={start}
+              disabled={starting}
+            >
+              {analysis ? "Relancer l'analyse" : "Lancer l'analyse"}
+            </button>
+            {analysis && analysis.dossierId !== latestDossier.id && (
+              <span className="hint">
+                Une version plus récente du dossier a été déposée.
+              </span>
+            )}
+          </div>
+        )}
       {startError && <p className="error">{startError}</p>}
 
       {analysis?.status === "DONE" && (
-        <SummarySheet data={data} analysis={analysis} onChanged={setSaved} onValidated={setSaved} />
+        <SummarySheet
+          data={data}
+          analysis={analysis}
+          onChanged={setSaved}
+          onValidated={setSaved}
+        />
       )}
     </div>
   );

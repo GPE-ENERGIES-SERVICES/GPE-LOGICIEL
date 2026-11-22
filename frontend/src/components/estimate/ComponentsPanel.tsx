@@ -31,7 +31,10 @@ import {
   suggestSupplies,
   updateComponent,
 } from "@/services/estimateApi";
-import { searchPriceLibrary, type PriceLibraryItem } from "@/services/priceLibraryApi";
+import {
+  searchPriceLibrary,
+  type PriceLibraryItem,
+} from "@/services/priceLibraryApi";
 import type {
   Availability,
   ComponentInput,
@@ -65,7 +68,12 @@ function LibraryPricePicker({
     event.preventDefault();
     setError(null);
     try {
-      setResults(await searchPriceLibrary(String(new FormData(event.currentTarget).get("q") ?? ""), ""));
+      setResults(
+        await searchPriceLibrary(
+          String(new FormData(event.currentTarget).get("q") ?? ""),
+          "",
+        ),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Recherche impossible.");
     }
@@ -74,7 +82,11 @@ function LibraryPricePicker({
   if (!open) {
     return (
       <p>
-        <button type="button" className="secondary" onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setOpen(true)}
+        >
           Prendre un prix de la bibliothèque
         </button>
       </p>
@@ -85,18 +97,35 @@ function LibraryPricePicker({
       <form className="inline-form" onSubmit={search}>
         <label>
           Ouvrage de la bibliothèque
-          <input name="q" required minLength={2} defaultValue={item.designation.split(/[^\p{L}\d,./]+/u).filter((word) => word.length >= 4).slice(0, 2).join(" ")}
-            size={40} />
+          <input
+            name="q"
+            required
+            minLength={2}
+            defaultValue={item.designation
+              .split(/[^\p{L}\d,./]+/u)
+              .filter((word) => word.length >= 4)
+              .slice(0, 2)
+              .join(" ")}
+            size={40}
+          />
         </label>
         <button type="submit" className="primary">
           Chercher
         </button>
-        <button type="button" className="secondary" onClick={() => setOpen(false)}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setOpen(false)}
+        >
           Fermer
         </button>
       </form>
       {error && <p className="error">{error}</p>}
-      {results && results.length === 0 && <p className="muted">Aucun ouvrage : raccourcissez la recherche (ex. « PC encastrée »).</p>}
+      {results && results.length === 0 && (
+        <p className="muted">
+          Aucun ouvrage : raccourcissez la recherche (ex. « PC encastrée »).
+        </p>
+      )}
       {results && results.length > 0 && (
         <table>
           <tbody>
@@ -165,7 +194,11 @@ export function ComponentsPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supplyAi = useAiRun("ESTIMATE_SUPPLY", "L'IA cherche les fournitures…");
-  const pending = suggestions.filter((suggestion) => suggestion.kind === "SUPPLY" && suggestion.status === "PENDING");
+  const pending = suggestions.filter(
+    (suggestion) =>
+      (suggestion.kind === "SUPPLY" || suggestion.kind === "LABOR") &&
+      suggestion.status === "PENDING",
+  );
 
   const run = async (action: () => Promise<Estimate | void>) => {
     setBusy(true);
@@ -188,7 +221,10 @@ export function ComponentsPanel({
     <div className="estimate-components">
       {editable && <LibraryPricePicker item={item} busy={busy} run={run} />}
       {item.components.length === 0 ? (
-        <p className="muted">Aucun coût : ajoutez la fourniture, la main-d&apos;œuvre… d&apos;une unité de ce poste.</p>
+        <p className="muted">
+          Aucun coût : ajoutez la fourniture, la main-d&apos;œuvre… d&apos;une
+          unité de ce poste.
+        </p>
       ) : (
         <table>
           <thead>
@@ -215,7 +251,9 @@ export function ComponentsPanel({
                       submitLabel="Enregistrer"
                       onCancel={() => setEditing(null)}
                       onSubmit={async (input) => {
-                        if (await run(() => updateComponent(component.id, input))) {
+                        if (
+                          await run(() => updateComponent(component.id, input))
+                        ) {
                           setEditing(null);
                         }
                       }}
@@ -223,13 +261,24 @@ export function ComponentsPanel({
                   </td>
                 </tr>
               ) : (
-                <tr key={component.id} className={component.unitCost === null ? "row-error" : undefined}>
+                <tr
+                  key={component.id}
+                  className={
+                    component.unitCost === null ? "row-error" : undefined
+                  }
+                >
                   <td>{COMPONENT_TYPE_LABELS[component.type]}</td>
                   <td>{component.label}</td>
                   <td className="number">{formatNumber(component.quantity)}</td>
                   <td>{component.unit ?? ""}</td>
-                  <td className="number">{component.unitCost === null ? "à saisir" : formatMoney(component.unitCost)}</td>
-                  <td className="number">{component.wasteRate ? formatRate(component.wasteRate) : ""}</td>
+                  <td className="number">
+                    {component.unitCost === null
+                      ? "à saisir"
+                      : formatMoney(component.unitCost)}
+                  </td>
+                  <td className="number">
+                    {component.wasteRate ? formatRate(component.wasteRate) : ""}
+                  </td>
                   <td className="number">
                     {component.coefficient !== null
                       ? formatNumber(component.coefficient)
@@ -238,7 +287,12 @@ export function ComponentsPanel({
                   <td className="muted">{origin(component)}</td>
                   {editable && (
                     <td className="row-actions">
-                      <button type="button" className="secondary" onClick={() => setEditing(component.id)} disabled={busy}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => setEditing(component.id)}
+                        disabled={busy}
+                      >
                         Modifier
                       </button>
                       <button
@@ -260,13 +314,20 @@ export function ComponentsPanel({
 
       {pending.length > 0 && (
         <div className="estimate-suggestions">
-          <h4>Propositions de l&apos;IA (prix lu dans le catalogue une fois acceptée)</h4>
+          <h4>
+            Propositions de l&apos;IA (prix lu dans le catalogue une fois
+            acceptée)
+          </h4>
           <ul className="plain-list">
             {pending.map((suggestion) => (
               <li key={suggestion.id}>
                 <span>
-                  Offre n° {suggestion.offerId}
-                  {suggestion.quantity !== null && ` · ${formatNumber(suggestion.quantity)} par unité`} — {suggestion.text}
+                  {suggestion.kind === "LABOR"
+                    ? `Main-d'œuvre ${suggestion.rateCode}`
+                    : `Offre n° ${suggestion.offerId}`}
+                  {suggestion.quantity !== null &&
+                    ` · ${formatNumber(suggestion.quantity)} ${suggestion.kind === "LABOR" ? "h " : ""}par unité`}{" "}
+                  — {suggestion.text}
                 </span>{" "}
                 {editable && (
                   <>
@@ -315,7 +376,11 @@ export function ComponentsPanel({
           />
         ) : (
           <div className="form-actions">
-            <button type="button" onClick={() => setEditing("new")} disabled={busy}>
+            <button
+              type="button"
+              onClick={() => setEditing("new")}
+              disabled={busy}
+            >
               Ajouter un coût
             </button>
             {aiAvailable && (
@@ -324,7 +389,13 @@ export function ComponentsPanel({
                 className="secondary"
                 disabled={busy}
                 onClick={async () => {
-                  if (await run(() => supplyAi.track(() => suggestSupplies(item.id)).then(() => undefined))) {
+                  if (
+                    await run(() =>
+                      supplyAi
+                        .track(() => suggestSupplies(item.id))
+                        .then(() => undefined),
+                    )
+                  ) {
                     onSuggestions();
                   }
                 }}
@@ -345,7 +416,11 @@ function origin(component: EstimateComponent): string {
     return `Taux ${component.rateCode}`;
   }
   if (component.supplierName || component.supplierRef) {
-    return [component.supplierName, component.supplierRef, component.costDate && `prix du ${formatDate(component.costDate)}`]
+    return [
+      component.supplierName,
+      component.supplierRef,
+      component.costDate && `prix du ${formatDate(component.costDate)}`,
+    ]
       .filter(Boolean)
       .join(" · ");
   }
@@ -378,12 +453,20 @@ function ComponentForm({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const connectors = useLoader(() => getSupplierConnectors(), "supplier-connectors");
-  const connector = connectors.data?.find((candidate) => candidate.available) ?? null;
+  const connectors = useLoader(
+    () => getSupplierConnectors(),
+    "supplier-connectors",
+  );
+  const connector =
+    connectors.data?.find((candidate) => candidate.available) ?? null;
   const [buyQuantity, setBuyQuantity] = useState("1");
-  const [availabilities, setAvailabilities] = useState<Record<number, Availability | null>>({});
+  const [availabilities, setAvailabilities] = useState<
+    Record<number, Availability | null>
+  >({});
   const [unpriced, setUnpriced] = useState<number[]>([]);
-  const [priceLabels, setPriceLabels] = useState<Record<number, string | null>>({});
+  const [priceLabels, setPriceLabels] = useState<Record<number, string | null>>(
+    {},
+  );
   const [manufacturerCode, setManufacturerCode] = useState("");
   const [manufacturerRef, setManufacturerRef] = useState("");
   const [packQuantity, setPackQuantity] = useState("1");
@@ -400,7 +483,9 @@ function ComponentForm({
     try {
       setOffers(await searchOffers(query));
     } catch (err) {
-      setSearchError(err instanceof Error ? err.message : "Recherche impossible.");
+      setSearchError(
+        err instanceof Error ? err.message : "Recherche impossible.",
+      );
     }
   };
 
@@ -411,14 +496,32 @@ function ComponentForm({
     try {
       const ids = listed.map((candidate) => candidate.id);
       const refreshed = await refreshOffers(ids, quantityToBuy);
-      const updated = new Map(refreshed.map((line) => [line.offerId, line.offer]));
-      setOffers(listed.map((candidate) => updated.get(candidate.id) ?? candidate));
-      setUnpriced(refreshed.filter((line) => line.status === "NOT_PRICED").map((line) => line.offerId));
-      setPriceLabels(Object.fromEntries(refreshed.map((line) => [line.offerId, line.priceLabel])));
+      const updated = new Map(
+        refreshed.map((line) => [line.offerId, line.offer]),
+      );
+      setOffers(
+        listed.map((candidate) => updated.get(candidate.id) ?? candidate),
+      );
+      setUnpriced(
+        refreshed
+          .filter((line) => line.status === "NOT_PRICED")
+          .map((line) => line.offerId),
+      );
+      setPriceLabels(
+        Object.fromEntries(
+          refreshed.map((line) => [line.offerId, line.priceLabel]),
+        ),
+      );
       const stocks = await getOfferAvailability(ids, quantityToBuy);
-      setAvailabilities(Object.fromEntries(stocks.map((line) => [line.offerId, line.availability])));
+      setAvailabilities(
+        Object.fromEntries(
+          stocks.map((line) => [line.offerId, line.availability]),
+        ),
+      );
     } catch (err) {
-      setSearchError(err instanceof Error ? err.message : "Le fournisseur ne répond pas.");
+      setSearchError(
+        err instanceof Error ? err.message : "Le fournisseur ne répond pas.",
+      );
     } finally {
       setAsking(false);
     }
@@ -427,17 +530,27 @@ function ComponentForm({
   const lookup = async () => {
     const pack = parseNumber(packQuantity);
     if (!connector || pack === null || Number.isNaN(pack) || pack <= 0) {
-      setSearchError("Conditionnement illisible : indiquez le nombre d'unités vendues pour le prix.");
+      setSearchError(
+        "Conditionnement illisible : indiquez le nombre d'unités vendues pour le prix.",
+      );
       return;
     }
     setAsking(true);
     setSearchError(null);
     try {
-      const found = await lookupOffer(connector.supplierCode, manufacturerCode.trim(), manufacturerRef.trim(), quantityToBuy, pack);
+      const found = await lookupOffer(
+        connector.supplierCode,
+        manufacturerCode.trim(),
+        manufacturerRef.trim(),
+        quantityToBuy,
+        pack,
+      );
       setOffers([found]);
       await askSupplier([found]);
     } catch (err) {
-      setSearchError(err instanceof Error ? err.message : "Le fournisseur ne répond pas.");
+      setSearchError(
+        err instanceof Error ? err.message : "Le fournisseur ne répond pas.",
+      );
     } finally {
       setAsking(false);
     }
@@ -451,7 +564,12 @@ function ComponentForm({
     const unitCost = picked ? null : parseNumber(text("unitCost"));
     const waste = parsePercent(text("waste"));
     const coefficient = parseNumber(text("coefficient"));
-    if (quantity === null || [quantity, unitCost, waste, coefficient].some((value) => Number.isNaN(value))) {
+    if (
+      quantity === null ||
+      [quantity, unitCost, waste, coefficient].some((value) =>
+        Number.isNaN(value),
+      )
+    ) {
       setError("Quantité, coût, perte ou coefficient illisible.");
       return;
     }
@@ -467,15 +585,25 @@ function ComponentForm({
         unitCost: picked ? (component?.unitCost ?? null) : unitCost,
         wasteRate: waste,
         coefficient,
-        supplierName: picked ? (component?.supplierName ?? null) : textOrNull(text("supplierName")),
-        supplierRef: picked ? (component?.supplierRef ?? null) : textOrNull(text("supplierRef")),
-        manufacturerRef: picked ? (component?.manufacturerRef ?? null) : textOrNull(text("manufacturerRef")),
-        costDate: picked ? (component?.costDate ?? null) : textOrNull(text("costDate")),
+        supplierName: picked
+          ? (component?.supplierName ?? null)
+          : textOrNull(text("supplierName")),
+        supplierRef: picked
+          ? (component?.supplierRef ?? null)
+          : textOrNull(text("supplierRef")),
+        manufacturerRef: picked
+          ? (component?.manufacturerRef ?? null)
+          : textOrNull(text("manufacturerRef")),
+        costDate: picked
+          ? (component?.costDate ?? null)
+          : textOrNull(text("costDate")),
         rateCode: offer ? null : textOrNull(rateCode),
         offerId: offer?.id ?? (rateCode ? null : (component?.offerId ?? null)),
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+      setError(
+        err instanceof Error ? err.message : "Enregistrement impossible.",
+      );
     } finally {
       setSaving(false);
     }
@@ -491,7 +619,9 @@ function ComponentForm({
           <select
             value={rateCode}
             onChange={(event) => {
-              const rate = activeRates.find((candidate) => candidate.code === event.target.value);
+              const rate = activeRates.find(
+                (candidate) => candidate.code === event.target.value,
+              );
               setRateCode(event.target.value);
               setOffer(null);
               if (rate) {
@@ -512,7 +642,11 @@ function ComponentForm({
         </label>
         <label>
           Type
-          <select value={offer ? "SUPPLY" : type} disabled={picked} onChange={(event) => setType(event.target.value as ComponentType)}>
+          <select
+            value={offer ? "SUPPLY" : type}
+            disabled={picked}
+            onChange={(event) => setType(event.target.value as ComponentType)}
+          >
             {COMPONENT_TYPES.map((value) => (
               <option key={value} value={value}>
                 {COMPONENT_TYPE_LABELS[value]}
@@ -522,49 +656,95 @@ function ComponentForm({
         </label>
         <label className="wide">
           Libellé
-          <input required maxLength={300} value={label} onChange={(event) => setLabel(event.target.value)} />
+          <input
+            required
+            maxLength={300}
+            value={label}
+            onChange={(event) => setLabel(event.target.value)}
+          />
         </label>
         <label>
           Quantité par unité du poste
-          <input name="quantity" required inputMode="decimal" defaultValue={numberInput(component?.quantity ?? 1)} />
+          <input
+            name="quantity"
+            required
+            inputMode="decimal"
+            defaultValue={numberInput(component?.quantity ?? 1)}
+          />
         </label>
         {!picked && (
           <>
             <label>
               Unité
-              <input name="unit" maxLength={20} defaultValue={component?.unit ?? ""} placeholder="u, h, m…" />
+              <input
+                name="unit"
+                maxLength={20}
+                defaultValue={component?.unit ?? ""}
+                placeholder="u, h, m…"
+              />
             </label>
             <label>
               Coût unitaire HT
-              <input name="unitCost" inputMode="decimal" defaultValue={numberInput(component?.unitCost)} placeholder="à saisir" />
+              <input
+                name="unitCost"
+                inputMode="decimal"
+                defaultValue={numberInput(component?.unitCost)}
+                placeholder="à saisir"
+              />
             </label>
           </>
         )}
         <label>
           Perte (%)
-          <input name="waste" inputMode="decimal" defaultValue={percentInput(component?.wasteRate || null)} placeholder="0" />
+          <input
+            name="waste"
+            inputMode="decimal"
+            defaultValue={percentInput(component?.wasteRate || null)}
+            placeholder="0"
+          />
         </label>
         <label>
           Coefficient propre
-          <input name="coefficient" inputMode="decimal" defaultValue={numberInput(component?.coefficient)} placeholder="celui du chiffrage" />
+          <input
+            name="coefficient"
+            inputMode="decimal"
+            defaultValue={numberInput(component?.coefficient)}
+            placeholder="celui du chiffrage"
+          />
         </label>
         {!picked && (type === "SUPPLY" || type === "RENTAL") && (
           <>
             <label>
               Fournisseur
-              <input name="supplierName" maxLength={100} defaultValue={component?.supplierName ?? ""} />
+              <input
+                name="supplierName"
+                maxLength={100}
+                defaultValue={component?.supplierName ?? ""}
+              />
             </label>
             <label>
               Réf. fournisseur
-              <input name="supplierRef" maxLength={100} defaultValue={component?.supplierRef ?? ""} />
+              <input
+                name="supplierRef"
+                maxLength={100}
+                defaultValue={component?.supplierRef ?? ""}
+              />
             </label>
             <label>
               Réf. fabricant
-              <input name="manufacturerRef" maxLength={100} defaultValue={component?.manufacturerRef ?? ""} />
+              <input
+                name="manufacturerRef"
+                maxLength={100}
+                defaultValue={component?.manufacturerRef ?? ""}
+              />
             </label>
             <label>
               Date du prix
-              <input name="costDate" type="date" defaultValue={component?.costDate ?? ""} />
+              <input
+                name="costDate"
+                type="date"
+                defaultValue={component?.costDate ?? ""}
+              />
             </label>
           </>
         )}
@@ -574,15 +754,23 @@ function ComponentForm({
         <fieldset>
           <legend>Prix d&apos;un fournisseur</legend>
           {connector?.environment === "TEST" && (
-            <p className="banner info">Connexion {connector.supplierName} en TEST : ces prix ne sont pas ceux du compte réel.</p>
+            <p className="banner info">
+              Connexion {connector.supplierName} en TEST : ces prix ne sont pas
+              ceux du compte réel.
+            </p>
           )}
           {offer ? (
             <p>
-              <strong>{offer.supplierName}</strong> · {offer.supplierRef} · {offer.designation} — prix net{" "}
-              {formatMoney(offer.netPrice)}
-              {offer.packQuantity !== 1 && ` les ${formatNumber(offer.packQuantity)} ${offer.purchaseUnit ?? ""}`}
+              <strong>{offer.supplierName}</strong> · {offer.supplierRef} ·{" "}
+              {offer.designation} — prix net {formatMoney(offer.netPrice)}
+              {offer.packQuantity !== 1 &&
+                ` les ${formatNumber(offer.packQuantity)} ${offer.purchaseUnit ?? ""}`}
               {offer.priceSource === "REXEL_TEST" && " · prix de TEST"}{" "}
-              <button type="button" className="secondary danger" onClick={() => setOffer(null)}>
+              <button
+                type="button"
+                className="secondary danger"
+                onClick={() => setOffer(null)}
+              >
                 Retirer
               </button>
             </p>
@@ -599,7 +787,11 @@ function ComponentForm({
                   }
                 }}
               />
-              <button type="button" onClick={search} disabled={query.trim().length < 2}>
+              <button
+                type="button"
+                onClick={search}
+                disabled={query.trim().length < 2}
+              >
                 Chercher
               </button>
               {searchError && <span className="error">{searchError}</span>}
@@ -609,38 +801,73 @@ function ComponentForm({
             <div className="inline-form">
               <label>
                 Quantité à acheter
-                <input inputMode="numeric" value={buyQuantity} onChange={(event) => setBuyQuantity(event.target.value)} />
+                <input
+                  inputMode="numeric"
+                  value={buyQuantity}
+                  onChange={(event) => setBuyQuantity(event.target.value)}
+                />
               </label>
               <label>
                 Trigramme fabricant
-                <input maxLength={10} value={manufacturerCode} onChange={(event) => setManufacturerCode(event.target.value)} placeholder="SCH" />
+                <input
+                  maxLength={10}
+                  value={manufacturerCode}
+                  onChange={(event) => setManufacturerCode(event.target.value)}
+                  placeholder="SCH"
+                />
               </label>
               <label>
                 Réf. commerciale
-                <input maxLength={100} value={manufacturerRef} onChange={(event) => setManufacturerRef(event.target.value)} />
+                <input
+                  maxLength={100}
+                  value={manufacturerRef}
+                  onChange={(event) => setManufacturerRef(event.target.value)}
+                />
               </label>
               <label>
                 Unités vendues pour le prix
-                <input inputMode="decimal" value={packQuantity} onChange={(event) => setPackQuantity(event.target.value)} />
+                <input
+                  inputMode="decimal"
+                  value={packQuantity}
+                  onChange={(event) => setPackQuantity(event.target.value)}
+                />
               </label>
               <button
                 type="button"
                 onClick={lookup}
-                disabled={asking || !validQuantity || !manufacturerCode.trim() || !manufacturerRef.trim()}
+                disabled={
+                  asking ||
+                  !validQuantity ||
+                  !manufacturerCode.trim() ||
+                  !manufacturerRef.trim()
+                }
               >
                 Vérifier chez {connector.supplierName}
               </button>
             </div>
           )}
           {!offer && offers !== null && offers.length === 0 && (
-            <p className="muted">Aucune offre trouvée : saisissez le coût à la main ou importez le tarif du fournisseur.</p>
+            <p className="muted">
+              Aucune offre trouvée : saisissez le coût à la main ou importez le
+              tarif du fournisseur.
+            </p>
           )}
           {!offer && connector && offers && offers.length > 0 && (
             <p>
-              <button type="button" className="secondary" onClick={() => askSupplier(offers)} disabled={asking || !validQuantity}>
-                {asking ? "Demande en cours…" : "Actualiser prix et disponibilités"}
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => askSupplier(offers)}
+                disabled={asking || !validQuantity}
+              >
+                {asking
+                  ? "Demande en cours…"
+                  : "Actualiser prix et disponibilités"}
               </button>{" "}
-              <span className="hint">Vérifiez l&apos;unité du prix (à la pièce, au cent, au mètre) avant de le retenir.</span>
+              <span className="hint">
+                Vérifiez l&apos;unité du prix (à la pièce, au cent, au mètre)
+                avant de le retenir.
+              </span>
             </p>
           )}
           {!offer && offers && offers.length > 0 && (
@@ -659,19 +886,43 @@ function ComponentForm({
                     }}
                   >
                     {candidate.supplierName} · {candidate.supplierRef}
-                    {candidate.manufacturerRef && ` (${candidate.manufacturerRef})`} — {candidate.designation} —{" "}
+                    {candidate.manufacturerRef &&
+                      ` (${candidate.manufacturerRef})`}{" "}
+                    — {candidate.designation} —{" "}
                     {formatMoney(candidate.netPrice)}
-                    {candidate.packQuantity !== 1 && ` les ${formatNumber(candidate.packQuantity)}`}
-                    {candidate.validFrom && ` · prix du ${formatDate(candidate.validFrom)}`}
-                    {candidate.priceSource !== "IMPORT" && ` · lu chez le fournisseur le ${formatDate(candidate.importedAt)}`}
+                    {candidate.packQuantity !== 1 &&
+                      ` les ${formatNumber(candidate.packQuantity)}`}
+                    {candidate.validFrom &&
+                      ` · prix du ${formatDate(candidate.validFrom)}`}
+                    {candidate.priceSource !== "IMPORT" &&
+                      ` · lu chez le fournisseur le ${formatDate(candidate.importedAt)}`}
                     {candidate.priceSource === "REXEL_TEST" && " (TEST)"}
-                    {candidate.ecoTax !== null && ` · écotaxe ${formatMoney(candidate.ecoTax)}`}
+                    {candidate.ecoTax !== null &&
+                      ` · écotaxe ${formatMoney(candidate.ecoTax)}`}
                   </button>
-                  {unpriced.includes(candidate.id) && <span className="error"> Pas de prix du fournisseur : ancien prix conservé.</span>}
-                  {priceLabels[candidate.id] && (
-                    <span className={/unitaire/i.test(priceLabels[candidate.id]!) ? "muted" : "error"}> {priceLabels[candidate.id]}</span>
+                  {unpriced.includes(candidate.id) && (
+                    <span className="error">
+                      {" "}
+                      Pas de prix du fournisseur : ancien prix conservé.
+                    </span>
                   )}
-                  {availabilities[candidate.id] && <AvailabilityLine availability={availabilities[candidate.id]!} />}
+                  {priceLabels[candidate.id] && (
+                    <span
+                      className={
+                        /unitaire/i.test(priceLabels[candidate.id]!)
+                          ? "muted"
+                          : "error"
+                      }
+                    >
+                      {" "}
+                      {priceLabels[candidate.id]}
+                    </span>
+                  )}
+                  {availabilities[candidate.id] && (
+                    <AvailabilityLine
+                      availability={availabilities[candidate.id]!}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -679,14 +930,22 @@ function ComponentForm({
         </fieldset>
       )}
       {picked && (
-        <p className="hint">Le coût, l&apos;unité et les références sont recopiés par le logiciel depuis {offer ? "l'offre" : "le taux"} choisi.</p>
+        <p className="hint">
+          Le coût, l&apos;unité et les références sont recopiés par le logiciel
+          depuis {offer ? "l'offre" : "le taux"} choisi.
+        </p>
       )}
 
       <div className="form-actions">
         <button type="submit" className="primary" disabled={saving}>
           {saving ? "Enregistrement…" : submitLabel}
         </button>
-        <button type="button" className="secondary" onClick={onCancel} disabled={saving}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={onCancel}
+          disabled={saving}
+        >
           Annuler
         </button>
         {error && <span className="error">{error}</span>}
@@ -696,14 +955,26 @@ function ComponentForm({
 }
 
 /** The stocks and delays of the supplier, written as it gives them. */
-export function AvailabilityLine({ availability }: { availability: Availability }) {
+export function AvailabilityLine({
+  availability,
+}: {
+  availability: Availability;
+}) {
   const parts = [
     availability.branchStock && `Agence : ${availability.branchStock}`,
     availability.branchDelay && `délai agence : ${availability.branchDelay}`,
-    availability.warehouseStock && `Centre logistique : ${availability.warehouseStock}`,
-    availability.warehouseDelay && `délai centre : ${availability.warehouseDelay}`,
+    availability.warehouseStock &&
+      `Centre logistique : ${availability.warehouseStock}`,
+    availability.warehouseDelay &&
+      `délai centre : ${availability.warehouseDelay}`,
     availability.warehouseInfo,
     availability.deliveryDate && `livraison : ${availability.deliveryDate}`,
   ].filter(Boolean);
-  return <p className="muted">{parts.length > 0 ? parts.join(" · ") : "Disponibilité non précisée par le fournisseur."}</p>;
+  return (
+    <p className="muted">
+      {parts.length > 0
+        ? parts.join(" · ")
+        : "Disponibilité non précisée par le fournisseur."}
+    </p>
+  );
 }
