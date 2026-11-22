@@ -52,7 +52,7 @@ public class ImportedSupplierCatalog implements SupplierCatalog {
 		if (!words.isEmpty()) {
 			sql.append(" OR (");
 			for (int i = 0; i < words.size(); i++) {
-				sql.append(i == 0 ? "" : " AND ").append("o.designation ILIKE ?");
+				sql.append(i == 0 ? "" : " AND ").append("unaccent(o.designation) ILIKE unaccent(?)");
 				args.add("%" + like(words.get(i)) + "%");
 			}
 			sql.append(')');
@@ -89,7 +89,7 @@ public class ImportedSupplierCatalog implements SupplierCatalog {
 			if (!words.isEmpty()) {
 				where.append(" OR (");
 				for (int i = 0; i < words.size(); i++) {
-					where.append(i == 0 ? "" : " AND ").append("o.designation ILIKE ?");
+					where.append(i == 0 ? "" : " AND ").append("unaccent(o.designation) ILIKE unaccent(?)");
 					args.add("%" + like(words.get(i)) + "%");
 				}
 				where.append(')');

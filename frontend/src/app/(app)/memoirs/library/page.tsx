@@ -2,18 +2,29 @@
 
 import { useState, type FormEvent } from "react";
 
-import { ACTIVITY_LABELS, formatDate } from "@/lib/format";
+import { DomainFilter } from "@/components/DomainFilter";
+import { ACTIVITY_LABELS, formatDate, normalizeText } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { deleteFormerMemoir, formerMemoirUrl, getLibrary, importFormerMemoir, updateFormerMemoir } from "@/services/memoirApi";
 
 /**
  * The former memoirs of GPE: references for the style, the structure and
- * the methods, chosen one by one for the AI; never copied as they are.
+ * the methods, chosen one by one for the AI; never copied as they are. Laid
+ * out as the price library: the list, filtered by domain, then the import.
  */
 export default function MemoirLibraryPage() {
   const library = useLoader(() => getLibrary(), "memoir-library");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [domain, setDomain] = useState("");
+  const [filter, setFilter] = useState("");
+  const words = normalizeText(filter).split(/\s+/).filter(Boolean);
+  const listed = (library.data ?? []).filter(
+    (entry) =>
+      (!domain || entry.activityCode === domain) &&
+      words.every((word) => normalizeText(`${entry.title} ${entry.context ?? ""} ${entry.fileName}`).includes(word)),
+  );
+  const forAi = listed.filter((entry) => entry.useForAi && entry.textChars > 0).length;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,82 +57,59 @@ export default function MemoirLibraryPage() {
   return (
     <div>
       <h1>Bibliothèque des mémoires</h1>
+      {(error || library.error) && <p className="banner error">{error ?? library.error}</p>}
+
       <section className="card">
-        <h2>Importer un ancien mémoire</h2>
+        <h2>Mémoires de la bibliothèque</h2>
         <p className="muted">
           L&apos;IA s&apos;en inspire pour le style, le vocabulaire et la façon de présenter GPE ; elle ne reprend jamais un ancien
           chantier ou une ancienne information sans qu&apos;ils figurent dans les données actuelles de l&apos;entreprise.
         </p>
-        <form onSubmit={submit}>
-          <div className="form-grid">
-            <label className="wide">
-              Fichier (PDF ou Word) *
-              <input type="file" name="file" accept=".pdf,.docx,.doc" required />
-            </label>
-            <label className="wide">
-              Titre *
-              <input name="title" required maxLength={300} placeholder="Éclairage public – Ville de Marignane" />
-            </label>
-            <label>
-              Date
-              <input type="date" name="writtenOn" />
-            </label>
-            <label>
-              Type de marché
-              <input name="marketType" maxLength={100} placeholder="Travaux, maintenance…" />
-            </label>
-            <label>
-              Type de travaux
-              <select name="activityCode" defaultValue="">
-                <option value="">—</option>
-                {Object.entries(ACTIVITY_LABELS).map(([code, label]) => (
-                  <option key={code} value={code}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="wide">
-              Contexte
-              <input name="context" maxLength={4000} placeholder="Acheteur, nature du marché, résultat…" />
-            </label>
-          </div>
-          <label>
-            <input type="checkbox" name="useForAi" defaultChecked /> Utilisable par l&apos;IA comme référence
-          </label>
-          <div className="form-actions">
-            <button type="submit" className="primary" disabled={busy}>
-              {busy ? "Import…" : "Importer"}
-            </button>
-          </div>
-        </form>
-        {error && <p className="banner error">{error}</p>}
-      </section>
-
-      <section className="card">
-        {library.error && <p className="banner error">{library.error}</p>}
-        {library.data && library.data.length === 0 && <p className="muted">Aucun ancien mémoire importé.</p>}
         {library.data && library.data.length > 0 && (
+          <div className="inline-form">
+            <DomainFilter value={domain} onChange={setDomain} />
+            <input
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Affaire, acheteur, fichier…"
+              aria-label="Filtrer les mémoires"
+            />
+            <span className="muted">
+              {listed.length} mémoire{listed.length > 1 ? "s" : ""} · {forAi} utilisé{forAi > 1 ? "s" : ""} par l&apos;IA
+            </span>
+          </div>
+        )}
+        {library.data && listed.length === 0 && (
+          <p className="muted">
+            {library.data.length === 0 ? "Aucun ancien mémoire pour l'instant." : "Aucun mémoire ne correspond à ce filtre."}
+          </p>
+        )}
+        {listed.length > 0 && (
           <table>
             <thead>
               <tr>
-                <th>Mémoire</th>
-                <th>Date</th>
-                <th>Type de travaux</th>
+                <th>Affaire</th>
+                <th>Domaine</th>
                 <th>Texte lu</th>
                 <th>Référence pour l&apos;IA</th>
+                <th>Ajouté</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {library.data.map((entry) => (
+              {listed.map((entry) => (
                 <tr key={entry.id}>
                   <td>
-                    <a href={formerMemoirUrl(entry.id)}>{entry.title}</a>
-                    {entry.context && <div className="muted">{entry.context}</div>}
+                    {entry.title}
+                    {entry.writtenOn && <span className="muted"> · {formatDate(entry.writtenOn)}</span>}
+                    {entry.context && <div className="small muted">{entry.context}</div>}
+                    <div className="small">
+                      <a href={formerMemoirUrl(entry.id)} title="Ouvrir le mémoire tel qu'il a été envoyé">
+                        {entry.fileName}
+                      </a>
+                    </div>
                   </td>
-                  <td>{entry.writtenOn ? formatDate(entry.writtenOn) : ""}</td>
-                  <td>{entry.activityCode ? ACTIVITY_LABELS[entry.activityCode] : ""}</td>
+                  <td>{entry.activityCode ? ACTIVITY_LABELS[entry.activityCode] : "–"}</td>
                   <td>
                     {entry.textChars > 0 ? (
                       `${entry.textChars.toLocaleString("fr-FR")} caractères`
@@ -144,12 +132,13 @@ export default function MemoirLibraryPage() {
                       }}
                     />
                   </td>
+                  <td className="nowrap">{formatDate(entry.uploadedAt)}</td>
                   <td className="row-actions">
                     <button
                       type="button"
                       className="secondary danger"
                       onClick={async () => {
-                        if (window.confirm(`Supprimer « ${entry.title} » de la bibliothèque ?`)) {
+                        if (window.confirm(`Retirer « ${entry.title} » de la bibliothèque ? L'IA ne s'en servira plus.`)) {
                           try {
                             await deleteFormerMemoir(entry.id);
                             library.reload();
@@ -159,7 +148,7 @@ export default function MemoirLibraryPage() {
                         }
                       }}
                     >
-                      Supprimer
+                      Retirer
                     </button>
                   </td>
                 </tr>
@@ -167,6 +156,51 @@ export default function MemoirLibraryPage() {
             </tbody>
           </table>
         )}
+
+        <h3>Ajouter un mémoire</h3>
+        <form onSubmit={submit}>
+          <div className="form-grid">
+            <label className="wide">
+              Mémoire envoyé (PDF ou Word) *
+              <input type="file" name="file" accept=".pdf,.docx,.doc" required />
+            </label>
+            <label className="wide">
+              Affaire *
+              <input name="title" required maxLength={300} placeholder="ex. Chambre funéraire Istres" />
+            </label>
+            <label>
+              Date
+              <input type="date" name="writtenOn" />
+            </label>
+            <label>
+              Domaine
+              <select name="activityCode" defaultValue="">
+                <option value="">–</option>
+                {Object.entries(ACTIVITY_LABELS).map(([code, label]) => (
+                  <option key={code} value={code}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Type de marché
+              <input name="marketType" maxLength={100} placeholder="Travaux, maintenance…" />
+            </label>
+            <label className="wide">
+              Contexte
+              <input name="context" maxLength={4000} placeholder="Acheteur, nature du marché, résultat…" />
+            </label>
+          </div>
+          <label>
+            <input type="checkbox" name="useForAi" defaultChecked /> Utilisable par l&apos;IA comme référence
+          </label>
+          <div className="form-actions">
+            <button type="submit" className="primary" disabled={busy}>
+              {busy ? "Import…" : "Ajouter"}
+            </button>
+          </div>
+        </form>
       </section>
     </div>
   );

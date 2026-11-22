@@ -3,8 +3,9 @@
 import { useState, type FormEvent } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
+import { DomainFilter } from "@/components/DomainFilter";
 import { formatMoney } from "@/lib/estimate";
-import { ACTIVITY_LABELS, formatDate } from "@/lib/format";
+import { ACTIVITY_LABELS, formatDate, normalizeText } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import {
   deletePriceLibraryImport,
@@ -14,22 +15,6 @@ import {
   searchPriceLibrary,
   type PriceLibraryItem,
 } from "@/services/priceLibraryApi";
-
-function DomainFilter({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return (
-    <label>
-      Domaine
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">Tous</option>
-        {Object.entries(ACTIVITY_LABELS).map(([code, label]) => (
-          <option key={code} value={code}>
-            {label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 /**
  * The prices GPE already gave: the price schedules it filled and sent, searched
@@ -44,7 +29,13 @@ export default function PriceLibraryPage() {
   const [busy, setBusy] = useState(false);
   const [domain, setDomain] = useState("");
   const [listDomain, setListDomain] = useState("");
-  const listed = (imports.data ?? []).filter((entry) => !listDomain || entry.domain === listDomain);
+  const [listFilter, setListFilter] = useState("");
+  const listWords = normalizeText(listFilter).split(/\s+/).filter(Boolean);
+  const listed = (imports.data ?? []).filter(
+    (entry) =>
+      (!listDomain || entry.domain === listDomain) &&
+      listWords.every((word) => normalizeText(`${entry.label} ${entry.fileName}`).includes(word)),
+  );
 
   const search = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -150,13 +141,21 @@ export default function PriceLibraryPage() {
         {imports.data && imports.data.length > 0 && (
           <div className="inline-form">
             <DomainFilter value={listDomain} onChange={setListDomain} />
+            <input
+              value={listFilter}
+              onChange={(event) => setListFilter(event.target.value)}
+              placeholder="Affaire, fichier…"
+              aria-label="Filtrer les DPGF"
+            />
             <span className="muted">
-              {listed.length} DPGF · {listed.reduce((sum, entry) => sum + entry.itemCount, 0)} prix
+              {listed.length} DPGF · {listed.reduce((sum, entry) => sum + entry.itemCount, 0).toLocaleString("fr-FR")} lignes de prix
             </span>
           </div>
         )}
         {imports.data && listed.length === 0 && (
-          <p className="muted">{listDomain ? "Aucun DPGF de ce domaine." : "Aucun DPGF pour l'instant."}</p>
+          <p className="muted">
+            {imports.data.length === 0 ? "Aucun DPGF pour l'instant." : "Aucun DPGF ne correspond à ce filtre."}
+          </p>
         )}
         {listed.length > 0 && (
           <table>
@@ -164,7 +163,9 @@ export default function PriceLibraryPage() {
               <tr>
                 <th>Affaire</th>
                 <th>Domaine</th>
-                <th className="number">Prix</th>
+                <th className="number" title="Ouvrages avec un prix unitaire lus dans ce DPGF, réutilisables dans les chiffrages">
+                  Lignes de prix
+                </th>
                 <th>Ajouté</th>
                 {admin && <th />}
               </tr>

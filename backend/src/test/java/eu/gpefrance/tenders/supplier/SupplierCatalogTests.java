@@ -137,7 +137,7 @@ class SupplierCatalogTests {
 		assertThat(mvc.get().uri("/api/suppliers/offers?size=1&page=1").with(TestUsers.admin())).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("{\"total\": 2, \"page\": 1, \"size\": 1, \"content\": [{\"supplierRef\": \"LEG077121\"}]}");
-		assertThat(mvc.get().uri("/api/suppliers/offers?q=r2v 3g2").with(TestUsers.admin())).bodyJson()
+		assertThat(mvc.get().uri("/api/suppliers/offers?q=CABLE r2v").with(TestUsers.admin())).bodyJson()
 			.isLenientlyEqualTo("{\"total\": 1, \"content\": [{\"supplierRef\": \"NEX123\"}]}");
 		assertThat(mvc.get().uri("/api/suppliers/offers?supplierId=2").with(TestUsers.admin())).bodyJson()
 			.isLenientlyEqualTo("{\"total\": 0, \"content\": []}");
