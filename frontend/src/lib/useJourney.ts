@@ -4,6 +4,7 @@ import { getDossiers } from "@/services/documentApi";
 import { getEstimates } from "@/services/estimateApi";
 import { getMemoirs } from "@/services/memoirApi";
 import { getResponse } from "@/services/responseApi";
+import { getTechnicalChoices } from "@/services/technicalApi";
 import type { Analysis } from "@/types/analysis";
 
 export type JourneyStep = "done" | "current" | "todo";
@@ -12,6 +13,7 @@ export type Journey = {
   dce: JourneyStep;
   summary: JourneyStep;
   financial: JourneyStep;
+  technical: JourneyStep;
   estimate: JourneyStep;
   memoir: JourneyStep;
   response: JourneyStep;
@@ -37,6 +39,7 @@ export function useJourney(tenderId: number): Journey {
   const estimates = useLoader(() => getEstimates(tenderId), key);
   const memoirs = useLoader(() => getMemoirs(), key);
   const response = useLoader(() => getResponse(tenderId), key);
+  const technical = useLoader(() => getTechnicalChoices(tenderId), `technical-${tenderId}`);
 
   const dossier = dossiers.data?.[0];
   const mine = (memoirs.data ?? []).filter((memoir) => memoir.tenderId === tenderId);
@@ -46,6 +49,7 @@ export function useJourney(tenderId: number): Journey {
     dce: !dossier ? "todo" : dossier.status === "DONE" ? "done" : "current",
     summary: analysisStep(summary.data?.latest),
     financial: analysisStep(financial.data?.latest),
+    technical: technical.data?.validatedAt ? "done" : technical.data?.saved ? "current" : "todo",
     estimate: estimates.data?.some((estimate) => estimate.status === "VALIDATED")
       ? "done"
       : estimates.data?.length

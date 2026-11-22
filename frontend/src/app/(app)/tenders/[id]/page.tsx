@@ -14,7 +14,7 @@ import { MemoirsSection } from "@/components/memoir/MemoirsSection";
 import { NoticeHistory } from "@/components/NoticeHistory";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { AdministrativeSection } from "@/components/AdministrativeSection";
-import { EquipmentSection } from "@/components/EquipmentSection";
+import { TechnicalSection } from "@/components/TechnicalSection";
 import { ResponseSection } from "@/components/ResponseSection";
 import { Tabs } from "@/components/Tabs";
 import { FollowButton } from "@/components/FollowButton";
@@ -36,13 +36,22 @@ import { useJourney } from "@/lib/useJourney";
 import { useLoader } from "@/lib/useLoader";
 import { getTenderAwards } from "@/services/awardApi";
 import { available } from "@/services/http";
-import { getTender, MANUAL_SOURCE, setTenderActivities } from "@/services/tenderApi";
+import {
+  getTender,
+  MANUAL_SOURCE,
+  setTenderActivities,
+} from "@/services/tenderApi";
 import type { AwardedContract } from "@/types/award";
 import type { TenderDetail } from "@/types/tender";
 
 /** A fact of the tender, left out when it is not known. */
 function Fact({ label, children }: { label: string; children: ReactNode }) {
-  if (children === null || children === undefined || children === "" || children === false) {
+  if (
+    children === null ||
+    children === undefined ||
+    children === "" ||
+    children === false
+  ) {
     return null;
   }
   return (
@@ -67,7 +76,13 @@ const DOMAIN_SOURCES: Record<string, string> = {
 };
 
 /** The domains of the tender, which a user may correct: the choice wins over the rules and the AI. */
-function DomainPicker({ tender, onSaved }: { tender: TenderDetail; onSaved: (tender: TenderDetail) => void }) {
+function DomainPicker({
+  tender,
+  onSaved,
+}: {
+  tender: TenderDetail;
+  onSaved: (tender: TenderDetail) => void;
+}) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const current = (tender.activities ?? []).join(",");
@@ -76,9 +91,13 @@ function DomainPicker({ tender, onSaved }: { tender: TenderDetail; onSaved: (ten
     setSaving(true);
     setError(null);
     try {
-      onSaved(await setTenderActivities(tender.id, value ? value.split(",") : []));
+      onSaved(
+        await setTenderActivities(tender.id, value ? value.split(",") : []),
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+      setError(
+        err instanceof Error ? err.message : "Enregistrement impossible.",
+      );
     } finally {
       setSaving(false);
     }
@@ -103,7 +122,12 @@ function DomainPicker({ tender, onSaved }: { tender: TenderDetail; onSaved: (ten
           </option>
         ))}
       </select>
-      {tender.activitiesSource && <span className="small muted"> {DOMAIN_SOURCES[tender.activitiesSource]}</span>}
+      {tender.activitiesSource && (
+        <span className="small muted">
+          {" "}
+          {DOMAIN_SOURCES[tender.activitiesSource]}
+        </span>
+      )}
       {error && <span className="error"> {error}</span>}
     </>
   );
@@ -120,7 +144,10 @@ function List({ items }: { items: string[] }) {
 }
 
 function awardText(award: AwardedContract): string {
-  const offers = award.offersReceived === null ? "" : ` · ${award.offersReceived} offres reçues`;
+  const offers =
+    award.offersReceived === null
+      ? ""
+      : ` · ${award.offersReceived} offres reçues`;
   return `${award.winner} — ${formatAmount(award.amount)} · le ${formatDate(award.awardedAt)}${offers}`;
 }
 
@@ -136,7 +163,11 @@ function TenderDetails() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const loaded = useLoader(() => getTender(id), id);
-  const awards = useLoader(() => (available("awards") ? getTenderAwards(Number(id)) : Promise.resolve([])), id);
+  const awards = useLoader(
+    () =>
+      available("awards") ? getTenderAwards(Number(id)) : Promise.resolve([]),
+    id,
+  );
   const journey = useJourney(Number(id));
   // The tender as last saved on this page, or as loaded.
   const [saved, setSaved] = useState<TenderDetail | null>(null);
@@ -158,12 +189,24 @@ function TenderDetails() {
   }
 
   const back = backLink(searchParams.get("from"), tender.status !== "ACTIVE");
-  const marketTypes = tender.marketTypes.map((type) => MARKET_TYPE_LABELS[type]).join(", ");
-  const procedure = tender.procedureType ? PROCEDURE_LABELS[tender.procedureType] : null;
-  const area = tender.postalCode ?? (tender.departments.length ? tender.departments.join(", ") : null);
-  const place = [tender.location, area && `(${area})`].filter(Boolean).join(" ");
+  const marketTypes = tender.marketTypes
+    .map((type) => MARKET_TYPE_LABELS[type])
+    .join(", ");
+  const procedure = tender.procedureType
+    ? PROCEDURE_LABELS[tender.procedureType]
+    : null;
+  const area =
+    tender.postalCode ??
+    (tender.departments.length ? tender.departments.join(", ") : null);
+  const place = [tender.location, area && `(${area})`]
+    .filter(Boolean)
+    .join(" ");
   const outcome =
-    tender.result?.kind === "AWARDED" ? "Attribuée" : tender.status !== "ACTIVE" ? STATUS_LABELS[tender.status] : null;
+    tender.result?.kind === "AWARDED"
+      ? "Attribuée"
+      : tender.status !== "ACTIVE"
+        ? STATUS_LABELS[tender.status]
+        : null;
 
   // Rule RM2: when a rectification moved the deadline, the change is highlighted. Only the notices of the source
   // of the consultation count: another source publishing it never changes it.
@@ -176,17 +219,29 @@ function TenderDetails() {
   const deadlineChanged = announcedDeadlines.size > 1;
 
   const lotAmounts = tender.lots.map((lot) => lot.estimatedAmount);
-  const lotTotal = lotAmounts.reduce<number>((sum, amount) => sum + (amount ?? 0), 0);
-  const awardsByLot = new Map((awards.data ?? []).map((award) => [award.lotNumber, award]));
-  const singleAward = tender.lots.length === 0 ? awardsByLot.get(null) : undefined;
+  const lotTotal = lotAmounts.reduce<number>(
+    (sum, amount) => sum + (amount ?? 0),
+    0,
+  );
+  const awardsByLot = new Map(
+    (awards.data ?? []).map((award) => [award.lotNumber, award]),
+  );
+  const singleAward =
+    tender.lots.length === 0 ? awardsByLot.get(null) : undefined;
 
   const criteria = tender.awardCriteria ?? [];
   const allWeighted = criteria.every((criterion) => criterion.weight !== null);
-  const weightTotal = criteria.reduce((sum, criterion) => sum + (criterion.weight ?? 0), 0);
+  const weightTotal = criteria.reduce(
+    (sum, criterion) => sum + (criterion.weight ?? 0),
+    0,
+  );
   const info = tender.keyInfo;
   const visit = info?.siteVisit;
-  const platform = tender.platformName ?? (tender.platformUrl ? hostOf(tender.platformUrl) : null);
-  const cpv = tender.cpv ?? tender.cpvCodes.map((code) => ({ code, label: "" }));
+  const platform =
+    tender.platformName ??
+    (tender.platformUrl ? hostOf(tender.platformUrl) : null);
+  const cpv =
+    tender.cpv ?? tender.cpvCodes.map((code) => ({ code, label: "" }));
 
   return (
     <article className="tender-page">
@@ -207,23 +262,40 @@ function TenderDetails() {
               {tender.title}
             </h1>
             <p className="hero-subtitle">
-              {[tender.buyer ?? "Acheteur non indiqué", place, tender.reference && `Réf. ${tender.reference}`]
+              {[
+                tender.buyer ?? "Acheteur non indiqué",
+                place,
+                tender.reference && `Réf. ${tender.reference}`,
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
             <div className="badges">
-              {tender.source === MANUAL_SOURCE && <span className="badge">Ajouté manuellement</span>}
+              {tender.source === MANUAL_SOURCE && (
+                <span className="badge">Ajouté manuellement</span>
+              )}
               <a href="#suivi" className="badge">
                 {FOLLOW_UP_LABELS[tender.followUpStatus]}
               </a>
               {outcome && <span className="badge">{outcome}</span>}
-              {tender.retained === false && <span className="badge">Hors critères</span>}
-              {deadlineChanged && <span className="badge urgent">Date limite modifiée par un rectificatif</span>}
+              {tender.retained === false && (
+                <span className="badge">Hors critères</span>
+              )}
+              {deadlineChanged && (
+                <span className="badge urgent">
+                  Date limite modifiée par un rectificatif
+                </span>
+              )}
             </div>
           </div>
           <div className="hero-actions">
             {tender.platformUrl && (
-              <a href={consultationUrl(tender.platformUrl)} target="_blank" rel="noopener noreferrer" className="button primary">
+              <a
+                href={consultationUrl(tender.platformUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button primary"
+              >
                 Accéder à la consultation
               </a>
             )}
@@ -231,7 +303,12 @@ function TenderDetails() {
               Déposer le DCE
             </a>
             {tender.noticeUrl && (
-              <a href={tender.noticeUrl} target="_blank" rel="noopener noreferrer" className="hero-link">
+              <a
+                href={tender.noticeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hero-link"
+              >
                 Voir l&apos;avis sur le {tender.source}
               </a>
             )}
@@ -241,13 +318,21 @@ function TenderDetails() {
           <div className="key-fact key-deadline">
             <dt>Date limite de réponse</dt>
             <dd>
-              {tender.deadline ? formatDateTime(tender.deadline) : "Non indiquée"}
-              {tender.status === "ACTIVE" && <DeadlineBadge deadline={tender.deadline} />}
+              {tender.deadline
+                ? formatDateTime(tender.deadline)
+                : "Non indiquée"}
+              {tender.status === "ACTIVE" && (
+                <DeadlineBadge deadline={tender.deadline} />
+              )}
             </dd>
           </div>
           <div className="key-fact">
             <dt>Montant estimé</dt>
-            <dd>{tender.estimatedAmount !== null ? formatAmount(tender.estimatedAmount) : "Non indiqué"}</dd>
+            <dd>
+              {tender.estimatedAmount !== null
+                ? formatAmount(tender.estimatedAmount)
+                : "Non indiqué"}
+            </dd>
           </div>
           <div className="key-fact">
             <dt>Procédure</dt>
@@ -255,13 +340,17 @@ function TenderDetails() {
           </div>
           <div className="key-fact">
             <dt>Lots</dt>
-            <dd>{tender.lots.length ? `${tender.lots.length} lots` : "Lot unique"}</dd>
+            <dd>
+              {tender.lots.length ? `${tender.lots.length} lots` : "Lot unique"}
+            </dd>
           </div>
           <div className="key-fact">
             <dt>Visite du site</dt>
             <dd>
               {visit?.required ? (
-                <span className="key-warning">Obligatoire{visit.date && ` le ${formatDateTime(visit.date)}`}</span>
+                <span className="key-warning">
+                  Obligatoire{visit.date && ` le ${formatDateTime(visit.date)}`}
+                </span>
               ) : visit ? (
                 "Facultative"
               ) : (
@@ -276,7 +365,10 @@ function TenderDetails() {
         </dl>
       </header>
 
-      <ProcessingPanel tenderId={tender.id} retained={tender.retained ?? null} />
+      <ProcessingPanel
+        tenderId={tender.id}
+        retained={tender.retained ?? null}
+      />
 
       <DecisionSection tenderId={tender.id} />
 
@@ -291,12 +383,17 @@ function TenderDetails() {
               <>
                 <section className="card">
                   <dl className="facts rows">
-                    <Fact label="Objet">{tender.description ?? "Description non disponible dans l'avis."}</Fact>
+                    <Fact label="Objet">
+                      {tender.description ??
+                        "Description non disponible dans l'avis."}
+                    </Fact>
                     <Fact label="Lots">
                       {tender.lots.length === 0 ? (
                         <>
                           Sans allotissement : un seul marché.
-                          {singleAward && <> Attribution : {awardText(singleAward)}</>}
+                          {singleAward && (
+                            <> Attribution : {awardText(singleAward)}</>
+                          )}
                         </>
                       ) : (
                         <table>
@@ -314,9 +411,20 @@ function TenderDetails() {
                               return (
                                 <tr key={lot.number}>
                                   <td>{lot.number}</td>
-                                  <td>{lotTitle(lot.number, lot.title) ?? "Sans intitulé"}</td>
-                                  <td className="nowrap">{formatAmount(lot.estimatedAmount)}</td>
-                                  {awardsByLot.size > 0 && <td>{award ? awardText(award) : "Non attribué"}</td>}
+                                  <td>
+                                    {lotTitle(lot.number, lot.title) ??
+                                      "Sans intitulé"}
+                                  </td>
+                                  <td className="nowrap">
+                                    {formatAmount(lot.estimatedAmount)}
+                                  </td>
+                                  {awardsByLot.size > 0 && (
+                                    <td>
+                                      {award
+                                        ? awardText(award)
+                                        : "Non attribué"}
+                                    </td>
+                                  )}
                                 </tr>
                               );
                             })}
@@ -325,8 +433,14 @@ function TenderDetails() {
                             <tfoot>
                               <tr>
                                 <td />
-                                <td>{lotAmounts.every((amount) => amount !== null) ? "Total" : "Total des montants indiqués"}</td>
-                                <td className="nowrap">{formatAmount(lotTotal)}</td>
+                                <td>
+                                  {lotAmounts.every((amount) => amount !== null)
+                                    ? "Total"
+                                    : "Total des montants indiqués"}
+                                </td>
+                                <td className="nowrap">
+                                  {formatAmount(lotTotal)}
+                                </td>
                                 {awardsByLot.size > 0 && <td />}
                               </tr>
                             </tfoot>
@@ -338,17 +452,22 @@ function TenderDetails() {
                       <>
                         <Fact label="Critères d'attribution">
                           {criteria.length === 0 ? (
-                            <span className="muted">Non indiqués dans l&apos;avis.</span>
+                            <span className="muted">
+                              Non indiqués dans l&apos;avis.
+                            </span>
                           ) : (
                             <>
                               <List
                                 items={criteria.map((criterion) =>
-                                  criterion.weight === null ? `${criterion.label} (non pondéré)` : `${criterion.label} : ${criterion.weight} %`,
+                                  criterion.weight === null
+                                    ? `${criterion.label} (non pondéré)`
+                                    : `${criterion.label} : ${criterion.weight} %`,
                                 )}
                               />
                               {allWeighted && weightTotal !== 100 && (
                                 <p className="hint">
-                                  Les pondérations publiées ne totalisent pas 100 % : vérifier le règlement de consultation.
+                                  Les pondérations publiées ne totalisent pas
+                                  100 % : vérifier le règlement de consultation.
                                 </p>
                               )}
                             </>
@@ -356,15 +475,25 @@ function TenderDetails() {
                         </Fact>
                         {!info ? (
                           <Fact label="Informations importantes">
-                            <span className="muted">Non renseignées dans l&apos;avis : elles seront relevées dans le DCE.</span>
+                            <span className="muted">
+                              Non renseignées dans l&apos;avis : elles seront
+                              relevées dans le DCE.
+                            </span>
                           </Fact>
                         ) : (
                           <>
                             <Fact label="Visite du site">
                               {visit?.required ? (
                                 <>
-                                  <span className="badge urgent">Obligatoire</span> {visit.date && `le ${formatDateTime(visit.date)}`}
-                                  {visit.date && new Date(visit.date) < new Date() && <span className="muted"> (passée)</span>}
+                                  <span className="badge urgent">
+                                    Obligatoire
+                                  </span>{" "}
+                                  {visit.date &&
+                                    `le ${formatDateTime(visit.date)}`}
+                                  {visit.date &&
+                                    new Date(visit.date) < new Date() && (
+                                      <span className="muted"> (passée)</span>
+                                    )}
                                 </>
                               ) : visit ? (
                                 "Facultative"
@@ -373,11 +502,23 @@ function TenderDetails() {
                               )}
                             </Fact>
                             <Fact label="Documents demandés">
-                              {info.requiredDocuments.length > 0 && <List items={info.requiredDocuments} />}
+                              {info.requiredDocuments.length > 0 && (
+                                <List items={info.requiredDocuments} />
+                              )}
                             </Fact>
-                            <Fact label="Qualifications">{info.qualifications.length > 0 && <List items={info.qualifications} />}</Fact>
-                            <Fact label="Certifications">{info.certifications.length > 0 && <List items={info.certifications} />}</Fact>
-                            <Fact label="Conditions particulières">{info.specialConditions}</Fact>
+                            <Fact label="Qualifications">
+                              {info.qualifications.length > 0 && (
+                                <List items={info.qualifications} />
+                              )}
+                            </Fact>
+                            <Fact label="Certifications">
+                              {info.certifications.length > 0 && (
+                                <List items={info.certifications} />
+                              )}
+                            </Fact>
+                            <Fact label="Conditions particulières">
+                              {info.specialConditions}
+                            </Fact>
                           </>
                         )}
                       </>
@@ -386,29 +527,57 @@ function TenderDetails() {
                 </section>
 
                 <section className="card">
-                  <Fold title="Détails de l'avis" count={tender.source === MANUAL_SOURCE ? "Ajouté manuellement" : `${tender.source} · ${tender.externalId}`}>
+                  <Fold
+                    title="Détails de l'avis"
+                    count={
+                      tender.source === MANUAL_SOURCE
+                        ? "Ajouté manuellement"
+                        : `${tender.source} · ${tender.externalId}`
+                    }
+                  >
                     <dl className="facts grid">
                       <Fact label="Référence">{tender.reference}</Fact>
                       <Fact label="Lieu d'exécution">
                         {tender.location && (
                           <>
                             {tender.location}
-                            {tender.distanceKm != null && <span className="muted"> · à {tender.distanceKm} km du siège</span>}
+                            {tender.distanceKm != null && (
+                              <span className="muted">
+                                {" "}
+                                · à {tender.distanceKm} km du siège
+                              </span>
+                            )}
                           </>
                         )}
                       </Fact>
-                      <Fact label="Départements">{tender.departments.join(", ")}</Fact>
+                      <Fact label="Départements">
+                        {tender.departments.join(", ")}
+                      </Fact>
                       <Fact label="Type de marché">{marketTypes}</Fact>
                       <Fact label="Domaine">
                         <DomainPicker tender={tender} onSaved={setSaved} />
                       </Fact>
-                      <Fact label="Publication">{tender.publishedAt && formatDate(tender.publishedAt)}</Fact>
-                      <Fact label="Pertinence">{tender.relevanceScore != null && `${tender.relevanceScore} %`}</Fact>
+                      <Fact label="Publication">
+                        {tender.publishedAt && formatDate(tender.publishedAt)}
+                      </Fact>
+                      <Fact label="Pertinence">
+                        {tender.relevanceScore != null &&
+                          `${tender.relevanceScore} %`}
+                      </Fact>
                       <Fact label="Codes CPV">
-                        {cpv.length > 0 && <List items={cpv.map((item) => `${item.code}${item.label ? ` – ${item.label}` : ""}`)} />}
+                        {cpv.length > 0 && (
+                          <List
+                            items={cpv.map(
+                              (item) =>
+                                `${item.code}${item.label ? ` – ${item.label}` : ""}`,
+                            )}
+                          />
+                        )}
                       </Fact>
                     </dl>
-                    {tender.filterReason && <p className="reason">{tender.filterReason}</p>}
+                    {tender.filterReason && (
+                      <p className="reason">{tender.filterReason}</p>
+                    )}
                   </Fold>
                 </section>
               </>
@@ -419,10 +588,13 @@ function TenderDetails() {
             label: "DCE et documents",
             step: journey.dce,
             content: (
-                <section className="card">
-                  <h2>Documents (DCE)</h2>
-                  <DocumentsSection tenderId={tender.id} manual={tender.source === MANUAL_SOURCE} />
-                </section>
+              <section className="card">
+                <h2>Documents (DCE)</h2>
+                <DocumentsSection
+                  tenderId={tender.id}
+                  manual={tender.source === MANUAL_SOURCE}
+                />
+              </section>
             ),
           },
           {
@@ -430,10 +602,10 @@ function TenderDetails() {
             label: "Fiche IA",
             step: journey.summary,
             content: (
-                <section className="card">
-                  <h2>Analyse du DCE</h2>
-                  <AnalysisSection tenderId={tender.id} />
-                </section>
+              <section className="card">
+                <h2>Analyse du DCE</h2>
+                <AnalysisSection tenderId={tender.id} />
+              </section>
             ),
           },
           {
@@ -441,14 +613,33 @@ function TenderDetails() {
             label: "Analyse financière",
             step: journey.financial,
             content: (
-                <section className="card">
-                  <h2>Analyse financière (DPGF, BPU, DQE)</h2>
-                  <p className="muted">
-                    À la demande : les montants des tableurs sont contrôlés par le logiciel (sommes, totaux, TVA), puis l&apos;IA
-                    résume les postes principaux et les points à vérifier, chacun avec sa source (document, feuille, ligne).
-                  </p>
-                  <FinancialSection tenderId={tender.id} />
-                </section>
+              <section className="card">
+                <h2>Analyse financière (DPGF, BPU, DQE)</h2>
+                <p className="muted">
+                  À la demande : les montants des tableurs sont contrôlés par le
+                  logiciel (sommes, totaux, TVA), puis l&apos;IA résume les
+                  postes principaux et les points à vérifier, chacun avec sa
+                  source (document, feuille, ligne).
+                </p>
+                <FinancialSection tenderId={tender.id} />
+              </section>
+            ),
+          },
+          {
+            id: "technique",
+            label: "Choix techniques",
+            step: journey.technical,
+            content: (
+              <section className="card">
+                <h2>Choix techniques</h2>
+                <p className="muted">
+                  Entre l&apos;analyse et le chiffrage : le matériel retenu, la
+                  valorisation de l&apos;énergie, la toiture et le
+                  dimensionnement. Le chiffrage, le mémoire et le dossier de
+                  réponse partent de ces choix.
+                </p>
+                <TechnicalSection tenderId={tender.id} />
+              </section>
             ),
           },
           {
@@ -479,7 +670,10 @@ function TenderDetails() {
             content: (
               <section className="card">
                 <h2>Administratif</h2>
-                <AdministrativeSection tenderId={tender.id} lots={tender.lots} />
+                <AdministrativeSection
+                  tenderId={tender.id}
+                  lots={tender.lots}
+                />
               </section>
             ),
           },
@@ -490,7 +684,7 @@ function TenderDetails() {
             content: (
               <section className="card">
                 <h2>Dossier de réponse</h2>
-                <EquipmentSection tenderId={tender.id} />
+
                 <ResponseSection tenderId={tender.id} />
               </section>
             ),
@@ -502,7 +696,11 @@ function TenderDetails() {
               <>
                 <section className="card">
                   <h2>Suivi</h2>
-                  <FollowUpForm tender={tender} onSaved={setSaved} key={tender.followUpAt ?? "new"} />
+                  <FollowUpForm
+                    tender={tender}
+                    onSaved={setSaved}
+                    key={tender.followUpAt ?? "new"}
+                  />
                 </section>
 
                 <section className="card">

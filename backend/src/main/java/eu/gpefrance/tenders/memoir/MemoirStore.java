@@ -415,10 +415,14 @@ class MemoirStore {
 			.stream()
 			.map(MemoirStore::pairs)
 			.toList();
+		// The use of the energy chosen, as the template memoirs say it: « revente du surplus ».
+		String valorisation = jdbc.queryForList("SELECT valorisation FROM technical_choice WHERE tender_id = ?", String.class,
+				tenderId).stream().filter(java.util.Objects::nonNull).findFirst().map(VALORISATION_WORDS::get).orElse(null);
 		return candidates.stream()
 			.sorted(java.util.Comparator.comparingInt((Candidate candidate) -> {
 				boolean sameMounting = mountings.stream().anyMatch((pairs) -> pairs.stream().anyMatch(candidate.described()::contains));
-				return (sameMounting ? 2 : 0) + (candidate.sameDomain() ? 1 : 0);
+				boolean sameValorisation = valorisation != null && candidate.described().contains(valorisation);
+				return (sameMounting ? 2 : 0) + (sameValorisation ? 2 : 0) + (candidate.sameDomain() ? 1 : 0);
 			}).reversed())
 			.limit(count)
 			.map(Candidate::excerpt)
@@ -440,6 +444,10 @@ class MemoirStore {
 						+ (row.getString("brand") == null ? "" : row.getString("brand") + " ") + row.getString("reference"),
 				tenderId);
 	}
+
+	/** The words that tell each use of the energy in a memoir, without accents. */
+	private static final Map<String, String> VALORISATION_WORDS = Map.of("SELF_TOTAL", "autoconsommation totale",
+			"SELF_SURPLUS", "revente du surplus", "RESALE_TOTAL", "revente totale");
 
 	/** Two words side by side in a reference: « helios b2 », « fix evo »; enough to know a system. */
 	static List<String> pairs(String reference) {

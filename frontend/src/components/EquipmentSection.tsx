@@ -133,7 +133,7 @@ export function EquipmentSection({ tenderId }: { tenderId: number }) {
     try {
       await chooseTenderEquipment(tenderId, ids);
       setChoosing(false);
-      refreshData(`equipment-${tenderId}`, `response-${tenderId}`);
+      refreshData(`equipment-${tenderId}`, `response-${tenderId}`, `technical-${tenderId}`);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Enregistrement impossible.",

@@ -25,6 +25,7 @@ import eu.gpefrance.tenders.memoir.MemoirStore.MemoirRow;
 import eu.gpefrance.tenders.memoir.MemoirStore.RequirementRow;
 import eu.gpefrance.tenders.memoir.MemoirStore.SectionRow;
 import eu.gpefrance.tenders.tender.Tender;
+import eu.gpefrance.tenders.equipment.TechnicalChoiceService;
 import eu.gpefrance.tenders.tender.TenderRepository;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -69,9 +70,12 @@ class MemoirAi {
 
 	private final TransactionTemplate transaction;
 
+	private final TechnicalChoiceService technical;
+
 	MemoirAi(AiAssistant ai, TenderRepository tenders, DossierRepository dossiers, DocumentPageRepository pages,
 			CompanyDirectory company, MemoirStore store, MemoirProperties properties, Clock clock,
-			TransactionTemplate transaction) {
+			TransactionTemplate transaction, TechnicalChoiceService technical) {
+		this.technical = technical;
 		this.ai = ai;
 		this.tenders = tenders;
 		this.dossiers = dossiers;
@@ -199,6 +203,8 @@ class MemoirAi {
 		content.set("entreprise", JSON.valueToTree(company.snapshot(LocalDate.now(clock))));
 		// The equipment chosen for this tender: the only one the memoir may name.
 		store.equipment(memoir.tenderId()).forEach((item) -> content.withArray("materiel_retenu").add(item));
+		// The technical choices of GPE for this tender, entered by hand: facts of the memoir.
+		technical.describe(memoir.tenderId()).forEach((line) -> content.withArray("choix_techniques").add(line));
 		store.libraryExcerpts(properties.libraryExcerpts(), properties.excerptLength(), memoir.tenderId())
 			.forEach(excerpt -> content.withArray("anciens_memoires_de_reference").add(excerpt));
 		JsonNode root = root(ai.ask("MEMOIR_SECTION", VERSION, writingInstructions(), context(memoir) + content,
@@ -351,6 +357,8 @@ class MemoirAi {
 				- « materiel_retenu », s'il est donné, est le matériel choisi pour ce marché (modules, onduleurs, \
 				fixation…) : c'est le seul que tu peux nommer, avec sa marque et sa référence exactes ; sans lui, \
 				parle du matériel sans marque ni référence et signale-le dans missing.
+				- « choix_techniques », s'il est donné, est ce que GPE a décidé pour ce marché (valorisation de \
+				l'énergie, toiture, puissance, onduleurs, contraintes) : ce sont des faits du mémoire, à respecter.
 				- Ne répète pas le titre de la section. Écris en HTML simple : <p>, <h4> pour un intertitre, <ul>, \
 				<ol>, <li>, <strong>, <em>, <table>. Pour une illustration utile, prévois un emplacement : \
 				<figure class="placeholder" data-kind="photo"><figcaption>Photo à insérer : …</figcaption></figure> \

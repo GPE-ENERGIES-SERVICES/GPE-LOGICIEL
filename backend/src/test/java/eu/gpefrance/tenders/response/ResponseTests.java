@@ -182,6 +182,19 @@ class ResponseTests {
 	}
 
 	@Test
+	void proposesThePowersTheFileNamesForTheTechnicalChoices() {
+		Long tender = tender();
+		analysis(tender, "attention_points", "Puissance indiquée de 179,4 kWc sur le plan réseaux, contre environ 162,84 kWc au CCTP",
+				null, null);
+
+		// Both, with their sentence: the file contradicts itself, a user decides.
+		assertThat(mvc.get().uri("/api/tenders/{id}/technical-choices", tender).with(TestUsers.user())).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"hasFile": true, "saved": false, "powers": [{"kwc": 179.4}, {"kwc": 162.84}]}""");
+	}
+
+	@Test
 	void filesEachPieceInTheFolderOfGpe() {
 		var application = ResponsePiece.Category.APPLICATION;
 		var offer = ResponsePiece.Category.OFFER;

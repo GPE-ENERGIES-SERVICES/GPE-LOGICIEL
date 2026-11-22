@@ -162,6 +162,57 @@ class EquipmentTests {
 			.isEqualTo(1);
 	}
 
+	@Test
+	void technicalChoicesAreEnteredByHandWithoutFileAndSizedByCode() {
+		// Nothing entered, no consultation file: everything to write by hand.
+		assertThat(mvc.get().uri("/api/tenders/{id}/technical-choices", tenderId).with(TestUsers.user())).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("{\"saved\": false, \"hasFile\": false, \"powers\": [], \"validatedBy\": null}");
+
+		String choices = """
+				{"valorisation": "SELF_TOTAL", "roof": "Bac acier, charpente vérifiée", "requestedKwc": 162.84,
+				 "moduleCount": 390, "moduleWc": 460, "inverterCount": 2, "inverterKva": 50,
+				 "openPoints": "Puissance à confirmer par l'acheteur"}""";
+		assertThat(put(choices)).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"saved": true, "choices": {"valorisation": "SELF_TOTAL", "moduleCount": 390},
+					 "sizing": {"installedKwc": 179.4, "gapPercent": 10.2, "inverterKva": 100, "dcAcRatio": 1.79},
+					 "updatedBy": "Marie Durand"}""");
+		assertThat(put(choices)).bodyJson().extractingPath("$.sizing.warnings.length()").isEqualTo(2);
+
+		assertThat(mvc.post().uri("/api/tenders/{id}/technical-choices/validation", tenderId).with(TestUsers.user()).with(csrf()))
+			.hasStatusOk()
+			.bodyJson()
+			.extractingPath("$.validatedBy")
+			.isEqualTo("Marie Durand");
+		// Changed after: to validate again.
+		assertThat(put(choices.replace("\"inverterCount\": 2", "\"inverterCount\": 3"))).bodyJson()
+			.isLenientlyEqualTo("{\"validatedBy\": null, \"sizing\": {\"dcAcRatio\": 1.20, \"warnings\": [\"La puissance installée (179.4 kWc) s'écarte de 10,2 % de la puissance demandée (162,84 kWc).\"]}}");
+
+		assertThat(put("{\"valorisation\": \"VENTE\"}")).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(put("{\"moduleCount\": 0}")).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(mvc.get().uri("/api/tenders/999/technical-choices").with(TestUsers.user())).hasStatus(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void readsThePowerOfAModuleInItsReference() {
+		assertThat(TechnicalChoiceService.watts("DMEGC DM460G12RT-B48HBT – 460 Wc")).isEqualByComparingTo("460");
+		assertThat(TechnicalChoiceService.watts("Tiger Neo : JKM450N-54HL4R")).isEqualByComparingTo("450");
+		assertThat(TechnicalChoiceService.watts("DMEGC 465")).isEqualByComparingTo("465");
+		assertThat(TechnicalChoiceService.watts("Module verre-verre")).isNull();
+	}
+
+	private MvcTestResult put(String json) {
+		return mvc.put()
+			.uri("/api/tenders/{id}/technical-choices", tenderId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(json)
+			.with(TestUsers.user())
+			.with(csrf())
+			.exchange();
+	}
+
 	private MvcTestResult upload(String name, RequestPostProcessor user) {
 		return mvc.post()
 			.uri("/api/equipment-sheets")
