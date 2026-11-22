@@ -86,7 +86,9 @@ public class TenderService {
 		Tender tender = tenders.save(Tender.manual(new TenderDetails(request.title().strip(), null, buyer, null, null,
 				List.of(), List.of(), null, List.of(), null, null, request.deadline(), null, null, List.of()), user,
 				clock.instant()));
-		return TenderDetailResponse.from(tender, false, List.of());
+		// Followed by whoever adds it: found again in « Mes suivis », not lost among the notices collected.
+		follows.save(new TenderFollow(userId, tender.getId(), clock.instant()));
+		return TenderDetailResponse.from(tender, true, List.of());
 	}
 
 	@Transactional

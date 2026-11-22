@@ -56,7 +56,12 @@ class ManualTenderTests {
 	@BeforeEach
 	void cleanDatabase() {
 		jdbc.execute("TRUNCATE extracted_field, analysis_document, analysis, document_page, document, dossier, "
-				+ "tender_notice, lot, tender RESTART IDENTITY CASCADE");
+				+ "tender_follow, tender_notice, lot, tender RESTART IDENTITY CASCADE");
+		jdbc.execute("""
+				INSERT INTO app_user (id, email, display_name, password_hash, role, enabled, created_at)
+				VALUES (1, 'marie@gpe.test', 'Marie Durand', 'x', 'USER', true, now())
+				ON CONFLICT DO NOTHING
+				""");
 	}
 
 	@Test
@@ -74,6 +79,11 @@ class ManualTenderTests {
 			.extractingPath("$.content[0].id")
 			.isEqualTo(tender.getId().intValue());
 		assertThat(mvc.get().uri("/api/tenders/{id}", tender.getId()).with(TestUsers.user())).hasStatusOk();
+		// Followed by whoever added it: found again in « Mes suivis ».
+		assertThat(mvc.get().uri("/api/tenders?tab=FOLLOWED").with(TestUsers.user())).hasStatusOk()
+			.bodyJson()
+			.extractingPath("$.content[0].id")
+			.isEqualTo(tender.getId().intValue());
 	}
 
 	@Test
