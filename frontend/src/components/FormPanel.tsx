@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
+import { useAiRun } from "@/components/AiProgress";
 import { formatDateTime } from "@/lib/format";
-import { useLoader } from "@/lib/useLoader";
+import { refreshData, useLoader } from "@/lib/useLoader";
 import { changeFormField, generateForm, getForm, reviewForm, startForm } from "@/services/responseApi";
 import type { FormDecision, FormField, FormFieldSource, FormStatus, ResponseForm, ResponseView } from "@/types/response";
 
@@ -127,6 +128,7 @@ export function FormPanel({
   const [showOthers, setShowOthers] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const ai = useAiRun("RESPONSE_FORM", "L'IA remplit le formulaire…");
   const form = saved ?? loaded.data;
 
   if (!form) {
@@ -140,6 +142,8 @@ export function FormPanel({
     try {
       setSaved(await action());
       onChange?.();
+      // The menu badge, the Administratif page and the answer show it at once.
+      refreshData("nav-administrative", "administrative", "response-*");
     } catch (err) {
       setError(err instanceof Error ? err.message : failure);
     } finally {
@@ -147,7 +151,13 @@ export function FormPanel({
     }
   };
   const start = (useAi: boolean) =>
-    act(() => startForm(pieceId, { lotNumber: chosenLot || null, useAi }), "Remplissage impossible.");
+    act(
+      () =>
+        useAi
+          ? ai.track(() => startForm(pieceId, { lotNumber: chosenLot || null, useAi }))
+          : startForm(pieceId, { lotNumber: chosenLot || null, useAi }),
+      "Remplissage impossible.",
+    );
   const review = (decision: FormDecision, comment?: string) =>
     act(() => reviewForm(pieceId, { decision, comment }), "Décision non enregistrée.");
   const validated = form.status === "VALIDATED";
@@ -197,6 +207,7 @@ export function FormPanel({
               </button>
             )}
           </div>
+          {ai.view}
           {!form.aiAvailable && form.aiMessage && <p className="hint">{form.aiMessage}</p>}
           <p className="hint">
             Un formulaire par lot : pour un autre lot, ajoutez une pièce (par exemple « Acte d&apos;engagement lot 2 »). Relancer l&apos;IA

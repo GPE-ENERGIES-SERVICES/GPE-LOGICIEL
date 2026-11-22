@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { formatDateTime } from "@/lib/format";
-import { useLoader } from "@/lib/useLoader";
+import { refreshData, useLoader } from "@/lib/useLoader";
 import { cancelAnalysis, getFinancialAnalysis, getTenderAnalysis, sendAnalysisNow } from "@/services/analysisApi";
 import { allowAutoAnalysis, getDossiers } from "@/services/documentApi";
 import type { Analysis } from "@/types/analysis";
@@ -164,23 +164,27 @@ export function ProcessingPanel({ tenderId, retained }: { tenderId: number; reta
   const { reload: reloadSummary } = summary;
   const { reload: reloadFinancial } = financial;
 
-  // While something runs: the time every second, the data every three.
+  // While something runs: the time every second, every part of the tender every three, and once more at the end.
+  const wasWorking = useRef(false);
   useEffect(() => {
     if (!working) {
+      if (wasWorking.current) {
+        wasWorking.current = false;
+        refreshData(String(tenderId), `response-${tenderId}`, `administrative-${tenderId}`, "nav-administrative");
+      }
       return;
     }
+    wasWorking.current = true;
     let tick = 0;
     const timer = window.setInterval(() => {
       setNow(Date.now());
       tick++;
       if (tick % 3 === 0) {
-        reloadDossiers();
-        reloadSummary();
-        reloadFinancial();
+        refreshData(String(tenderId));
       }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [working, reloadDossiers, reloadSummary, reloadFinancial]);
+  }, [working, tenderId]);
 
   const run = async (action: () => Promise<unknown>) => {
     setError(null);

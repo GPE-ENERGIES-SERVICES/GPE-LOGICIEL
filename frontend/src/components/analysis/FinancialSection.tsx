@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { Fold } from "@/components/Fold";
 import { ANALYSIS_STATUS_LABELS } from "@/lib/analysis";
 import { DOCUMENT_STATE_LABELS, formatDateTime, PIECE_TYPE_LABELS } from "@/lib/format";
-import { useLoader } from "@/lib/useLoader";
+import { AiProgress } from "@/components/AiProgress";
+import { refreshData, useLoader } from "@/lib/useLoader";
 import { getFinancialAnalysis, startFinancialAnalysis } from "@/services/analysisApi";
 import { getDossiers } from "@/services/documentApi";
 import type { AnalysisDocument, FinancialPoint, FinancialResult, PriceCheck } from "@/types/analysis";
@@ -279,7 +280,7 @@ export function FinancialSection({ tenderId }: { tenderId: number }) {
     setError(null);
     try {
       await startFinancialAnalysis(latestDossier.id, analysis?.dossierId === latestDossier.id);
-      reload();
+      refreshData(String(tenderId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible de lancer l'analyse financière.");
     } finally {
@@ -343,7 +344,14 @@ export function FinancialSection({ tenderId }: { tenderId: number }) {
           <span className="hint">Appel à l&apos;IA, payant : lancé seulement sur ce bouton.</span>
         </div>
       )}
-      {running && <p className="muted">Analyse financière en cours…</p>}
+      {running && analysis && (
+        <AiProgress
+          since={analysis.startedAt ?? analysis.createdAt}
+          running
+          typicalSeconds={data.typicalSeconds}
+          label={analysis.startedAt ? "L'IA lit les pièces de prix…" : "Analyse financière en attente d'envoi…"}
+        />
+      )}
       {error && <p className="error">{error}</p>}
 
       {analysis?.status === "DONE" && data.result && <Result result={data.result} documents={analysis.documents} />}

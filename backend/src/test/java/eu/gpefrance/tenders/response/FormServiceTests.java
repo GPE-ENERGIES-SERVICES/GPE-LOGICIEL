@@ -349,6 +349,29 @@ class FormServiceTests {
 	}
 
 	@Test
+	void tellsWhatAFillingByTheAiCostAndHowLongSuchACallTakes() {
+		Instant before = Instant.now().minusSeconds(5);
+		service.start(piece(), null, true, "Marie Durand");
+
+		assertThat(mvc.get()
+			.uri("/api/ai-calls/summary?kind=RESPONSE_FORM&since={since}", before.toString())
+			.with(TestUsers.user())).hasStatusOk()
+			.bodyJson()
+			// 100 tokens in at 3 € and 50 out at 15 € a million.
+			.isLenientlyEqualTo("{\"calls\": 1, \"inputTokens\": 100, \"outputTokens\": 50, \"cost\": 0.0011}");
+		assertThat(mvc.get().uri("/api/ai-calls/summary?kind=RESPONSE_FORM").with(TestUsers.user())).bodyJson()
+			.extractingPath("$.typicalSeconds")
+			.isEqualTo(0);
+		// Another user, or a kind not called: nothing.
+		assertThat(mvc.get()
+			.uri("/api/ai-calls/summary?kind=ESTIMATE_REVIEW&since={since}", before.toString())
+			.with(TestUsers.user())).bodyJson()
+			.isLenientlyEqualTo("{\"calls\": 0, \"cost\": null}");
+		assertThat(mvc.get().uri("/api/ai-calls/summary?kind=bad kind").with(TestUsers.user()))
+			.hasStatus(HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
 	void findsTheOtherFormsInTheFileByTheWordsOfTheirLabel() {
 		var honour = document("DCE/05_Declaration_sur_honneur.docx");
 		var visit = document("DCE/Attestation de visite.doc");

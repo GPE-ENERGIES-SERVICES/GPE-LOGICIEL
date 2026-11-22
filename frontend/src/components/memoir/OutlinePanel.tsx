@@ -18,6 +18,7 @@ import {
   validateOutline,
 } from "@/services/memoirApi";
 import type { MemoirSection, MemoirWorkspace, RequirementCategory } from "@/types/memoir";
+import { AiProgress } from "@/components/AiProgress";
 import { Icon } from "@/components/Icon";
 
 type Props = {
@@ -97,6 +98,14 @@ export function OutlinePanel({ workspace, onChanged, onError, onShow }: Props) {
           >
             {running && job?.kind === "ANALYSIS" ? "Analyse du DCE en cours…" : "Analyser le DCE et proposer un sommaire"}
           </button>
+          {job?.kind === "ANALYSIS" && (
+            <AiProgress
+              kind="MEMOIR_ANALYSIS"
+              since={job.startedAt}
+              running={running}
+              label="L'IA lit le DCE et propose le sommaire…"
+            />
+          )}
           {!ai.available && <p className="hint">IA non disponible : {ai.message}</p>}
           {ai.available && documents.length === 0 && (
             <p className="hint">Aucun document lu dans le DCE : déposez-le dans l&apos;appel d&apos;offres.</p>

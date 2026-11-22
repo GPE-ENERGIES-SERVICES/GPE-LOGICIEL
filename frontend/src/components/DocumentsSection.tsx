@@ -11,7 +11,7 @@ import {
   PIECE_TYPE_LABELS,
 } from "@/lib/format";
 import { readingProgress } from "@/lib/progress";
-import { useLoader } from "@/lib/useLoader";
+import { refreshData, useLoader } from "@/lib/useLoader";
 import { changeAiChoice, changePieceType, getDossiers, retryDossier, uploadDossier } from "@/services/documentApi";
 import { available, DEMO_DATA } from "@/services/http";
 import type { AiChoice, AiUse, DocumentInfo, Dossier, PieceType } from "@/types/document";
@@ -256,7 +256,7 @@ export function DocumentsSection({ tenderId, manual = false }: { tenderId: numbe
         fileInput.current.value = "";
       }
       setChosen([]);
-      reload();
+      refreshData(String(tenderId));
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Dépôt impossible.");
     } finally {
@@ -326,13 +326,13 @@ export function DocumentsSection({ tenderId, manual = false }: { tenderId: numbe
       {data?.[0]?.status === "DONE" && available("documentSearch") && <DocumentSearch tenderId={tenderId} />}
       {data?.map((dossier, index) =>
         index === 0 ? (
-          <DossierView key={dossier.id} dossier={dossier} onChanged={reload} />
+          <DossierView key={dossier.id} dossier={dossier} onChanged={() => refreshData(String(tenderId))} />
         ) : (
           <details key={dossier.id} className="previous-dossier">
             <summary>
               Version {dossier.version} du {formatDateTime(dossier.uploadedAt)} ({dossier.documents.length} fichiers)
             </summary>
-            <DossierView dossier={dossier} onChanged={reload} />
+            <DossierView dossier={dossier} onChanged={() => refreshData(String(tenderId))} />
           </details>
         ),
       )}

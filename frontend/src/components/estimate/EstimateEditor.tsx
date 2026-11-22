@@ -18,6 +18,7 @@ import {
   percentInput,
   textOrNull,
 } from "@/lib/estimate";
+import { useAiRun } from "@/components/AiProgress";
 import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { getDossiers } from "@/services/documentApi";
@@ -70,6 +71,8 @@ export function EstimateEditor({ id }: { id: number }) {
   const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
   const [error, setError] = useState<string | null>(null);
+  const libraryAi = useAiRun("ESTIMATE_PRICE", "Recherche des prix dans la bibliothèque…");
+  const reviewAi = useAiRun("ESTIMATE_REVIEW", "L'IA relit le chiffrage…");
   const estimate = saved && saved.id === id ? saved : loaded.data;
 
   if (loaded.error) {
@@ -180,13 +183,18 @@ export function EstimateEditor({ id }: { id: number }) {
             className="secondary"
             disabled={busy}
             title="Pour chaque ligne sans prix (hors forfaits) : le même ouvrage de la bibliothèque GPE, trouvé par le logiciel, puis par l'IA pour les cas ambigus"
-            onClick={() => run(() => suggestLibraryPrices(estimate.id).then(() => undefined))}
+            onClick={() => run(() => libraryAi.track(() => suggestLibraryPrices(estimate.id)).then(() => undefined))}
           >
             Prix bibliothèque
           </button>
         )}
         {aiAvailable && (
-          <button type="button" className="secondary" disabled={busy} onClick={() => run(() => reviewEstimate(estimate.id).then(() => undefined))}>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => run(() => reviewAi.track(() => reviewEstimate(estimate.id)).then(() => undefined))}
+          >
             Relecture IA
           </button>
         )}
@@ -205,6 +213,8 @@ export function EstimateEditor({ id }: { id: number }) {
           </button>
         )}
       </div>
+      {libraryAi.view}
+      {reviewAi.view}
 
       {panel === "import" && editable && (
         <div className="sheet-panel">

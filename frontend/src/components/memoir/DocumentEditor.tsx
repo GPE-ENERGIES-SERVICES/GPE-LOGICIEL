@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { AiProgress, useAiRun } from "@/components/AiProgress";
 import { formatDateTime } from "@/lib/format";
 import { AI_ACTION_LABELS, COMPANY_BLOCK_LABELS, PLACEHOLDER_LABELS } from "@/lib/memoir";
 import {
@@ -194,7 +195,6 @@ export function DocumentEditor({ workspace, onSection, onChanged, onError }: Pro
               Rédaction par l&apos;IA : {job.doneSteps} / {job.totalSteps}
               {current && ` · en cours : ${current.number} ${current.title}`}
             </span>
-            <progress max={job.totalSteps} value={job.doneSteps} />
             <button type="button" className="secondary" disabled={job.cancelRequested} onClick={() => run(() => cancelJob(memoir.id))}>
               {job.cancelRequested ? "Arrêt après la section en cours…" : "Arrêter"}
             </button>
@@ -225,6 +225,15 @@ export function DocumentEditor({ workspace, onSection, onChanged, onError }: Pro
           </>
         )}
       </div>
+      {job?.kind === "WRITING" && (
+        <AiProgress
+          kind="MEMOIR_SECTION"
+          since={job.startedAt}
+          running={writing}
+          steps={{ done: job.doneSteps, total: job.totalSteps }}
+          label="Rédaction des sections par l'IA"
+        />
+      )}
 
       <div
         className="memoir-page"
@@ -284,6 +293,10 @@ function SectionEditor({
   const [busy, setBusy] = useState(false);
   const [requirementId, setRequirementId] = useState<string>("");
   const [revisions, setRevisions] = useState<MemoirRevision[] | null>(null);
+  // Writing a section and changing its text are two kinds of calls, each with its usual duration.
+  const writeAi = useAiRun("MEMOIR_SECTION", "L'IA rédige la section…");
+  const editAi = useAiRun("MEMOIR_EDIT", "L'IA retravaille le texte…");
+  const [lastAi, setLastAi] = useState<"write" | "edit">("edit");
   const Heading = HEADINGS[Math.min(section.level, 4) - 1];
   const { ai, requirements } = workspace;
 
@@ -416,12 +429,16 @@ function SectionEditor({
               onError("Choisissez d'abord l'exigence du DCE à laquelle adapter le texte.");
               return;
             }
+            const followed = action === "WRITE" ? writeAi : editAi;
+            setLastAi(action === "WRITE" ? "write" : "edit");
             act(() =>
-              askAi(section.id, {
-                action,
-                instruction: null,
-                requirementId: action === "ADAPT" ? Number(requirementId) : null,
-              }),
+              followed.track(() =>
+                askAi(section.id, {
+                  action,
+                  instruction: null,
+                  requirementId: action === "ADAPT" ? Number(requirementId) : null,
+                }),
+              ),
             );
           }}
         >
@@ -473,6 +490,7 @@ function SectionEditor({
           Versions précédentes
         </button>
       </div>
+      {lastAi === "write" ? writeAi.view : editAi.view}
 
       {revisions && (
         <div className="memoir-revisions">

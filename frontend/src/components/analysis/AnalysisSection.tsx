@@ -17,7 +17,7 @@ import {
 } from "@/lib/analysis";
 import { DOCUMENT_STATE_LABELS, formatDateTime, PIECE_TYPE_LABELS } from "@/lib/format";
 import { analysisProgress, readingProgress } from "@/lib/progress";
-import { useLoader } from "@/lib/useLoader";
+import { refreshData, useLoader } from "@/lib/useLoader";
 import {
   cancelAnalysis,
   getTenderAnalysis,
@@ -399,7 +399,7 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
     try {
       await startAnalysis(latestDossier.id, force);
       setSaved(null);
-      reloadAnalysis();
+      refreshData(String(tenderId));
     } catch (err) {
       setStartError(err instanceof Error ? err.message : "Impossible de lancer l'analyse.");
     } finally {
@@ -415,6 +415,7 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
     setStartError(null);
     try {
       setSaved(await cancelAnalysis(analysis.id));
+      refreshData(String(tenderId));
     } catch (err) {
       setStartError(err instanceof Error ? err.message : "Impossible d'annuler l'analyse.");
     } finally {
@@ -479,6 +480,7 @@ export function AnalysisSection({ tenderId }: { tenderId: number }) {
                 setStartError(null);
                 try {
                   setSaved(await sendAnalysisNow(analysis.id));
+                  refreshData(String(tenderId));
                 } catch (err) {
                   setStartError(err instanceof Error ? err.message : "Envoi impossible.");
                 }

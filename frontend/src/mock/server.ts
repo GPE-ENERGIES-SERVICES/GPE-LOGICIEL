@@ -835,6 +835,11 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/administrative-forms$/, () => []],
   [
     "GET",
+    /^\/api\/ai-calls\/summary$/,
+    () => ({ typicalSeconds: null, calls: 0, inputTokens: 0, outputTokens: 0, cost: null, seconds: null }),
+  ],
+  [
+    "GET",
     /^\/api\/tenders\/(\d+)\/response$/,
     (id) => find(id) && { steps: [], analysisDone: false, pieces: [], documents: [] },
   ],

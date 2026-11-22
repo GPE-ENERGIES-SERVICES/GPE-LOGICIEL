@@ -14,6 +14,7 @@ import {
   percentInput,
   textOrNull,
 } from "@/lib/estimate";
+import { useAiRun } from "@/components/AiProgress";
 import { formatDate } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import {
@@ -163,6 +164,7 @@ export function ComponentsPanel({
   const [editing, setEditing] = useState<number | "new" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const supplyAi = useAiRun("ESTIMATE_SUPPLY", "L'IA cherche les fournitures…");
   const pending = suggestions.filter((suggestion) => suggestion.kind === "SUPPLY" && suggestion.status === "PENDING");
 
   const run = async (action: () => Promise<Estimate | void>) => {
@@ -322,7 +324,7 @@ export function ComponentsPanel({
                 className="secondary"
                 disabled={busy}
                 onClick={async () => {
-                  if (await run(() => suggestSupplies(item.id).then(() => undefined))) {
+                  if (await run(() => supplyAi.track(() => suggestSupplies(item.id)).then(() => undefined))) {
                     onSuggestions();
                   }
                 }}
@@ -332,6 +334,7 @@ export function ComponentsPanel({
             )}
           </div>
         ))}
+      {supplyAi.view}
       {error && <p className="error">{error}</p>}
     </div>
   );
