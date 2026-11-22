@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 
 import eu.gpefrance.tenders.document.FileStorage;
+import eu.gpefrance.tenders.document.OfficeConverter;
 import eu.gpefrance.tenders.document.FileTypeValidator;
 import eu.gpefrance.tenders.document.FileTypeValidator.Kind;
 
@@ -45,9 +46,12 @@ class MemoirFiles {
 
 	private final MemoirProperties properties;
 
-	MemoirFiles(FileStorage storage, MemoirProperties properties) {
+	private final OfficeConverter converter;
+
+	MemoirFiles(FileStorage storage, MemoirProperties properties, OfficeConverter converter) {
 		this.storage = storage;
 		this.properties = properties;
+		this.converter = converter;
 	}
 
 	/**
@@ -76,7 +80,23 @@ class MemoirFiles {
 					text = new PDFTextStripper().getText(document);
 				}
 			}
-			else if (WORD.contains(extension) && !extension.equals("odt")) {
+			else if (extension.equals("doc")) {
+				// The old Word format is read once converted, as the forms of the consultations.
+				Path folder = Files.createTempDirectory("memoir-convert");
+				try {
+					Path copy = Files.copy(stored.path(), folder.resolve("memoir.doc"));
+					try (POITextExtractor extractor = ExtractorFactory
+						.createExtractor(converter.toDocx(copy, folder).toFile())) {
+						text = extractor.getText();
+					}
+				}
+				finally {
+					try (var paths = Files.walk(folder)) {
+						paths.sorted(java.util.Comparator.reverseOrder()).forEach((path) -> path.toFile().delete());
+					}
+				}
+			}
+			else if (extension.equals("docx")) {
 				try (POITextExtractor extractor = ExtractorFactory.createExtractor(stored.path().toFile())) {
 					text = extractor.getText();
 				}

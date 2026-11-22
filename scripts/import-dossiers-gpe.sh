@@ -6,9 +6,16 @@
 # - the company documents of "03-Dossier RAO/02-Situation GPE",
 #   "03-Assurance et Rib", "04-Références" and "05-Qualification", one per
 #   name, the copy of the last job folder.
+# In older folders without "03-Dossier RAO", the memoir is the « MT… » file of the
+# job folder; a « MT… » file alone at the top of the folder is a job of its own.
 # What is already there (same title or name) is skipped: it can be run again.
 #
 #   scripts/import-dossiers-gpe.sh "<folder AO PV 1>" PHOTOVOLTAIC
+#
+# On Windows, run it in Linux: curl.exe reads its arguments in the Windows code
+# page and breaks the accents of the titles.
+#   docker run --rm --add-host=host.docker.internal:host-gateway -v "<repo>:/repo" -v "<folder>:/in" \
+#     -e API_URL=http://host.docker.internal:3000 alpine sh -c "apk add -q curl && sh /repo/scripts/import-dossiers-gpe.sh /in ELECTRICITY"
 #
 # Logs in with BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD of .env.
 # API_URL is the address of the frontend (default http://localhost:APP_PORT).
@@ -55,26 +62,45 @@ printf '{"email":"%s","password":"%s"}' "$(json_escape "$BOOTSTRAP_ADMIN_EMAIL")
 
 echo "== Memoirs"
 curl -fsS -b "$JAR" "$API_URL/api/memoir-library" -o "$JAR.memoirs"
+memoir() {
+  title="$1"
+  file="$2"
+  if grep -qF "\"title\":\"$(json_escape "$title")\"" "$JAR.memoirs"; then
+    echo "Already there: $title"
+  elif post /api/memoir-library -F "file=@$file" --form-string "title=$title" \
+      --form-string "activityCode=$ACTIVITY" > /dev/null; then
+    echo "$title: $(basename "$file")"
+  fi
+}
+
+# Word first, then PDF
+word_first() {
+  grep -iE '\.(docx|doc|odt|pdf)$' | awk '{ print (tolower($0) ~ /\.pdf$/ ? 1 : 0) "\t" $0 }' | sort | head -1 | cut -f2
+}
+
 for job in "$ROOT"/*/; do
   title=$(basename "$job")
   pieces="$job/03-Dossier RAO/01-Pieces principales"
-  [ -d "$pieces" ] || continue
-  if grep -qF "\"title\":\"$(json_escape "$title")\"" "$JAR.memoirs"; then
-    echo "Already there: $title"
-    continue
+  if [ -d "$pieces" ]; then
+    # « MT » as a word or « mémoire », not its annexes nor Office lock files
+    found=$(ls "$pieces" | grep -iE '(^|[^a-z])mt([^a-z]|$)|moire' | grep -viE '^annexe|^~' | word_first)
+  else
+    # Older folders: the memoir is the « MT… » file at the top of the job folder
+    pieces="$job"
+    found=$(ls -p "$pieces" | grep -v '/$' | grep -iE '^mt' | word_first)
   fi
-  # « MT » as a word or « mémoire », not its annexes nor Office lock files; Word first
-  memoir=$(ls "$pieces" | grep -iE '(^|[^a-z])mt([^a-z]|$)|moire' | grep -viE '^annexe|^~' |
-    grep -iE '\.(docx|doc|odt|pdf)$' | awk '{ print (tolower($0) ~ /\.pdf$/ ? 1 : 0) "\t" $0 }' |
-    sort | head -1 | cut -f2)
-  if [ -z "$memoir" ]; then
+  if [ -z "$found" ]; then
     echo "No memoir found: $title" >&2
     continue
   fi
-  if post /api/memoir-library -F "file=@$pieces/$memoir" --form-string "title=$title" \
-      --form-string "activityCode=$ACTIVITY" > /dev/null; then
-    echo "$title: $memoir"
-  fi
+  memoir "$title" "$pieces/$found"
+done
+# A memoir alone at the top of the folder: one job each, titled by its name
+for file in "$ROOT"/[Mm][Tt]*; do
+  [ -f "$file" ] || continue
+  case "$file" in *.doc|*.docx|*.odt|*.pdf|*.DOC|*.DOCX|*.PDF) ;; *) continue ;; esac
+  name=$(basename "$file")
+  memoir "${name%.*}" "$file"
 done
 
 category() {
@@ -113,7 +139,8 @@ while IFS= read -r file; do
   fi
   created=$(printf '{"category":"%s","name":"%s"}' "$(category "$name")" "$(json_escape "$name")" |
     post /api/company/documents -H "Content-Type: application/json" --data @-) || continue
-  id=$(printf '%s' "$created" | sed 's/^{"id":\([0-9]*\).*/\1/')
+  # the keys come in alphabetical order; a new document has no file, so its last "id" is its own
+  id=$(printf '%s' "$created" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
   if post "/api/company/documents/$id/files" -F "file=@$file" > /dev/null; then
     echo "$name ($(category "$name"))"
   fi
