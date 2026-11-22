@@ -37,6 +37,7 @@ import eu.gpefrance.tenders.company.CompanyDirectory;
 import eu.gpefrance.tenders.company.CompanyDirectory.DocumentFile;
 import eu.gpefrance.tenders.company.Validity;
 import eu.gpefrance.tenders.document.FileStorage;
+import eu.gpefrance.tenders.equipment.EquipmentService;
 import eu.gpefrance.tenders.document.FileTypeValidator;
 import eu.gpefrance.tenders.estimate.EstimateResponse;
 import eu.gpefrance.tenders.estimate.EstimateService;
@@ -78,8 +79,12 @@ public class ResponseService {
 
 	private final Clock clock;
 
+	private final EquipmentService equipment;
+
 	public ResponseService(ResponsePieceRepository pieces, TenderRepository tenders, AnalysisRepository analyses,
-			CompanyDirectory company, EstimateService estimates, FileStorage storage, JdbcTemplate jdbc, Clock clock) {
+			CompanyDirectory company, EstimateService estimates, FileStorage storage, JdbcTemplate jdbc, Clock clock,
+			EquipmentService equipment) {
+		this.equipment = equipment;
 		this.pieces = pieces;
 		this.tenders = tenders;
 		this.analyses = analyses;
@@ -109,7 +114,7 @@ public class ResponseService {
 	 */
 	public record PieceResponse(Long id, Category category, String label, boolean fromAnalysis, PieceState state,
 			String detail, Long companyDocumentId, String fileName, Long sizeBytes, String attachedName,
-			String checkedBy, Instant checkedAt, boolean fillable) {
+			String checkedBy, Instant checkedAt, boolean fillable, String section) {
 	}
 
 	/** A step before the answer, as it stands. */
@@ -298,8 +303,12 @@ public class ResponseService {
 	 * belongs to; refused rather than incomplete when a file is gone from the
 	 * disk.
 	 */
+	/**
+	 * @param single one envelope, as some consultations ask: the folders of GPE
+	 * without the candidature and the offer around them
+	 */
 	@Transactional(readOnly = true)
-	public List<PieceFile> archiveEntries(Long tenderId) {
+	public List<PieceFile> archiveEntries(Long tenderId, boolean single) {
 		checkTender(tenderId);
 		Map<Long, DocumentFile> documents = documentsById();
 		List<PieceFile> entries = new ArrayList<>();
@@ -313,9 +322,17 @@ public class ResponseService {
 				throw new ResponseStatusException(HttpStatus.CONFLICT,
 						"Le fichier de « " + piece.getLabel() + " » est introuvable : déposez-le à nouveau.");
 			}
-			String folder = piece.getCategory() == Category.APPLICATION ? "1-Candidature/" : "2-Offre/";
+			String envelope = single ? "" : piece.getCategory() == Category.APPLICATION ? "1-Candidature/" : "2-Offre/";
+			String folder = envelope + PieceMatcher.section(piece.getCategory(), piece.getLabel()) + "/";
 			entries.add(new PieceFile(unique(folder + attached.name().replaceAll("[\\\\/:*?\"<>|]", "_"), names),
 					attached.path()));
+		}
+		// The sheets of the equipment chosen for the tender go with the offer, as GPE files them.
+		for (EquipmentService.SheetFile sheet : equipment.filesOfTender(tenderId)) {
+			if (Files.isRegularFile(sheet.path())) {
+				entries.add(new PieceFile(unique((single ? "" : "2-Offre/") + "06-Fiches techniques/"
+						+ sheet.fileName().replaceAll("[\\\\/:*?\"<>|]", "_"), names), sheet.path()));
+			}
 		}
 		if (entries.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Aucun fichier à exporter pour l'instant.");
@@ -389,7 +406,7 @@ public class ResponseService {
 		return new PieceResponse(piece.getId(), piece.getCategory(), piece.getLabel(), piece.isFromAnalysis(), state, detail,
 				piece.getCompanyDocumentId(), piece.getFileName(), piece.getSizeBytes(),
 				attached == null ? null : attached.name(), piece.getCheckedBy(), piece.getCheckedAt(),
-				FormService.fillable(piece.getLabel()));
+				FormService.fillable(piece.getLabel()), PieceMatcher.section(piece.getCategory(), piece.getLabel()));
 	}
 
 	private static String whatToDo(String label, List<EstimateResponse.Summary> tenderEstimates, List<String> memoirs) {

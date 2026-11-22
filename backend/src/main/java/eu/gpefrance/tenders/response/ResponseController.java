@@ -118,8 +118,9 @@ public class ResponseController {
 	}
 
 	@GetMapping("/api/tenders/{tenderId}/response/archive")
-	public ResponseEntity<StreamingResponseBody> archive(@PathVariable Long tenderId) {
-		List<ResponseService.PieceFile> entries = service.archiveEntries(tenderId);
+	public ResponseEntity<StreamingResponseBody> archive(@PathVariable Long tenderId,
+			@RequestParam(defaultValue = "false") boolean single) {
+		List<ResponseService.PieceFile> entries = service.archiveEntries(tenderId, single);
 		StreamingResponseBody body = out -> ResponseService.writeArchive(entries, out);
 		return ResponseEntity.ok()
 			.contentType(MediaType.APPLICATION_OCTET_STREAM)

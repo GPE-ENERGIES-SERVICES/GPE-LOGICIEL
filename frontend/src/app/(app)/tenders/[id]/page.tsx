@@ -14,6 +14,7 @@ import { MemoirsSection } from "@/components/memoir/MemoirsSection";
 import { NoticeHistory } from "@/components/NoticeHistory";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { AdministrativeSection } from "@/components/AdministrativeSection";
+import { EquipmentSection } from "@/components/EquipmentSection";
 import { ResponseSection } from "@/components/ResponseSection";
 import { Tabs } from "@/components/Tabs";
 import { FollowButton } from "@/components/FollowButton";
@@ -489,6 +490,7 @@ function TenderDetails() {
             content: (
               <section className="card">
                 <h2>Dossier de réponse</h2>
+                <EquipmentSection tenderId={tender.id} />
                 <ResponseSection tenderId={tender.id} />
               </section>
             ),

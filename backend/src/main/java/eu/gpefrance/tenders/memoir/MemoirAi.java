@@ -197,6 +197,8 @@ class MemoirAi {
 				.put("exigence", requirement.text())
 				.put("ponderation", requirement.weight()));
 		content.set("entreprise", JSON.valueToTree(company.snapshot(LocalDate.now(clock))));
+		// The equipment chosen for this tender: the only one the memoir may name.
+		store.equipment(memoir.tenderId()).forEach((item) -> content.withArray("materiel_retenu").add(item));
 		store.libraryExcerpts(properties.libraryExcerpts(), properties.excerptLength(), memoir.tenderId())
 			.forEach(excerpt -> content.withArray("anciens_memoires_de_reference").add(excerpt));
 		JsonNode root = root(ai.ask("MEMOIR_SECTION", VERSION, writingInstructions(), context(memoir) + content,
@@ -346,6 +348,9 @@ class MemoirAi {
 				jamais un ancien chantier, une ancienne information ou un ancien chiffre qui ne figure pas dans les \
 				données actuelles de l'entreprise.
 				- Réponds précisément aux exigences du DCE de la section, de façon concrète et professionnelle.
+				- « materiel_retenu », s'il est donné, est le matériel choisi pour ce marché (modules, onduleurs, \
+				fixation…) : c'est le seul que tu peux nommer, avec sa marque et sa référence exactes ; sans lui, \
+				parle du matériel sans marque ni référence et signale-le dans missing.
 				- Ne répète pas le titre de la section. Écris en HTML simple : <p>, <h4> pour un intertitre, <ul>, \
 				<ol>, <li>, <strong>, <em>, <table>. Pour une illustration utile, prévois un emplacement : \
 				<figure class="placeholder" data-kind="photo"><figcaption>Photo à insérer : …</figcaption></figure> \

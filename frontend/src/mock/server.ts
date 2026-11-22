@@ -833,6 +833,8 @@ const ROUTES: Route[] = [
   // Answers: none in the demonstration; their changes answer « indisponible ».
   ["GET", /^\/api\/responses$/, () => []],
   ["GET", /^\/api\/administrative-forms$/, () => []],
+  ["GET", /^\/api\/equipment-sheets$/, () => []],
+  ["GET", /^\/api\/tenders\/(\d+)\/equipment$/, () => []],
   [
     "GET",
     /^\/api\/ai-calls\/summary$/,

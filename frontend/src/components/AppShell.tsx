@@ -39,6 +39,7 @@ const SECTIONS: Section[] = [
   { href: "/memoirs", label: "Mémoires", icon: "file", group: "Mémoire technique" },
   { href: "/memoirs/library", label: "Bibliothèque", icon: "archive", group: "Mémoire technique" },
   { href: "/administrative", label: "Administratif", icon: "clipboard", group: "Réponse" },
+  { href: "/equipment-sheets", label: "Fiches techniques", icon: "file", group: "Réponse" },
   { href: "/responses", label: "Dossiers de réponse", icon: "archive", group: "Réponse" },
   { href: "/company", label: "Entreprise", icon: "building", separator: true },
   { href: "/supervision", label: "Supervision", icon: "eye", admin: true, separator: true },

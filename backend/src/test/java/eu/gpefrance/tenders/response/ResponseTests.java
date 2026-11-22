@@ -27,6 +27,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 import eu.gpefrance.tenders.TestUsers;
+import eu.gpefrance.tenders.company.CompanyDocument;
 import eu.gpefrance.tenders.TestcontainersConfiguration;
 import eu.gpefrance.tenders.analysis.Analysis;
 import eu.gpefrance.tenders.analysis.AnalysisKind;
@@ -172,8 +173,38 @@ class ResponseTests {
 
 		var result = mvc.get().uri("/api/tenders/{id}/response/archive", tender).with(TestUsers.user()).exchange();
 		assertThat(result.getResponse().getStatus()).isEqualTo(200);
+		// Each envelope holds the folders of GPE; one envelope when the consultation asks it.
 		assertThat(names(result.getResponse().getContentAsByteArray()))
-			.containsExactlyInAnyOrder("1-Candidature/kbis.pdf", "2-Offre/DPGF rempli.pdf");
+			.containsExactlyInAnyOrder("1-Candidature/02-Situation GPE/kbis.pdf", "2-Offre/01-Pieces principales/DPGF rempli.pdf");
+		var single = mvc.get().uri("/api/tenders/{id}/response/archive?single=true", tender).with(TestUsers.user()).exchange();
+		assertThat(names(single.getResponse().getContentAsByteArray()))
+			.containsExactlyInAnyOrder("02-Situation GPE/kbis.pdf", "01-Pieces principales/DPGF rempli.pdf");
+	}
+
+	@Test
+	void filesEachPieceInTheFolderOfGpe() {
+		var application = ResponsePiece.Category.APPLICATION;
+		var offer = ResponsePiece.Category.OFFER;
+		assertThat(PieceMatcher.section(application, "Formulaire DC2")).isEqualTo("01-Formulaires");
+		assertThat(PieceMatcher.section(application, "Extrait Kbis")).isEqualTo("02-Situation GPE");
+		assertThat(PieceMatcher.section(application, "Déclaration sur l'honneur")).isEqualTo("02-Situation GPE");
+		assertThat(PieceMatcher.section(application, "Attestations d'assurance RC et décennale")).isEqualTo("03-Assurance et RIB");
+		assertThat(PieceMatcher.section(offer, "RIB")).isEqualTo("03-Assurance et RIB");
+		assertThat(PieceMatcher.section(application, "Liste des travaux des 5 dernières années")).isEqualTo("04-Références");
+		assertThat(PieceMatcher.section(application, "Références de travaux similaires")).isEqualTo("04-Références");
+		assertThat(PieceMatcher.section(application, "Certificat de qualification RGE")).isEqualTo("05-Qualification");
+		assertThat(PieceMatcher.section(offer, "Acte d'engagement")).isEqualTo("01-Pieces principales");
+		assertThat(PieceMatcher.section(offer, "DPGF datée et tamponnée")).isEqualTo("01-Pieces principales");
+		assertThat(PieceMatcher.section(offer, "Mémoire justificatif")).isEqualTo("01-Pieces principales");
+		assertThat(PieceMatcher.section(offer, "Planning des travaux optimisé")).isEqualTo("01-Pieces principales");
+		assertThat(PieceMatcher.section(offer, "Documentation technique du matériel et certifications")).isEqualTo("06-Fiches techniques");
+		assertThat(PieceMatcher.section(offer, "Attestation de garantie modules et onduleurs")).isEqualTo("06-Fiches techniques");
+		assertThat(PieceMatcher.section(offer, "Plan de calepinage sommaire")).isEqualTo("07-Plans");
+		assertThat(PieceMatcher.section(offer, "Schéma électrique de principe")).isEqualTo("07-Plans");
+		assertThat(PieceMatcher.section(offer, "Contribution au bilan carbone")).isEqualTo("01-Pieces principales");
+		// Neither the accounts proposed for a carbon footprint, nor « contribution » taken for a RIB.
+		assertThat(PieceMatcher.category("Annexe bilan carbone simplifié")).isNull();
+		assertThat(PieceMatcher.category("Bilan des trois derniers exercices")).isEqualTo(CompanyDocument.Category.FINANCIAL);
 	}
 
 	@Test

@@ -54,7 +54,8 @@ class MemoirApiTests {
 
 	@BeforeEach
 	void cleanDatabase() {
-		jdbc.execute("TRUNCATE memoir, memoir_library, company_activity, employee, lot, tender RESTART IDENTITY CASCADE");
+		jdbc.execute("TRUNCATE memoir, memoir_library, equipment_sheet, company_activity, employee, lot, tender RESTART IDENTITY "
+				+ "CASCADE");
 		jdbc.update("UPDATE company_profile SET legal_name = NULL, trade_name = NULL, city = NULL");
 		tenderId = jdbc.queryForObject("""
 				INSERT INTO tender (source, external_id, title, status, created_at, updated_at)
@@ -85,6 +86,22 @@ class MemoirApiTests {
 		// Without tender: the most recent.
 		assertThat(store.libraryExcerpts(3, 100, null)).extracting((excerpt) -> excerpt.lines().findFirst().orElseThrow())
 			.containsExactly("CFO récent", "Sans domaine", "PV ancien");
+
+		// The memoir made for the mounting system chosen comes first, before the domain.
+		jdbc.update("""
+				INSERT INTO memoir_library (title, written_on, activity_code, use_for_ai, file_name, storage_path, size_bytes,
+				    text, uploaded_at, context)
+				VALUES ('Mémoire type – Helios B2', '2019-01-01', NULL, true, 'mt.docx', 'x', 1, 'texte', now(),
+				    'système de pose Helios B2')""");
+		Long sheet = jdbc.queryForObject("""
+				INSERT INTO equipment_sheet (category, brand, reference, file_name, storage_path, size_bytes, sha256, uploaded_at)
+				VALUES ('MOUNTING', 'Dome Solar', 'dome-solar-helios-b2-brochure-fr', 'b2.pdf', 'y', 1, 'h', now()) RETURNING id""",
+				Long.class);
+		jdbc.update("INSERT INTO tender_equipment (tender_id, sheet_id, chosen_at) VALUES (?, ?, now())", tenderId, sheet);
+		assertThat(store.libraryExcerpts(2, 100, tenderId)).extracting((excerpt) -> excerpt.lines().findFirst().orElseThrow())
+			.containsExactly("Mémoire type – Helios B2 (système de pose Helios B2)", "PV ancien");
+		assertThat(store.equipment(tenderId)).containsExactly("Système de fixation : Dome Solar dome-solar-helios-b2-brochure-fr");
+		assertThat(MemoirStore.pairs("SOPRASOLAR FIX EVO TILT")).contains("fix evo", "evo tilt");
 	}
 
 	@Test

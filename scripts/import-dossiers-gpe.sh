@@ -122,6 +122,17 @@ while IFS= read -r file; do
   fi
 done
 
+echo "== Technical sheets"
+# The sheets of the equipment, once each (the server knows a file already sent); what each one
+# is comes from its name. Not the pieces of a job filed there (CV, planning, layout study).
+find "$ROOT" -path "*/03-Dossier RAO/06-Fiches techniques/*" -type f -iname "*.pdf" |
+  grep -viE 'planning|\bcv\b|habilitation|etude d.implantation|calepinage|/~' |
+while IFS= read -r file; do
+  if answer=$(post /api/equipment-sheets -F "file=@$file"); then
+    echo "$(basename "$file"): $(printf '%s' "$answer" | sed -n 's/.*"category":"\([A-Z_]*\)".*/\1/p')"
+  fi
+done | sort -u
+
 category() {
   case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
     *kbis*) echo KBIS ;;

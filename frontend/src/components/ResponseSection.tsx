@@ -76,7 +76,10 @@ function PieceRow({
             }
           }}
         />
-        {!piece.fromAnalysis && <p className="hint">Ajoutée à la main</p>}
+        <p className="hint">
+          Rangée dans {piece.section}
+          {!piece.fromAnalysis && " · ajoutée à la main"}
+        </p>
       </td>
       <td>
         <span className={STATE_CLASSES[piece.state]}>{STATE_LABELS[piece.state]}</span>
@@ -213,6 +216,7 @@ export function ResponseSection({ tenderId }: { tenderId: number }) {
   const [saved, setSaved] = useState<ResponseView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [single, setSingle] = useState(false);
   const data = saved ?? loaded.data;
 
   const run = async (action: () => Promise<ResponseView>) => {
@@ -300,12 +304,17 @@ export function ResponseSection({ tenderId }: { tenderId: number }) {
         <>
           <h3>Exporter</h3>
           <p className="hint">
-            Le ZIP contient les fichiers joints, rangés en Candidature et Offre. Relisez-le avant de déposer : la signature et
-            le dépôt restent de votre côté, et l&apos;export du chiffrage (vos coûts) n&apos;en fait jamais partie.
+            Le ZIP contient les fichiers joints, rangés en Candidature et Offre, puis dans les dossiers GPE (02-Situation GPE,
+            05-Qualification, 06-Fiches techniques…). Relisez-le avant de déposer : la signature et le dépôt restent de votre
+            côté, et l&apos;export du chiffrage (vos coûts) n&apos;en fait jamais partie.
           </p>
+          <label>
+            <input type="checkbox" checked={single} onChange={(event) => setSingle(event.target.checked)} /> Une seule enveloppe
+            (quand le règlement de la consultation ne sépare pas candidature et offre)
+          </label>{" "}
           <a
             className="button"
-            href={`/api/tenders/${tenderId}/response/archive`}
+            href={`/api/tenders/${tenderId}/response/archive${single ? "?single=true" : ""}`}
             onClick={(event) => {
               if (
                 problems.length > 0 &&

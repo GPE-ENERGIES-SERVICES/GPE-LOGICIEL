@@ -21,6 +21,8 @@ export type ResponsePiece = {
   checkedAt: string | null;
   /** A form of the consultation file the software can fill. */
   fillable: boolean;
+  /** Its folder of GPE inside its envelope: « 05-Qualification », « 06-Fiches techniques »… */
+  section: string;
 };
 
 export type FormFieldSource = "COMPANY" | "ESTIMATE" | "TENDER" | "AI" | "MANUAL" | "MISSING" | "NONE";

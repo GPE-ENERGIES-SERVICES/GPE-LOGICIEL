@@ -74,7 +74,9 @@ final class PieceMatcher {
 		if (text.contains("social") || text.contains("cotisation")) {
 			return CompanyDocument.Category.SOCIAL;
 		}
-		if (text.contains("bilan") || text.contains("chiffre d'affaires") || text.contains("chiffre d’affaires")) {
+		// A « bilan carbone » is an environmental piece of the offer, not the accounts.
+		if (text.contains("bilan") && !text.contains("carbone") || text.contains("chiffre d'affaires")
+				|| text.contains("chiffre d’affaires")) {
 			return CompanyDocument.Category.FINANCIAL;
 		}
 		if (text.contains("charte") || text.contains("prevention des risques")) {
@@ -86,7 +88,8 @@ final class PieceMatcher {
 		if (text.contains("moyens materiels") || text.contains("materiel")) {
 			return CompanyDocument.Category.EQUIPMENT;
 		}
-		if (text.contains("reference") || text.contains("realisation") || text.contains("presentation de l'entreprise")) {
+		if (text.contains("reference") || text.contains("realisation") || text.contains("presentation de l'entreprise")
+				|| text.contains("liste des travaux") || text.contains("travaux similaires")) {
 			return CompanyDocument.Category.REFERENCES;
 		}
 		if (text.contains("qualibat") || text.contains("qualifelec") || text.contains("certificat")
@@ -94,6 +97,45 @@ final class PieceMatcher {
 			return CompanyDocument.Category.CERTIFICATE;
 		}
 		return null;
+	}
+
+	private static final Pattern TECHNICAL = Pattern
+		.compile("fiche.? technique|documentation technique|notice|garantie|avis technique|\\batec\\b|certification.{0,20}(materiel|module|onduleur)");
+
+	private static final Pattern DRAWINGS = Pattern.compile("\\bplans?\\b|calepinage|schema|synoptique|unifilaire");
+
+	/**
+	 * The folder of a piece in the answer, as GPE files its answers, inside its
+	 * envelope (candidature or offer): « 05-Qualification », « 06-Fiches techniques »...
+	 */
+	static String section(ResponsePiece.Category category, String label) {
+		String text = plain(label);
+		Kind kind = kind(label);
+		if (kind == Kind.FORM) {
+			return "01-Formulaires";
+		}
+		if (kind == Kind.ENGAGEMENT || kind == Kind.PRICES || kind == Kind.MEMOIR) {
+			return "01-Pieces principales";
+		}
+		if (TECHNICAL.matcher(text).find()) {
+			return "06-Fiches techniques";
+		}
+		if (DRAWINGS.matcher(text).find()) {
+			return "07-Plans";
+		}
+		CompanyDocument.Category document = category(label);
+		if (document != null) {
+			return switch (document) {
+				case INSURANCE -> "03-Assurance et RIB";
+				case REFERENCES -> "04-Références";
+				case CERTIFICATE -> "05-Qualification";
+				default -> "02-Situation GPE";
+			};
+		}
+		if (text.matches(".*\\brib\\b.*") || text.contains("releve d'identite bancaire")) {
+			return "03-Assurance et RIB";
+		}
+		return category == ResponsePiece.Category.APPLICATION ? "02-Situation GPE" : "01-Pieces principales";
 	}
 
 	private static String plain(String label) {

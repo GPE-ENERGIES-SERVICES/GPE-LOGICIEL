@@ -391,17 +391,73 @@ class MemoirStore {
 	}
 
 	/**
-	 * Excerpts of the former memoirs chosen for the AI: those of the domains of
-	 * the tender first (a PV memoir for a PV tender), then the most recent.
+	 * Excerpts of the former memoirs chosen for the AI: first the memoir made
+	 * for the mounting system chosen for the tender (« Fix Evo Tilt »), then
+	 * those of its domains (a PV memoir for a PV tender), then the most recent.
 	 * @param tenderId the tender of the memoir written, or null
 	 */
 	List<String> libraryExcerpts(int count, int length, Long tenderId) {
-		return jdbc.queryForList("""
-				SELECT title || coalesce(' (' || context || ')', '') || E'\\n' || left(text, ?) FROM memoir_library
-				WHERE use_for_ai AND text IS NOT NULL
-				ORDER BY EXISTS (SELECT 1 FROM tender t WHERE t.id = ? AND memoir_library.activity_code = ANY (t.activities)) DESC,
-				    written_on DESC NULLS LAST, id DESC
-				LIMIT ?""", String.class, length, tenderId, count);
+		record Candidate(String excerpt, String described, boolean sameDomain) {
+		}
+		List<Candidate> candidates = jdbc.query("""
+				SELECT title || coalesce(' (' || context || ')', '') || E'\\n' || left(text, ?) AS excerpt,
+				       title || ' ' || coalesce(context, '') AS described,
+				       EXISTS (SELECT 1 FROM tender t WHERE t.id = ? AND memoir_library.activity_code = ANY (t.activities))
+				           AS same_domain
+				FROM memoir_library WHERE use_for_ai AND text IS NOT NULL
+				ORDER BY written_on DESC NULLS LAST, id DESC""",
+				(row, n) -> new Candidate(row.getString("excerpt"), plain(row.getString("described")),
+						row.getBoolean("same_domain")),
+				length, tenderId);
+		List<List<String>> mountings = jdbc.queryForList("""
+				SELECT s.reference FROM tender_equipment e JOIN equipment_sheet s ON s.id = e.sheet_id
+				WHERE e.tender_id = ? AND s.category = 'MOUNTING'""", String.class, tenderId)
+			.stream()
+			.map(MemoirStore::pairs)
+			.toList();
+		return candidates.stream()
+			.sorted(java.util.Comparator.comparingInt((Candidate candidate) -> {
+				boolean sameMounting = mountings.stream().anyMatch((pairs) -> pairs.stream().anyMatch(candidate.described()::contains));
+				return (sameMounting ? 2 : 0) + (candidate.sameDomain() ? 1 : 0);
+			}).reversed())
+			.limit(count)
+			.map(Candidate::excerpt)
+			.toList();
+	}
+
+	/**
+	 * The equipment chosen for a tender, as the equipment table says it:
+	 * « Onduleur : Huawei SUN2000-50KTL-M3 »; none without tender.
+	 */
+	List<String> equipment(Long tenderId) {
+		if (tenderId == null) {
+			return List.of();
+		}
+		return jdbc.query("""
+				SELECT s.category, s.brand, s.reference FROM tender_equipment e JOIN equipment_sheet s ON s.id = e.sheet_id
+				WHERE e.tender_id = ? ORDER BY s.category, s.reference""",
+				(row, n) -> eu.gpefrance.tenders.equipment.EquipmentService.TABLE_LABELS.get(row.getString("category")) + " : "
+						+ (row.getString("brand") == null ? "" : row.getString("brand") + " ") + row.getString("reference"),
+				tenderId);
+	}
+
+	/** Two words side by side in a reference: « helios b2 », « fix evo »; enough to know a system. */
+	static List<String> pairs(String reference) {
+		List<String> words = java.util.Arrays.stream(plain(reference).split("[^a-z0-9]+")).filter((word) -> !word.isEmpty()).toList();
+		List<String> pairs = new ArrayList<>();
+		for (int i = 0; i + 1 < words.size(); i++) {
+			if (words.get(i).length() + words.get(i + 1).length() >= 5) {
+				pairs.add(words.get(i) + " " + words.get(i + 1));
+			}
+		}
+		return pairs;
+	}
+
+	private static String plain(String text) {
+		return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD)
+			.replaceAll("\\p{M}", "")
+			.toLowerCase(java.util.Locale.ROOT)
+			.replaceAll("[^a-z0-9]+", " ");
 	}
 
 	// Mapping
