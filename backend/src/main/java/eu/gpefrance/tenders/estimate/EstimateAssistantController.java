@@ -62,6 +62,12 @@ public class EstimateAssistantController {
 		return assistant.suggestSupplies(itemId, user.displayName());
 	}
 
+	/** A first estimate of the items still without cost: supplies and labour proposed, each to accept. */
+	@PostMapping("/api/estimates/{id}/ai-draft")
+	public List<EstimateSuggestion.Response> draft(@PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal user) {
+		return assistant.draftWithAi(id, user.displayName());
+	}
+
 	@PostMapping("/api/estimates/{id}/review")
 	public List<EstimateSuggestion.Response> review(@PathVariable Long id,
 			@AuthenticationPrincipal AppUserPrincipal user) {

@@ -29,6 +29,9 @@ public class EstimateSuggestion {
 		/** A unit price of the price library for an item, updated to this year. */
 		PRICE,
 
+		/** A labour time for an item, in hours per unit, counted at a rate of GPE. */
+		LABOR,
+
 		/** A point to check. */
 		CHECK
 
@@ -62,6 +65,10 @@ public class EstimateSuggestion {
 
 	@Column(name = "library_item_id", updatable = false)
 	private Long libraryItemId;
+
+	/** The rate of GPE a labour time is counted at (LABOR). */
+	@Column(name = "rate_code", updatable = false)
+	private String rateCode;
 
 	/** The price proposed (PRICE), already updated. */
 	@Column(updatable = false)
@@ -101,6 +108,14 @@ public class EstimateSuggestion {
 		this.createdAt = now;
 	}
 
+	/** A labour time for an item: hours per unit at a rate of GPE. */
+	static EstimateSuggestion labor(Long estimateId, Long itemId, String rateCode, BigDecimal hours, String text,
+			String model, Instant now) {
+		EstimateSuggestion suggestion = new EstimateSuggestion(estimateId, itemId, Kind.LABOR, null, hours, text, model, now);
+		suggestion.rateCode = rateCode;
+		return suggestion;
+	}
+
 	/** A price of the library for an item. */
 	static EstimateSuggestion price(Long estimateId, Long itemId, Long libraryItemId, BigDecimal price, String text,
 			String model, Instant now) {
@@ -119,12 +134,12 @@ public class EstimateSuggestion {
 
 	public record Response(Long id, Long itemId, Kind kind, Long offerId, BigDecimal quantity, String text,
 			Status status, String model, Instant createdAt, String decidedBy, Instant decidedAt, Long libraryItemId,
-			BigDecimal price) {
+			BigDecimal price, String rateCode) {
 	}
 
 	Response response() {
 		return new Response(id, itemId, kind, offerId, quantity, text, status, model, createdAt, decidedBy, decidedAt,
-				libraryItemId, price);
+				libraryItemId, price, rateCode);
 	}
 
 	public Long getId() {
@@ -149,6 +164,10 @@ public class EstimateSuggestion {
 
 	public Long getLibraryItemId() {
 		return libraryItemId;
+	}
+
+	public String getRateCode() {
+		return rateCode;
 	}
 
 	public BigDecimal getPrice() {

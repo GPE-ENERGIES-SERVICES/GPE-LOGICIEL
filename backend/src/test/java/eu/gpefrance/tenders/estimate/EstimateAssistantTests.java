@@ -81,6 +81,16 @@ class EstimateAssistantTests {
 		given(client.complete(any(ExtractionRequest.class))).willAnswer(invocation -> {
 			ExtractionRequest request = invocation.getArgument(0);
 			sent.add(request);
+			if (request.analysisType().equals("ESTIMATE_DRAFT")) {
+				return new ModelAnswer("""
+						{"postes": [{"item_id": 1,
+						   "fournitures": [{"offer_id": 1, "quantite_par_unite": 1, "explication": "Prise Mosaic 16 A."},
+						                   {"offer_id": 999, "quantite_par_unite": 1, "explication": "Offre inventée."}],
+						   "main_oeuvre": [{"code_taux": "MONTEUR", "heures_par_unite": 0.5, "explication": "Pose encastrée."},
+						                   {"code_taux": "ROBOT", "heures_par_unite": 1, "explication": "Taux inventé."}],
+						   "a_verifier": "Boîte d'encastrement à prévoir."},
+						  {"item_id": 9, "fournitures": [], "main_oeuvre": [], "a_verifier": "Poste inventé."}]}""", 1500, 300);
+			}
 			if (request.analysisType().equals("ESTIMATE_PRICE")) {
 				return new ModelAnswer("""
 						{"choices": [{"item_id": 1, "library_id": 1, "explanation": "Même prise encastrée."},
@@ -160,6 +170,33 @@ class EstimateAssistantTests {
 			.contentType(MediaType.APPLICATION_JSON).content("{\"libraryItemId\": 2}")).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("{\"items\": [{\"unitPrice\": 3.08}, {\"unitPrice\": null}, {\"unitPrice\": null}]}");
+	}
+
+	@Test
+	void draftsTheItemsWithoutCostAsProposalsPricedByTheApplication() {
+		jdbc.execute("DELETE FROM pricing_rate WHERE code = 'MONTEUR'");
+		jdbc.update("""
+				INSERT INTO pricing_rate (code, label, type, unit, cost, active, updated_at)
+				VALUES ('MONTEUR', 'Monteur', 'LABOR', 'h', 30, true, now())""");
+
+		// Only what the application gave: the offer and the rate it knows, the item it sent.
+		assertThat(post("/api/estimates/1/ai-draft")).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					[{"kind": "SUPPLY", "itemId": 1, "offerId": 1, "quantity": 1.0000},
+					 {"kind": "LABOR", "itemId": 1, "rateCode": "MONTEUR", "quantity": 0.5000, "text": "Pose encastrée."},
+					 {"kind": "CHECK", "itemId": 1, "text": "Boîte d'encastrement à prévoir."}]""");
+		// Neither the prices of the catalogue nor the cost of the rates are sent.
+		assertThat(sent.getLast().documents()).contains("LEG077121", "MONTEUR").doesNotContain("3.2").doesNotContain("\"30");
+
+		assertThat(post("/api/estimate-suggestions/2/acceptance")).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"items": [{"components": [{"type": "LABOR", "quantity": 0.5000, "unitCost": 30.0000,
+					 "rateCode": "MONTEUR"}]}]}""");
+		// An item with costs is not drafted again.
+		post("/api/estimate-suggestions/1/acceptance").exchange();
+		assertThat(post("/api/estimates/1/ai-draft")).hasStatus(HttpStatus.BAD_REQUEST);
 	}
 
 	@Test
