@@ -13,6 +13,7 @@ import type {
   OfferAvailability,
   OfferImport,
   PricingRate,
+  PriceUpdate,
   PricingSettings,
   RateInput,
   RefreshedOffer,
@@ -191,6 +192,15 @@ export function fillCatalogue(supplierCode: string): Promise<CatalogueFilling> {
 
 export function getCatalogueFilling(supplierCode: string): Promise<CatalogueFilling> {
   return api(`/api/suppliers/connectors/${supplierCode}/catalogue`);
+}
+
+/** Asks the supplier again every price of its catalogue, in the background (administrators). */
+export function startPriceUpdate(supplierCode: string): Promise<PriceUpdate> {
+  return api(`/api/suppliers/connectors/${supplierCode}/prices`, { method: "POST" });
+}
+
+export function getPriceUpdate(supplierCode: string): Promise<PriceUpdate> {
+  return api(`/api/suppliers/connectors/${supplierCode}/prices`);
 }
 
 export function getSupplierConnectors(): Promise<SupplierConnector[]> {

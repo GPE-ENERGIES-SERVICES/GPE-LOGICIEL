@@ -251,6 +251,19 @@ export type CatalogueFilling = {
   finishedAt: string | null;
 };
 
+/** The prices of a supplier asked again to its service, in the background. */
+export type PriceUpdate = {
+  running: boolean;
+  offers: number;
+  updated: number;
+  /** Read recently: not asked again. */
+  fresh: number;
+  /** No price given, or no manufacturer code: they keep the one they had. */
+  notPriced: number;
+  error: string | null;
+  finishedAt: string | null;
+};
+
 export type OfferAvailability = { offerId: number; availability: Availability | null };
 
 /** A cost of a draft against the price of its offer read from the supplier. */

@@ -328,6 +328,27 @@ class SupplierPricingTests {
 		return mvc.post().uri(uri).with(csrf()).with(TestUsers.user()).contentType(MediaType.APPLICATION_JSON).content(body);
 	}
 
+	@Test
+	void updatesEveryPriceOfTheSupplierFromItsService() throws Exception {
+		connector.price("A-1", "13.00", null);
+
+		assertThat(post("/api/suppliers/connectors/ACME/prices", "")).hasStatus(HttpStatus.FORBIDDEN);
+		assertThat(mvc.post().uri("/api/suppliers/connectors/ACME/prices").with(csrf()).with(TestUsers.admin()))
+			.hasStatus(HttpStatus.ACCEPTED);
+		for (int wait = 0; wait < 100 && Boolean.TRUE.equals(pricing.update("ACME").running()); wait++) {
+			Thread.sleep(100);
+		}
+
+		// The offer with a manufacturer code priced again, the other one kept as it was.
+		assertThat(mvc.get().uri("/api/suppliers/connectors/ACME/prices").with(TestUsers.admin())).bodyJson()
+			.isLenientlyEqualTo("""
+					{"running": false, "offers": 2, "updated": 1, "fresh": 0, "notPriced": 1, "error": null}""");
+		assertThat(jdbc.queryForObject("SELECT net_price FROM supplier_offer WHERE id = 1", BigDecimal.class))
+			.isEqualByComparingTo("13");
+		assertThat(jdbc.queryForObject("SELECT net_price FROM supplier_offer WHERE id = 2", BigDecimal.class))
+			.isEqualByComparingTo("20");
+	}
+
 	@TestConfiguration(proxyBeanMethods = false)
 	static class FakeConnectorConfiguration {
 

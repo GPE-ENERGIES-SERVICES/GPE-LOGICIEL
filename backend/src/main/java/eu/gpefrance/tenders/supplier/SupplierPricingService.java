@@ -59,6 +59,8 @@ public class SupplierPricingService {
 
 	private final Map<String, CatalogueFilling> fillings = new ConcurrentHashMap<>();
 
+	private final Map<String, PriceUpdate> updates = new ConcurrentHashMap<>();
+
 	public SupplierPricingService(List<SupplierConnector> connectors, JdbcTemplate jdbc,
 			TransactionTemplate transaction, SupplierCatalog catalog, SupplierPricingProperties properties,
 			Clock clock) {
@@ -298,6 +300,79 @@ public class SupplierPricingService {
 	/** @return null when it was never asked since the start of the application */
 	public CatalogueFilling filling(String supplierCode) {
 		return fillings.get(supplierCode.strip().toUpperCase());
+	}
+
+	/**
+	 * Where the update of the prices of a supplier stands.
+	 * @param offers its offers, all asked
+	 * @param updated priced again by the supplier
+	 * @param fresh read recently, not asked again
+	 * @param notPriced no price given (or no manufacturer code): they keep the one they had
+	 */
+	public record PriceUpdate(boolean running, int offers, int updated, int fresh, int notPriced, String error,
+			Instant finishedAt) {
+	}
+
+	/**
+	 * Asks the supplier again the price of every offer of its catalogue, in
+	 * the background and by chunks; those read recently are not asked again.
+	 */
+	public PriceUpdate startUpdate(String supplierCode, String user) {
+		String code = supplierCode.strip().toUpperCase();
+		SupplierConnector connector = connectors.get(code);
+		if (connector == null || !connector.available()) {
+			throw new SupplierConnectorException(SupplierConnectorException.Kind.NOT_CONFIGURED);
+		}
+		boolean[] started = { false };
+		PriceUpdate state = updates.compute(code, (key, current) -> {
+			if (current != null && current.running()) {
+				return current;
+			}
+			started[0] = true;
+			return new PriceUpdate(true, 0, 0, 0, 0, null, null);
+		});
+		if (started[0]) {
+			Thread.ofVirtual().name("prices-" + code).start(() -> updateAll(code, user));
+		}
+		return state;
+	}
+
+	/** @return null when it was never asked since the start of the application */
+	public PriceUpdate update(String supplierCode) {
+		return updates.get(supplierCode.strip().toUpperCase());
+	}
+
+	private void updateAll(String code, String user) {
+		List<Long> ids = jdbc.queryForList("""
+				SELECT o.id FROM supplier_offer o JOIN supplier s ON s.id = o.supplier_id WHERE s.code = ? ORDER BY o.id""",
+				Long.class, code);
+		int updated = 0;
+		int fresh = 0;
+		int notPriced = 0;
+		String error = null;
+		try {
+			for (int start = 0; start < ids.size(); start += FILLING_CHUNK) {
+				for (RefreshedOffer refreshed : refresh(ids.subList(start, Math.min(start + FILLING_CHUNK, ids.size())), 1,
+						new Place(null, null, null), user)) {
+					switch (refreshed.status()) {
+						case UPDATED -> updated++;
+						case FRESH -> fresh++;
+						default -> notPriced++;
+					}
+				}
+				updates.put(code, new PriceUpdate(true, ids.size(), updated, fresh, notPriced, null, null));
+			}
+		}
+		catch (SupplierConnectorException ex) {
+			error = ex.getBody().getDetail();
+		}
+		catch (RuntimeException ex) {
+			log.error("Prices of {} not updated", code, ex);
+			error = "Mise à jour interrompue : voir le journal du serveur.";
+		}
+		updates.put(code, new PriceUpdate(false, ids.size(), updated, fresh, notPriced, error, clock.instant()));
+		log.info("Prices of {}: {} offers, {} updated, {} fresh, {} not priced, by {}", code, ids.size(), updated, fresh,
+				notPriced, user);
 	}
 
 	private void fill(SupplierConnector connector, String code, String user) {

@@ -159,6 +159,19 @@ public class SupplierController {
 		return pricing.startFilling(code, user.displayName());
 	}
 
+	/** Asks the supplier again every price of its catalogue, in the background; for administrators (security). */
+	@PostMapping("/api/suppliers/connectors/{code}/prices")
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	public SupplierPricingService.PriceUpdate updatePrices(@PathVariable String code,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return pricing.startUpdate(code, user.displayName());
+	}
+
+	@GetMapping("/api/suppliers/connectors/{code}/prices")
+	public SupplierPricingService.PriceUpdate priceUpdate(@PathVariable String code) {
+		return pricing.update(code);
+	}
+
 	@GetMapping("/api/suppliers/connectors/{code}/catalogue")
 	public SupplierPricingService.CatalogueFilling catalogueFilling(@PathVariable String code) {
 		return pricing.filling(code);
