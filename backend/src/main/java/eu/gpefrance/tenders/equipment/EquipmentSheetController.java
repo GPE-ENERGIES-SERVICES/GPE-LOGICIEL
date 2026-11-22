@@ -111,7 +111,7 @@ public class EquipmentSheetController {
 			.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
 			.header(HttpHeaders.CONTENT_DISPOSITION,
 					ContentDisposition.attachment().filename("Tableau matériel.xlsx", StandardCharsets.UTF_8).build().toString())
-			.body(EquipmentTable.write(title, service.ofTender(tenderId)));
+			.body(EquipmentTable.write(title, service.chosen(tenderId)));
 	}
 
 }

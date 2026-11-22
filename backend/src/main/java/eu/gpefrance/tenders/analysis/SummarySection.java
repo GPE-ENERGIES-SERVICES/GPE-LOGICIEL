@@ -16,6 +16,8 @@ public enum SummarySection {
 	REQUESTED,
 
 	/** Criteria, documents to provide, qualifications, submission. */
-	TO_ANSWER
+	TO_ANSWER,
+	/** What the technical choices start from: requirements, power, roof, quantities, site. */
+	TECHNICAL
 
 }

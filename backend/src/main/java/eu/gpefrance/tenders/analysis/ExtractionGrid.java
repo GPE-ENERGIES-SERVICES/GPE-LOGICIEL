@@ -6,6 +6,7 @@ import static eu.gpefrance.tenders.analysis.GridField.single;
 import static eu.gpefrance.tenders.analysis.SummarySection.AT_A_GLANCE;
 import static eu.gpefrance.tenders.analysis.SummarySection.ATTENTION;
 import static eu.gpefrance.tenders.analysis.SummarySection.REQUESTED;
+import static eu.gpefrance.tenders.analysis.SummarySection.TECHNICAL;
 import static eu.gpefrance.tenders.analysis.SummarySection.TO_ANSWER;
 
 import java.util.List;
@@ -21,7 +22,7 @@ import java.util.Optional;
  */
 public final class ExtractionGrid {
 
-	public static final String VERSION = "grid-4";
+	public static final String VERSION = "grid-5";
 
 	public static final String DEADLINE = "deadline";
 
@@ -36,6 +37,34 @@ public final class ExtractionGrid {
 	/** The answers to {@link #DOMAIN}, with the domains of GPE they give to the tender. */
 	public static final Map<String, List<String>> DOMAIN_CHOICES = Map.of("CFO/CFA", List.of("ELECTRICITY"), "PV",
 			List.of("PHOTOVOLTAIC"), "CFO/CFA et PV", List.of("ELECTRICITY", "PHOTOVOLTAIC"), "aucun", List.of());
+
+	public static final String TECH_REQUIREMENTS = "tech_requirements";
+
+	public static final String TECH_INCONSISTENCIES = "tech_inconsistencies";
+
+	public static final String TECH_QUANTITIES = "tech_quantities";
+
+	public static final String TECH_DESIGNER_EQUIPMENT = "tech_designer_equipment";
+
+	public static final String TECH_SITE = "tech_site";
+
+	public static final String TECH_VALORISATION = "tech_valorisation";
+
+	public static final String VALORISATION_SELF_TOTAL = "autoconsommation totale";
+
+	public static final String VALORISATION_SELF_SURPLUS = "autoconsommation avec revente du surplus";
+
+	public static final String VALORISATION_RESALE_TOTAL = "revente totale";
+
+	public static final String TECH_ROOF = "tech_roof";
+
+	public static final String TECH_POWER = "tech_power";
+
+	public static final String TECH_PLANES = "tech_planes";
+
+	public static final String TECH_YIELD = "tech_yield";
+
+	public static final String TECH_PRODUCTION = "tech_production";
 
 	public static final List<GridField> FIELDS = List.of(
 			choice(DOMAIN, "Domaine GPE", AT_A_GLANCE,
@@ -173,7 +202,54 @@ public final class ExtractionGrid {
 			single("questions_deadline", "Date limite des questions", TO_ANSWER, FieldKind.DATE_TIME,
 					"Date limite pour poser des questions à l'acheteur ou demander des renseignements complémentaires. "
 							+ "Si le document ne donne qu'un délai (« 10 jours avant la date limite »), ne calcule pas "
-							+ "la date : NOT_INDICATED."));
+							+ "la date : NOT_INDICATED."),
+			// What the technical choices of GPE start from, read in the CCTP, the plans and the studies.
+			list(TECH_REQUIREMENTS, "Exigences techniques", TECHNICAL,
+					"Chaque exigence technique imposée sur le matériel ou l'installation, une par élément, sous la forme "
+							+ "« Sujet : exigence » avec la valeur exacte : « Modules : puissance unitaire minimale 460 Wc », "
+							+ "« Onduleurs : puissance apparente nominale 130 kVA maximum », « Modules : garantie produit "
+							+ "15 ans minimum », « Fixation : ATEC exigé », « Éclairage : 300 lux dans les bureaux », « SSI : "
+							+ "catégorie A ». Seulement ce qui est imposé, pas ce qui est cité à titre d'exemple."),
+			list(TECH_INCONSISTENCIES, "Incohérences techniques", TECHNICAL,
+					"Chaque contradiction technique entre les pièces (puissance, nombre de modules, quantités, matériel, "
+							+ "surfaces), formulée comme une question à poser à l'acheteur, avec les deux valeurs et leurs "
+							+ "pièces : « Puissance : 162,84 kWc au CCTP ou 179 kWc dans l'étude PVsyst ? ». Citer l'une des "
+							+ "deux valeurs."),
+			list(TECH_QUANTITIES, "Quantités techniques", TECHNICAL,
+					"Chaque quantité technique chiffrée utile au chiffrage, sous la forme « libellé : valeur unité » : "
+							+ "« Modules photovoltaïques : 390 u », « Câble AC coffret – TGBT : 5 ml », « Luminaires LED : "
+							+ "120 u », « Surface de toiture équipée : 850 m² ». Pas les montants en euros."),
+			list(TECH_DESIGNER_EQUIPMENT, "Matériel étudié par la maîtrise d'œuvre", TECHNICAL,
+					"Chaque matériel étudié ou préconisé par la maîtrise d'œuvre ou l'étude, avec la marque et le modèle, "
+							+ "sous la forme « Catégorie : marque modèle » : « Onduleur : Huawei SUN2000-100KTL-M2 », "
+							+ "« Module : JinkoSolar JKM-54HL4R-460 ». Indiquer comme élément séparé si un matériel "
+							+ "équivalent est accepté et à quelles conditions."),
+			list(TECH_SITE, "Contraintes de chantier", TECHNICAL,
+					"Chaque contrainte de chantier : site occupé ou en exploitation, accès et horaires, travaux en "
+							+ "hauteur, levage, sécurisation de la toiture, stockage, emplacement imposé du matériel, "
+							+ "coupure ou consignation, démarches à la charge du titulaire ou non."),
+			choice(TECH_VALORISATION, "Valorisation de l'énergie", TECHNICAL,
+					"Pour une installation photovoltaïque : l'énergie est-elle autoconsommée en totalité, autoconsommée "
+							+ "avec revente du surplus, ou revendue en totalité ? NOT_INDICATED si ce n'est pas du "
+							+ "photovoltaïque ou si les pièces ne le disent pas.",
+					List.of(VALORISATION_SELF_TOTAL, VALORISATION_SELF_SURPLUS, VALORISATION_RESALE_TOTAL)),
+			single(TECH_ROOF, "Toiture et support", TECHNICAL, FieldKind.TEXT,
+					"Pour une installation photovoltaïque : type de toiture ou de support (bac acier, toiture terrasse, "
+							+ "ombrière, sol) avec sa référence, nombre de pans, mode de pose (surimposition, intégration, "
+							+ "lestage) et avis technique exigé. NOT_INDICATED sinon."),
+			list(TECH_POWER, "Puissance de la centrale", TECHNICAL,
+					"Pour une installation photovoltaïque : chaque puissance crête de la centrale citée dans une pièce, "
+							+ "un élément par pièce, sous la forme « 162,84 kWc ». Plusieurs éléments si les pièces "
+							+ "divergent."),
+			list(TECH_PLANES, "Pans équipés", TECHNICAL,
+					"Pour une installation photovoltaïque : chaque pan ou zone équipé, sous la forme « Pan Sud : 210 "
+							+ "modules, orientation sud, inclinaison 10° » avec ce que les pièces donnent."),
+			single(TECH_YIELD, "Productible", TECHNICAL, FieldKind.TEXT,
+					"Pour une installation photovoltaïque : productible annuel attendu en kWh/kWc/an, tel qu'écrit "
+							+ "(« 1352 kWh/kWc/an »). NOT_INDICATED sinon."),
+			single(TECH_PRODUCTION, "Production annuelle", TECHNICAL, FieldKind.TEXT,
+					"Pour une installation photovoltaïque : production annuelle attendue en MWh/an, telle qu'écrite "
+							+ "(« 242,52 MWh/an »). NOT_INDICATED sinon."));
 
 	private ExtractionGrid() {
 	}

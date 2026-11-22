@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -75,6 +76,8 @@ public class AnalysisWorker {
 
 	private final Clock clock;
 
+	private final ApplicationEventPublisher events;
+
 	/** Threads of the calls to the provider only. */
 	private final ThreadPoolTaskExecutor executor;
 
@@ -85,7 +88,8 @@ public class AnalysisWorker {
 	public AnalysisWorker(AnalysisRepository analyses, DossierRepository dossiers, DocumentPageRepository pages,
 			TenderRepository tenders, FilterCriteriaRepository criteria, PriceSchedules priceSchedules,
 			AnalysisGate gate, AnalysisProperties properties, JdbcTemplate jdbc, TransactionTemplate transaction,
-			Clock clock) {
+			Clock clock, ApplicationEventPublisher events) {
+		this.events = events;
 		this.analyses = analyses;
 		this.dossiers = dossiers;
 		this.pages = pages;
@@ -238,12 +242,14 @@ public class AnalysisWorker {
 						result.items().size(), result.points().size(), usage.inputTokens(), usage.outputTokens());
 				return;
 			}
+			Long[] tenderOf = new Long[1];
 			List<Proposal> proposals = AnswerChecker.check(AnswerReader.read(answer.text(), texts.keySet()), texts,
 					prepared.noticeDeadline());
 			Decision decision = readDecision(analysisId, answer.text(), texts);
 			ModelAnswer usage = answer;
 			transaction.executeWithoutResult(tx -> {
 				Analysis analysis = analyses.findById(analysisId).orElseThrow();
+				tenderOf[0] = analysis.getTenderId();
 				proposals.forEach(proposal -> analysis.addField(proposal.key(), proposal.value(), proposal.quote(),
 						proposal.documentId(), proposal.page(), proposal.state()));
 				analysis.recordDecision(decision);
@@ -259,6 +265,8 @@ public class AnalysisWorker {
 			});
 			log.info("Analysis {} done ({} fields, {} / {} tokens)", analysisId, proposals.size(), usage.inputTokens(),
 					usage.outputTokens());
+			// The technical choices start from what was just read, once it is committed.
+			events.publishEvent(new DceAnalysisDone(tenderOf[0], analysisId));
 		}
 		catch (ProviderException ex) {
 			failed(analysisId, ex.kind(), SecretRedactor.redact(ex.getMessage()), answer != null ? answer : ex.usage());

@@ -3,6 +3,7 @@ package eu.gpefrance.tenders.equipment;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -19,6 +20,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,20 +168,88 @@ public class EquipmentService {
 			.toList();
 	}
 
-	/** The equipment chosen for a tender, replacing the former choice. */
+	/**
+	 * The equipment chosen for a tender, replacing the former choice; what is
+	 * kept keeps its quantity, power and note.
+	 */
 	@Transactional
 	public List<Sheet> choose(Long tenderId, List<Long> sheetIds, String user) {
 		if (jdbc.queryForObject("SELECT count(*) FROM tender WHERE id = ?", Long.class, tenderId) == 0) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Appel d'offres introuvable.");
 		}
-		jdbc.update("DELETE FROM tender_equipment WHERE tender_id = ?", tenderId);
+		List<Long> ids = sheetIds.stream().distinct().toList();
+		ids.forEach(this::find);
+		jdbc.update("DELETE FROM tender_equipment WHERE tender_id = ? AND NOT (sheet_id = ANY (?))", tenderId,
+				ids.toArray(Long[]::new));
 		Timestamp now = Timestamp.from(clock.instant());
-		for (Long sheetId : sheetIds.stream().distinct().toList()) {
-			find(sheetId);
-			jdbc.update("INSERT INTO tender_equipment (tender_id, sheet_id, chosen_by, chosen_at) VALUES (?, ?, ?, ?)",
-					tenderId, sheetId, user, now);
+		for (Long sheetId : ids) {
+			jdbc.update("""
+					INSERT INTO tender_equipment (tender_id, sheet_id, chosen_by, chosen_at) VALUES (?, ?, ?, ?)
+					ON CONFLICT (tender_id, sheet_id) DO NOTHING""", tenderId, sheetId, user, now);
 		}
 		return ofTender(tenderId);
+	}
+
+	/**
+	 * An equipment chosen for a tender, with how many and how powerful.
+	 * @param unitPower Wc for a module, kVA for an inverter: entered, or read in the reference
+	 * @param powerGuessed the power was read in the reference, not entered
+	 */
+	public record Chosen(Sheet sheet, BigDecimal quantity, BigDecimal unitPower, boolean powerGuessed, String note) {
+	}
+
+	/** The equipment chosen for a tender with its quantities, in the order of the equipment table. */
+	public List<Chosen> chosen(Long tenderId) {
+		Map<Long, Object[]> details = new java.util.HashMap<>();
+		jdbc.query("SELECT sheet_id, quantity, unit_power, note FROM tender_equipment WHERE tender_id = ?",
+				(java.sql.ResultSet row) -> {
+					details.put(row.getLong("sheet_id"),
+							new Object[] { row.getBigDecimal("quantity"), row.getBigDecimal("unit_power"), row.getString("note") });
+				}, tenderId);
+		return ofTender(tenderId).stream().map((sheet) -> {
+			Object[] detail = details.get(sheet.id());
+			BigDecimal entered = (BigDecimal) detail[1];
+			BigDecimal guessed = entered == null ? unitPower(sheet.category(), sheet.reference()) : null;
+			return new Chosen(sheet, (BigDecimal) detail[0], entered != null ? entered : guessed, guessed != null,
+					(String) detail[2]);
+		}).toList();
+	}
+
+	/** How many of an equipment chosen, its unit power and a note; empty values clear them. */
+	@Transactional
+	public List<Chosen> detail(Long tenderId, Long sheetId, BigDecimal quantity, BigDecimal unitPower, String note) {
+		if (jdbc.update("UPDATE tender_equipment SET quantity = ?, unit_power = ?, note = ? WHERE tender_id = ? AND sheet_id = ?",
+				quantity, unitPower, cut(clean(note), 2000), tenderId, sheetId) == 0) {
+			throw notFound();
+		}
+		return chosen(tenderId);
+	}
+
+	private static final Pattern KVA = Pattern.compile("(?<!\\d)(\\d{1,3}(?:[.,]\\d)?)(?:\\s*[/-]\\s*\\d{1,3})*\\s*-?\\s*k(?:tl|w|va)?\\b",
+			Pattern.CASE_INSENSITIVE);
+
+	private static final Pattern MODULE_WATTS = Pattern.compile("(?<!\\d)([2-7]\\d{2})\\s*Wc?\\b", Pattern.CASE_INSENSITIVE);
+
+	private static final Pattern THREE_DIGITS = Pattern.compile("(?<!\\d)([2-7]\\d{2})(?!\\d)");
+
+	/**
+	 * The unit power a reference tells: « DM460G12RT » a module of 460 Wc, « SUN2000-100KTL » an inverter of
+	 * 100 kVA, « SUN2000-30/36/40KTL » the first of the range (30); null for another equipment or nothing read.
+	 */
+	static BigDecimal unitPower(String category, String reference) {
+		if ("MODULE".equals(category)) {
+			Matcher written = MODULE_WATTS.matcher(reference);
+			if (written.find()) {
+				return new BigDecimal(written.group(1));
+			}
+			Matcher inside = THREE_DIGITS.matcher(reference);
+			return inside.find() ? new BigDecimal(inside.group(1)) : null;
+		}
+		if ("INVERTER".equals(category)) {
+			Matcher matcher = KVA.matcher(reference);
+			return matcher.find() ? new BigDecimal(matcher.group(1).replace(',', '.')) : null;
+		}
+		return null;
 	}
 
 	/** The file of each sheet chosen for a tender, for its answer. */

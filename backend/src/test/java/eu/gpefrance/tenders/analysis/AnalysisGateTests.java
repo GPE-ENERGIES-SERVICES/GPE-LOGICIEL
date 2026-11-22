@@ -113,7 +113,7 @@ class AnalysisGateTests {
 	@Test
 	void waitsLongerAfterEachTemporaryErrorWithJitter() {
 		AnalysisWorker worker = new AnalysisWorker(null, null, null, null, null, null, null,
-				properties(true, "test", true, null, 0), null, null, CLOCK);
+				properties(true, "test", true, null, 0), null, null, CLOCK, null);
 		try {
 			assertThat(worker.delayAfter(1, 0)).isEqualTo(Duration.ofSeconds(90));
 			assertThat(worker.delayAfter(1, 1)).isEqualTo(Duration.ofSeconds(150));

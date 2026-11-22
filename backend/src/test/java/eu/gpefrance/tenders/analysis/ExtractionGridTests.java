@@ -77,7 +77,7 @@ class ExtractionGridTests {
 
 	@Test
 	void theVersionNamesTheGridAndTheInstructions() {
-		assertThat(ExtractionPrompt.VERSION).isEqualTo("grid-4/prompt-4");
+		assertThat(ExtractionPrompt.VERSION).isEqualTo("grid-5/prompt-4");
 	}
 
 }

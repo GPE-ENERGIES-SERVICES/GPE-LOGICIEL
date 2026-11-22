@@ -58,7 +58,7 @@ class EquipmentTests {
 
 	@BeforeEach
 	void cleanDatabase() {
-		jdbc.execute("TRUNCATE equipment_sheet, response_piece, tender RESTART IDENTITY CASCADE");
+		jdbc.execute("TRUNCATE equipment_sheet, technical_line, technical_choice, response_piece, tender RESTART IDENTITY CASCADE");
 		tenderId = tenders.save(Tender.manual(new TenderDetails("Centrale PV Eyragues", null, null, null, null, List.of(),
 				List.of(), null, List.of(), null, null, null, null, null, List.of()), "Marie", Instant.now())).getId();
 	}
@@ -166,44 +166,116 @@ class EquipmentTests {
 	}
 
 	@Test
-	void technicalChoicesAreEnteredByHandWithoutFileAndSizedByCode() {
+	void technicalChoicesAreEnteredByHandWithoutFileAndSizedFromTheEquipment() {
 		// Nothing entered, no consultation file: everything to write by hand.
 		assertThat(mvc.get().uri("/api/tenders/{id}/technical-choices", tenderId).with(TestUsers.user())).hasStatusOk()
 			.bodyJson()
-			.isLenientlyEqualTo("{\"saved\": false, \"hasFile\": false, \"powers\": [], \"validatedBy\": null}");
+			.isLenientlyEqualTo("{\"saved\": false, \"hasFile\": false, \"analysisDone\": false, \"powers\": []}");
 
-		String choices = """
-				{"valorisation": "SELF_TOTAL", "roof": "Bac acier, charpente vérifiée", "requestedKwc": 162.84,
-				 "moduleCount": 390, "moduleWc": 460, "inverterCount": 2, "inverterKva": 50,
-				 "openPoints": "Puissance à confirmer par l'acheteur"}""";
-		assertThat(put(choices)).hasStatusOk()
+		sheet("DMEGC DM460G12RT-B48HBT – 460 Wc.pdf");
+		sheet("SUN2000-100KTL.pdf");
+		sheet("SUN2000-30KTL-M3.pdf");
+		mvc.put()
+			.uri("/api/tenders/{id}/equipment", tenderId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"sheetIds\": [1, 2, 3]}")
+			.with(TestUsers.user())
+			.with(csrf())
+			.exchange();
+		// The powers read in the references; two models of inverter.
+		assertThat(mvc.get().uri("/api/tenders/{id}/technical-choices", tenderId).with(TestUsers.user())).bodyJson()
+			.isLenientlyEqualTo("""
+					{"equipment": [{"sheet": {"id": 1}, "unitPower": 460, "powerGuessed": true},
+					               {"sheet": {"id": 2}, "unitPower": 100}, {"sheet": {"id": 3}, "unitPower": 30}],
+					 "sizing": {"installedKwc": null}}""");
+		detail(1, "{\"quantity\": 390}");
+		detail(2, "{\"quantity\": 1}");
+		detail(3, "{\"quantity\": 1, \"note\": \"pan Nord\"}");
+
+		assertThat(put("""
+				{"valorisation": "SELF_SURPLUS", "roof": "Bac acier", "requestedKwc": 162.84, "safety": "Ligne de vie au faîtage"}"""))
+			.hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("""
-					{"saved": true, "choices": {"valorisation": "SELF_TOTAL", "moduleCount": 390},
-					 "sizing": {"installedKwc": 179.4, "gapPercent": 10.2, "inverterKva": 100, "dcAcRatio": 1.79},
+					{"saved": true, "choices": {"valorisation": "SELF_SURPLUS", "safety": "Ligne de vie au faîtage"},
+					 "sizing": {"modules": 390, "installedKwc": 179.4, "gapPercent": 10.2, "inverterKva": 130, "dcAcRatio": 1.38},
 					 "updatedBy": "Marie Durand"}""");
-		assertThat(put(choices)).bodyJson().extractingPath("$.sizing.warnings.length()").isEqualTo(2);
+
+		// Lines: the roof planes against the modules, a requirement answered, a question.
+		line("PLANE", "{\"text\": \"Pan Sud\", \"moduleCount\": 200, \"orientation\": \"Sud\", \"tilt\": 10}");
+		assertThat(line("PLANE", "{\"text\": \"Pan Nord\", \"moduleCount\": 180}")).bodyJson()
+			.extractingPath("$.sizing.warnings[2]")
+			.isEqualTo("Les pans comptent 380 modules, le matériel retenu 390.");
+		assertThat(line("REQUIREMENT", "{\"text\": \"Modules : 460 Wc minimum\"}")).bodyJson()
+			.isLenientlyEqualTo("{\"requirements\": [{\"status\": \"TO_CHECK\", \"origin\": \"USER\"}]}");
+		Long requirement = jdbc.queryForObject("SELECT id FROM technical_line WHERE kind = 'REQUIREMENT'", Long.class);
+		assertThat(mvc.put()
+			.uri("/api/tenders/{id}/technical-lines/{line}", tenderId, requirement)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"text\": \"Modules : 460 Wc minimum\", \"status\": \"COMPLIANT\", \"answer\": \"DMEGC 460 Wc\"}")
+			.with(TestUsers.user())
+			.with(csrf())).bodyJson()
+			.isLenientlyEqualTo("{\"requirements\": [{\"status\": \"COMPLIANT\", \"answer\": \"DMEGC 460 Wc\"}]}");
+		line("QUESTION", "{\"text\": \"Puissance : 162,84 ou 179,4 kWc ?\"}");
 
 		assertThat(mvc.post().uri("/api/tenders/{id}/technical-choices/validation", tenderId).with(TestUsers.user()).with(csrf()))
-			.hasStatusOk()
 			.bodyJson()
 			.extractingPath("$.validatedBy")
 			.isEqualTo("Marie Durand");
-		// Changed after: to validate again.
-		assertThat(put(choices.replace("\"inverterCount\": 2", "\"inverterCount\": 3"))).bodyJson()
-			.isLenientlyEqualTo("{\"validatedBy\": null, \"sizing\": {\"dcAcRatio\": 1.20, \"warnings\": [\"La puissance installée (179,4 kWc) s'écarte de 10,2 % de la puissance demandée (162,84 kWc).\"]}}");
+		// Any change after: to validate again.
+		Long question = jdbc.queryForObject("SELECT id FROM technical_line WHERE kind = 'QUESTION'", Long.class);
+		assertThat(mvc.delete()
+			.uri("/api/tenders/{id}/technical-lines/{line}", tenderId, question)
+			.with(TestUsers.user())
+			.with(csrf())).bodyJson()
+			.isLenientlyEqualTo("{\"validatedBy\": null, \"questions\": []}");
 
 		assertThat(put("{\"valorisation\": \"VENTE\"}")).hasStatus(HttpStatus.BAD_REQUEST);
-		assertThat(put("{\"moduleCount\": 0}")).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(line("ROBOT", "{\"text\": \"x\"}")).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(line("QUESTION", "{\"text\": \"x\", \"status\": \"COMPLIANT\"}")).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(line("QUESTION", "{\"text\": \" \"}")).hasStatus(HttpStatus.BAD_REQUEST);
 		assertThat(mvc.get().uri("/api/tenders/999/technical-choices").with(TestUsers.user())).hasStatus(HttpStatus.NOT_FOUND);
 	}
 
 	@Test
-	void readsThePowerOfAModuleInItsReference() {
-		assertThat(TechnicalChoiceService.watts("DMEGC DM460G12RT-B48HBT – 460 Wc")).isEqualByComparingTo("460");
-		assertThat(TechnicalChoiceService.watts("Tiger Neo : JKM450N-54HL4R")).isEqualByComparingTo("450");
-		assertThat(TechnicalChoiceService.watts("DMEGC 465")).isEqualByComparingTo("465");
-		assertThat(TechnicalChoiceService.watts("Module verre-verre")).isNull();
+	void readsTheUnitPowerOfAModuleOrAnInverterInItsReference() {
+		assertThat(EquipmentService.unitPower("MODULE", "DMEGC DM460G12RT-B48HBT – 460 Wc")).isEqualByComparingTo("460");
+		assertThat(EquipmentService.unitPower("MODULE", "Tiger Neo : JKM450N-54HL4R")).isEqualByComparingTo("450");
+		assertThat(EquipmentService.unitPower("MODULE", "DMEGC 465")).isEqualByComparingTo("465");
+		assertThat(EquipmentService.unitPower("MODULE", "Module verre-verre")).isNull();
+		assertThat(EquipmentService.unitPower("INVERTER", "Huawei SUN2000-100KTL")).isEqualByComparingTo("100");
+		assertThat(EquipmentService.unitPower("INVERTER", "SUN2000-30/36/40KTL-M3")).isEqualByComparingTo("30");
+		assertThat(EquipmentService.unitPower("INVERTER", "SUN2000-15K-MB0")).isEqualByComparingTo("15");
+		assertThat(EquipmentService.unitPower("CABLE_AC", "U1000R2V 5G16")).isNull();
+	}
+
+	private void sheet(String name) {
+		mvc.post()
+			.uri("/api/equipment-sheets")
+			.multipart()
+			.file(new MockMultipartFile("file", name, "application/pdf", TestFiles.pdf(name)))
+			.with(TestUsers.admin())
+			.with(csrf())
+			.exchange();
+	}
+
+	private void detail(long sheetId, String json) {
+		assertThat(mvc.put()
+			.uri("/api/tenders/{id}/equipment/{sheet}", tenderId, sheetId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(json)
+			.with(TestUsers.user())
+			.with(csrf())).hasStatusOk();
+	}
+
+	private MvcTestResult line(String kind, String json) {
+		return mvc.post()
+			.uri("/api/tenders/{id}/technical-lines/{kind}", tenderId, kind)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(json)
+			.with(TestUsers.user())
+			.with(csrf())
+			.exchange();
 	}
 
 	private MvcTestResult put(String json) {

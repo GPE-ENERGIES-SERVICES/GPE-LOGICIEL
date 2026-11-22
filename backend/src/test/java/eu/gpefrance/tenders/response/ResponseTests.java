@@ -195,6 +195,51 @@ class ResponseTests {
 	}
 
 	@Test
+	void theAnalysisOfTheFileProposesTheTechnicalChoicesWhereNothingIsWritten() {
+		Long tender = tender();
+		analysis(tender, "tech_valorisation", "autoconsommation avec revente du surplus", null, null);
+		analysis(tender, "tech_roof", "Bac acier Nervesco 3-45-1000, deux pans", null, null);
+		analysis(tender, "tech_power", "162,84 kWc", null, null);
+		analysis(tender, "tech_power", "179 kWc", null, null);
+		analysis(tender, "tech_requirements", "Modules : puissance unitaire minimale 460 Wc", null, null);
+		analysis(tender, "tech_quantities", "Câble AC coffret – TGBT : 5 ml", null, null);
+		analysis(tender, "tech_planes", "Pan Sud : 210 modules, orientation sud, inclinaison 10°", null, null);
+		analysis(tender, "tech_yield", "1352 kWh/kWc/an", null, null);
+		// Written by a user before: kept.
+		jdbc.update("INSERT INTO technical_choice (tender_id, roof, updated_by, updated_at) VALUES (?, 'Ma toiture', 'Paul', now())",
+				tender);
+
+		assertThat(mvc.post().uri("/api/tenders/{id}/technical-choices/prefill", tender).with(TestUsers.user()).with(csrf()))
+			.hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"added": 6, "view": {"choices": {"valorisation": "SELF_SURPLUS", "roof": "Ma toiture",
+					  "requestedKwc": null, "yieldKwhKwc": 1352},
+					 "requirements": [{"text": "Modules : puissance unitaire minimale 460 Wc", "status": "TO_CHECK", "origin": "AI"}],
+					 "questions": [{"text": "Puissance de la centrale : 162,84 kWc ou 179 kWc ?", "status": "TO_ASK"}],
+					 "quantities": [{"text": "Câble AC coffret – TGBT", "value": 5, "unit": "ml"}],
+					 "planes": [{"text": "Pan Sud", "moduleCount": 210, "orientation": "sud", "tilt": 10}]}}""");
+		assertThat(mvc.get().uri("/api/tenders/{id}/technical-choices", tender).with(TestUsers.user())).bodyJson()
+			.extractingPath("$.aiSources.valorisation")
+			.isNotNull();
+		// Again: nothing twice.
+		assertThat(mvc.post().uri("/api/tenders/{id}/technical-choices/prefill", tender).with(TestUsers.user()).with(csrf()))
+			.bodyJson()
+			.extractingPath("$.added")
+			.isEqualTo(0);
+		// A value changed by a user loses its AI source.
+		assertThat(mvc.put()
+			.uri("/api/tenders/{id}/technical-choices", tender)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"valorisation\": \"SELF_TOTAL\", \"roof\": \"Ma toiture\", \"yieldKwhKwc\": 1352}")
+			.with(TestUsers.user())
+			.with(csrf())).bodyJson()
+			.extractingPath("$.aiSources")
+			.asMap()
+			.containsOnlyKeys("yieldKwhKwc");
+	}
+
+	@Test
 	void filesEachPieceInTheFolderOfGpe() {
 		var application = ResponsePiece.Category.APPLICATION;
 		var offer = ResponsePiece.Category.OFFER;

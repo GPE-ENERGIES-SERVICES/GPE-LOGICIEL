@@ -27,7 +27,7 @@ final class EquipmentTable {
 	private EquipmentTable() {
 	}
 
-	static byte[] write(String tenderTitle, List<EquipmentService.Sheet> equipment) {
+	static byte[] write(String tenderTitle, List<EquipmentService.Chosen> equipment) {
 		try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("Tableau matériel");
 			CellStyle header = style(workbook, true);
@@ -43,10 +43,15 @@ final class EquipmentTable {
 			note.createCell(0).setCellValue(SHEETS_ATTACHED);
 			sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 2));
 			int number = 5;
-			for (EquipmentService.Sheet item : equipment) {
+			for (EquipmentService.Chosen chosen : equipment) {
+				EquipmentService.Sheet item = chosen.sheet();
 				Row row = sheet.createRow(number++);
+				// As GPE writes it: « SUN2000-40-KTL (x2) » for several of a model, not for modules or cables.
+				boolean several = chosen.quantity() != null && chosen.quantity().compareTo(java.math.BigDecimal.ONE) > 0
+						&& !item.category().equals("MODULE") && !item.category().startsWith("CABLE");
 				String[] values = { EquipmentService.TABLE_LABELS.get(item.category()),
-						item.brand() == null ? "-" : item.brand(), item.reference() };
+						item.brand() == null ? "-" : item.brand(), item.reference()
+								+ (several ? " (x" + chosen.quantity().stripTrailingZeros().toPlainString() + ")" : "") };
 				for (int column = 0; column < values.length; column++) {
 					row.createCell(column).setCellValue(values[column]);
 					row.getCell(column).setCellStyle(cell);
