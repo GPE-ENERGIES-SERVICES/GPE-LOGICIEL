@@ -68,6 +68,42 @@ public class ImportedSupplierCatalog implements SupplierCatalog {
 		return jdbc.query(SELECT + " WHERE o.id = ?", ImportedSupplierCatalog::offer, offerId).stream().findFirst();
 	}
 
+	/**
+	 * A page of the prices, by designation: of one supplier or all, and those
+	 * whose reference starts with the query or whose designation holds its words.
+	 */
+	@Override
+	public OfferPage page(Long supplierId, String query, int page, int size) {
+		List<Object> args = new ArrayList<>();
+		StringBuilder where = new StringBuilder(" WHERE TRUE");
+		if (supplierId != null) {
+			where.append(" AND o.supplier_id = ?");
+			args.add(supplierId);
+		}
+		String text = query == null ? "" : query.strip();
+		if (!text.isEmpty()) {
+			String prefix = like(text) + "%";
+			where.append(" AND (o.supplier_ref ILIKE ? OR o.manufacturer_ref ILIKE ? OR o.ean = ?");
+			args.addAll(List.of(prefix, prefix, text));
+			List<String> words = Arrays.stream(text.split("\\s+")).filter(word -> word.length() > 1).limit(MAX_WORDS).toList();
+			if (!words.isEmpty()) {
+				where.append(" OR (");
+				for (int i = 0; i < words.size(); i++) {
+					where.append(i == 0 ? "" : " AND ").append("o.designation ILIKE ?");
+					args.add("%" + like(words.get(i)) + "%");
+				}
+				where.append(')');
+			}
+			where.append(')');
+		}
+		Long total = jdbc.queryForObject("SELECT count(*) FROM supplier_offer o" + where, Long.class, args.toArray());
+		List<Object> pageArgs = new ArrayList<>(args);
+		pageArgs.addAll(List.of(size, (long) page * size));
+		List<Offer> content = jdbc.query(SELECT + where + " ORDER BY o.designation, o.id LIMIT ? OFFSET ?",
+				ImportedSupplierCatalog::offer, pageArgs.toArray());
+		return new OfferPage(content, total == null ? 0 : total, page, size);
+	}
+
 	@Override
 	public List<Offer> list(Long supplierId, int limit) {
 		return jdbc.query(SELECT + " WHERE o.supplier_id = ? ORDER BY o.designation, o.id LIMIT ?",

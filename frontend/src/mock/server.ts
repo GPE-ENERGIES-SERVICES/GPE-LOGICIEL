@@ -826,6 +826,7 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/pricing-settings$/, () => PRICING_SETTINGS],
   ["GET", /^\/api\/pricing-rates$/, () => []],
   ["GET", /^\/api\/suppliers$/, () => []],
+  ["GET", /^\/api\/suppliers\/offers$/, () => ({ content: [], total: 0, page: 0, size: 50 })],
   ["GET", /^\/api\/estimate-assistant$/, () => ({ available: false, message: NOT_ENABLED })],
   // Memoirs: none in the demonstration; their changes answer « indisponible ».
   ["GET", /^\/api\/memoirs$/, () => []],

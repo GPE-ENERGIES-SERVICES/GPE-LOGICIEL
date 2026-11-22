@@ -9,6 +9,7 @@ import type {
   FeeRates,
   ItemInput,
   ListedEstimate,
+  ManualOffer,
   OfferAvailability,
   OfferImport,
   PricingRate,
@@ -19,6 +20,7 @@ import type {
   Supplier,
   SupplierConnector,
   SupplierOffer,
+  SupplierOfferPage,
   SupplierPriceLine,
 } from "@/types/estimate";
 
@@ -154,8 +156,19 @@ export function importOffers(supplierId: number, file: File, validFrom: string |
   return upload(`/api/suppliers/${supplierId}/offers${query}`, form);
 }
 
-export function getSupplierOffers(supplierId: number): Promise<SupplierOffer[]> {
-  return api(`/api/suppliers/${supplierId}/offers`);
+/** A page of every price, of one supplier or all, by designation (administrators). */
+export function getOfferPage(params: { supplierId: number | null; q: string; page: number }): Promise<SupplierOfferPage> {
+  const query = new URLSearchParams({ page: String(params.page), size: String(OFFER_PAGE_SIZE) });
+  if (params.supplierId) query.set("supplierId", String(params.supplierId));
+  if (params.q.trim()) query.set("q", params.q.trim());
+  return api(`/api/suppliers/offers?${query}`);
+}
+
+export const OFFER_PAGE_SIZE = 50;
+
+/** A price entered by hand: it replaces the price of the same reference, the former one stays in the history. */
+export function addOffer(supplierId: number, body: ManualOffer): Promise<SupplierOffer> {
+  return api(`/api/suppliers/${supplierId}/offers/manual`, { method: "POST", body });
 }
 
 export function searchOffers(query: string): Promise<SupplierOffer[]> {

@@ -127,6 +127,49 @@ class SupplierCatalogTests {
 			.hasStatus(HttpStatus.BAD_REQUEST);
 	}
 
+	@Test
+	void listsEveryPriceOnePageAtATimeBySupplierAndWords() {
+		post("/api/suppliers", "{\"code\": \"REXEL\", \"name\": \"Rexel\"}", TestUsers.admin()).exchange();
+		post("/api/suppliers", "{\"code\": \"SONEPAR\", \"name\": \"Sonepar\"}", TestUsers.admin()).exchange();
+		upload(PRICES, TestUsers.admin());
+
+		assertThat(mvc.get().uri("/api/suppliers/offers?size=1").with(TestUsers.user())).hasStatus(HttpStatus.FORBIDDEN);
+		assertThat(mvc.get().uri("/api/suppliers/offers?size=1&page=1").with(TestUsers.admin())).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("{\"total\": 2, \"page\": 1, \"size\": 1, \"content\": [{\"supplierRef\": \"LEG077121\"}]}");
+		assertThat(mvc.get().uri("/api/suppliers/offers?q=r2v 3g2").with(TestUsers.admin())).bodyJson()
+			.isLenientlyEqualTo("{\"total\": 1, \"content\": [{\"supplierRef\": \"NEX123\"}]}");
+		assertThat(mvc.get().uri("/api/suppliers/offers?supplierId=2").with(TestUsers.admin())).bodyJson()
+			.isLenientlyEqualTo("{\"total\": 0, \"content\": []}");
+	}
+
+	@Test
+	void addsAPriceByHandWhichReplacesTheSameReferenceAndIsKeptInTheHistory() {
+		post("/api/suppliers", "{\"code\": \"REXEL\", \"name\": \"Rexel\"}", TestUsers.admin()).exchange();
+		upload(PRICES, TestUsers.admin());
+		String price = """
+				{"supplierRef": "NEX123", "designation": "Câble R2V 3G2,5 couronne 100 m", "unit": "M",
+				 "packQuantity": 100, "netPrice": 80, "validFrom": "2026-11-01"}""";
+
+		assertThat(post("/api/suppliers/1/offers/manual", price, TestUsers.user())).hasStatus(HttpStatus.FORBIDDEN);
+		assertThat(post("/api/suppliers/1/offers/manual", "{\"supplierRef\": \"X\", \"designation\": \"Y\"}",
+				TestUsers.admin()))
+			.hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(post("/api/suppliers/1/offers/manual", price, TestUsers.admin())).hasStatus(HttpStatus.CREATED)
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"id": 2, "supplierRef": "NEX123", "netPrice": 80, "priceSource": "MANUAL", "validFrom": "2026-11-01"}""");
+		assertThat(post("/api/suppliers/1/offers/manual",
+				"{\"supplierRef\": \"NEW1\", \"designation\": \"Coffret AC\", \"netPrice\": 450}", TestUsers.admin()))
+			.hasStatus(HttpStatus.CREATED)
+			.bodyJson()
+			.isLenientlyEqualTo("{\"supplierRef\": \"NEW1\", \"packQuantity\": 1}");
+
+		assertThat(jdbc.queryForList("SELECT source FROM supplier_offer_price WHERE offer_id = 2 ORDER BY id", String.class))
+			.containsExactly("IMPORT", "MANUAL");
+		assertThat(post("/api/suppliers/9/offers/manual", price, TestUsers.admin())).hasStatus(HttpStatus.NOT_FOUND);
+	}
+
 	private MvcTestResult upload(String csv, RequestPostProcessor user) {
 		return mvc.post()
 			.uri("/api/suppliers/1/offers?validFrom=2026-10-01")

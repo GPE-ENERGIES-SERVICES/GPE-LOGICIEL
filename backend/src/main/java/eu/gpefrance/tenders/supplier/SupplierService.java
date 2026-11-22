@@ -44,7 +44,10 @@ public class SupplierService {
 
 	private final Clock clock;
 
-	public SupplierService(JdbcTemplate jdbc, SpreadsheetExtractor extractor, Clock clock) {
+	private final SupplierCatalog catalog;
+
+	public SupplierService(JdbcTemplate jdbc, SpreadsheetExtractor extractor, Clock clock, SupplierCatalog catalog) {
+		this.catalog = catalog;
 		this.jdbc = jdbc;
 		this.extractor = extractor;
 		this.clock = clock;
@@ -100,14 +103,43 @@ public class SupplierService {
 			throw problem(HttpStatus.BAD_REQUEST, "Colonnes non reconnues : le fichier doit avoir un en-tête avec une "
 					+ "référence, une désignation et un prix (net ou tarif).");
 		}
-		Timestamp now = Timestamp.from(clock.instant());
 		List<OfferFileReader.Line> lines = result.lines();
+		save(supplierId, lines, validFrom, "IMPORT", user);
+		log.info("{} prices imported for supplier {} by {} ({} lines left out)", lines.size(), supplierId, user,
+				result.rejected());
+		return new ImportResult(lines.size(), result.rejected(),
+				result.columns()
+					.entrySet()
+					.stream()
+					.collect(java.util.stream.Collectors.toMap(entry -> entry.getKey().name(), Map.Entry::getValue)),
+				result.warnings());
+	}
+
+	/**
+	 * A price entered by hand: as a line of a file, it replaces the price of
+	 * the same reference and goes to the history.
+	 */
+	@Transactional
+	public SupplierCatalog.Offer addOffer(Long supplierId, OfferFileReader.Line line, LocalDate validFrom, String user) {
+		if (jdbc.queryForObject("SELECT count(*) FROM supplier WHERE id = ?", Long.class, supplierId) == 0) {
+			throw problem(HttpStatus.NOT_FOUND, "Fournisseur introuvable.");
+		}
+		save(supplierId, List.of(line), validFrom, "MANUAL", user);
+		Long id = jdbc.queryForObject("SELECT id FROM supplier_offer WHERE supplier_id = ? AND supplier_ref = ?", Long.class,
+				supplierId, line.supplierRef());
+		log.info("Price of {} entered by hand for supplier {} by {}", line.supplierRef(), supplierId, user);
+		return catalog.find(id).orElseThrow();
+	}
+
+	/** Writes the prices and one line of history for each price changed. */
+	private void save(Long supplierId, List<OfferFileReader.Line> lines, LocalDate validFrom, String source, String user) {
+		Timestamp now = Timestamp.from(clock.instant());
 		for (int start = 0; start < lines.size(); start += BATCH) {
 			jdbc.batchUpdate("""
 					INSERT INTO supplier_offer (supplier_id, supplier_ref, manufacturer_code, manufacturer_ref, ean,
 					    designation, purchase_unit, pack_quantity, list_price, discount_rate, net_price, valid_from,
-					    imported_at, imported_by)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					    imported_at, imported_by, price_source)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 					ON CONFLICT (supplier_id, supplier_ref) DO UPDATE SET
 					    manufacturer_code = COALESCE(excluded.manufacturer_code, supplier_offer.manufacturer_code),
 					    manufacturer_ref = COALESCE(excluded.manufacturer_ref, supplier_offer.manufacturer_ref),
@@ -115,7 +147,8 @@ public class SupplierService {
 					    pack_quantity = excluded.pack_quantity, list_price = excluded.list_price,
 					    discount_rate = excluded.discount_rate, net_price = excluded.net_price,
 					    valid_from = excluded.valid_from, valid_until = NULL, imported_at = excluded.imported_at,
-					    imported_by = excluded.imported_by, eco_tax = NULL, price_source = 'IMPORT', priced_quantity = NULL""",
+					    imported_by = excluded.imported_by, eco_tax = NULL, price_source = excluded.price_source,
+					    priced_quantity = NULL""",
 					lines.subList(start, Math.min(start + BATCH, lines.size())), BATCH, (statement, line) -> {
 						statement.setLong(1, supplierId);
 						statement.setString(2, line.supplierRef());
@@ -131,28 +164,21 @@ public class SupplierService {
 						statement.setObject(12, validFrom);
 						statement.setTimestamp(13, now);
 						statement.setString(14, user);
+						statement.setString(15, source);
 					});
 		}
 		// One line of history for each price this import changed.
 		jdbc.update("""
 				INSERT INTO supplier_offer_price (offer_id, list_price, discount_rate, net_price, pack_quantity, source,
 				    observed_at, observed_by)
-				SELECT o.id, o.list_price, o.discount_rate, o.net_price, o.pack_quantity, 'IMPORT', o.imported_at, o.imported_by
+				SELECT o.id, o.list_price, o.discount_rate, o.net_price, o.pack_quantity, ?, o.imported_at, o.imported_by
 				FROM supplier_offer o
 				LEFT JOIN LATERAL (SELECT * FROM supplier_offer_price p WHERE p.offer_id = o.id
 				    ORDER BY p.observed_at DESC, p.id DESC LIMIT 1) last ON TRUE
 				WHERE o.supplier_id = ? AND o.imported_at = ? AND (last.id IS NULL
 				    OR last.net_price IS DISTINCT FROM o.net_price OR last.list_price IS DISTINCT FROM o.list_price
 				    OR last.discount_rate IS DISTINCT FROM o.discount_rate OR last.pack_quantity IS DISTINCT FROM o.pack_quantity)""",
-				supplierId, now);
-		log.info("{} prices imported for supplier {} by {} ({} lines left out)", lines.size(), supplierId, user,
-				result.rejected());
-		return new ImportResult(lines.size(), result.rejected(),
-				result.columns()
-					.entrySet()
-					.stream()
-					.collect(java.util.stream.Collectors.toMap(entry -> entry.getKey().name(), Map.Entry::getValue)),
-				result.warnings());
+				source, supplierId, now);
 	}
 
 	/** Read from a temporary copy, deleted at once: the file of the supplier is not kept. */

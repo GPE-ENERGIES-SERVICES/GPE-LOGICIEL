@@ -194,8 +194,23 @@ export type SupplierOffer = {
   manufacturerCode: string | null;
   /** Not part of the cost. */
   ecoTax: number | null;
-  /** IMPORT, or the service read: REXEL_TEST, REXEL_PROD. */
+  /** IMPORT, MANUAL (entered by hand), or the service read: REXEL_TEST, REXEL_PROD. */
   priceSource: string;
+};
+
+export type SupplierOfferPage = { content: SupplierOffer[]; total: number; page: number; size: number };
+
+/** @property discountRate share deducted, 0.35 for 35 % */
+export type ManualOffer = {
+  supplierRef: string;
+  manufacturerRef: string | null;
+  designation: string;
+  unit: string | null;
+  packQuantity: number | null;
+  listPrice: number | null;
+  discountRate: number | null;
+  netPrice: number;
+  validFrom: string | null;
 };
 
 /** A service of a supplier; a test environment is always shown as such. */

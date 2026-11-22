@@ -27,6 +27,8 @@ import eu.gpefrance.tenders.supplier.SupplierService.ImportResult;
 import eu.gpefrance.tenders.supplier.SupplierService.SupplierResponse;
 import eu.gpefrance.tenders.user.AppUserPrincipal;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -75,6 +77,41 @@ public class SupplierController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate validFrom,
 			@AuthenticationPrincipal AppUserPrincipal user) {
 		return service.importOffers(id, file, validFrom, user.displayName());
+	}
+
+	/**
+	 * A price entered by hand; the net price is the price paid for the pack.
+	 * @param discountRate share deducted, 0.35 for 35 %
+	 */
+	public record ManualOfferRequest(@NotBlank @Size(max = 100) String supplierRef, @Size(max = 100) String manufacturerRef,
+			@NotBlank @Size(max = 500) String designation, @Size(max = 20) String unit,
+			@DecimalMin(value = "0", inclusive = false) BigDecimal packQuantity,
+			@DecimalMin("0") BigDecimal listPrice,
+			@DecimalMin("0") @DecimalMax(value = "1", inclusive = false) BigDecimal discountRate,
+			@NotNull @DecimalMin("0") BigDecimal netPrice,
+			LocalDate validFrom) {
+	}
+
+	@PostMapping("/api/suppliers/{id}/offers/manual")
+	@ResponseStatus(HttpStatus.CREATED)
+	public Offer addOffer(@PathVariable Long id, @Valid @RequestBody ManualOfferRequest request,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return service.addOffer(id, new OfferFileReader.Line(request.supplierRef().strip(), null,
+				blank(request.manufacturerRef()), null, request.designation().strip(), blank(request.unit()),
+				request.packQuantity() == null ? BigDecimal.ONE : request.packQuantity(), request.listPrice(),
+				request.discountRate(), request.netPrice()), request.validFrom(), user.displayName());
+	}
+
+	private static String blank(String text) {
+		return text == null || text.isBlank() ? null : text.strip();
+	}
+
+	/** Every price, one page at a time, of one supplier or all; for administrators (security configuration). */
+	@GetMapping("/api/suppliers/offers")
+	public SupplierCatalog.OfferPage page(@RequestParam(required = false) Long supplierId,
+			@RequestParam(required = false) @Size(max = 200) String q, @RequestParam(defaultValue = "0") @Min(0) int page,
+			@RequestParam(defaultValue = "50") @Min(1) @Max(200) int size) {
+		return catalog.page(supplierId, q, page, size);
 	}
 
 	/** The prices of a supplier, to be read on the page of the suppliers; for administrators. */

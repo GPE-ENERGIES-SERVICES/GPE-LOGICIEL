@@ -29,13 +29,25 @@ public interface SupplierCatalog {
 	List<Offer> list(Long supplierId, int limit);
 
 	/**
+	 * A page of the offers, by designation.
+	 * @param supplierId only this supplier, or null for all
+	 * @param query a reference or words of the designation, or null for all
+	 * @param page from 0
+	 */
+	OfferPage page(Long supplierId, String query, int page, int size);
+
+	/** @param total offers matching, on every page */
+	record OfferPage(List<Offer> content, long total, int page, int size) {
+	}
+
+	/**
 	 * A price of a supplier for one of its references.
 	 * @param packQuantity units sold for the price (100 for a reel of 100 m)
 	 * @param netPrice price paid, discount deducted, for the pack
 	 * @param validFrom the date of the price given at the import, or null
 	 * @param manufacturerCode the code of the manufacturer at the supplier, or null
 	 * @param ecoTax the eco-tax given by the supplier, not part of the cost, or null
-	 * @param priceSource IMPORT, or the service of the supplier the price was read from
+	 * @param priceSource IMPORT, MANUAL (entered by hand), or the service of the supplier the price was read from
 	 */
 	record Offer(Long id, Long supplierId, String supplierName, String supplierRef, String manufacturerRef,
 			String ean, String designation, String purchaseUnit, BigDecimal packQuantity, BigDecimal listPrice,

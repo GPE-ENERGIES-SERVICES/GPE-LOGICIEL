@@ -2,19 +2,19 @@
 
 import { useState, type FormEvent } from "react";
 
-import { formatMoney, formatRate } from "@/lib/estimate";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import {
   createSupplier,
   fillCatalogue,
   getCatalogueFilling,
   getSupplierConnectors,
-  getSupplierOffers,
   getSuppliers,
   importOffers,
 } from "@/services/estimateApi";
-import type { CatalogueFilling, OfferImport, Supplier } from "@/types/estimate";
+import type { CatalogueFilling, OfferImport } from "@/types/estimate";
+
+import { OfferCatalogue } from "./OfferCatalogue";
 
 /**
  * The suppliers of GPE, the import of their price files (CSV, XLSX) and the
@@ -122,10 +122,6 @@ export function SuppliersPanel() {
         </table>
       )}
 
-      {suppliers.data
-        ?.filter((supplier) => supplier.offers > 0)
-        .map((supplier) => <OfferList key={supplier.id} supplier={supplier} />)}
-
       <form className="inline-form" onSubmit={create}>
         <input name="code" required maxLength={30} pattern="[A-Za-z0-9_\-]+" placeholder="Code (REXEL)" />
         <input name="name" required maxLength={100} placeholder="Nom" />
@@ -169,61 +165,9 @@ export function SuppliersPanel() {
         </p>
       )}
       {(error || suppliers.error) && <p className="banner error">{error ?? suppliers.error}</p>}
+
+      {suppliers.data && <OfferCatalogue suppliers={suppliers.data} onChanged={suppliers.reload} />}
     </>
   );
 }
 
-/** The prices of a supplier, filtered on the page: at most the 2000 first by designation. */
-function OfferList({ supplier }: { supplier: Supplier }) {
-  const offers = useLoader(() => getSupplierOffers(supplier.id), `${supplier.id}#${supplier.offers}#${supplier.lastImport}`);
-  const [filter, setFilter] = useState("");
-  const words = filter.toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = (offers.data ?? []).filter((offer) => {
-    const text = `${offer.designation} ${offer.supplierRef} ${offer.manufacturerCode ?? ""} ${offer.manufacturerRef ?? ""}`.toLowerCase();
-    return words.every((word) => text.includes(word));
-  });
-
-  return (
-    <>
-      <h2>Prix {supplier.name}</h2>
-      {offers.error && <p className="banner error">{offers.error}</p>}
-      <div className="inline-form">
-        <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filtrer : R2V, H07VR, DNX3…" aria-label={`Filtrer les prix ${supplier.name}`} />
-        <span className="muted">
-          {shown.length} produit(s) sur {supplier.offers}
-        </span>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Désignation</th>
-            <th>Réf. fournisseur</th>
-            <th>Trigramme</th>
-            <th>Réf. commerciale</th>
-            <th className="number">Prix de base</th>
-            <th className="number">Remise</th>
-            <th className="number">Prix net HT</th>
-            <th>Date du prix</th>
-          </tr>
-        </thead>
-        <tbody>
-          {shown.map((offer) => (
-            <tr key={offer.id}>
-              <td>{offer.designation}</td>
-              <td>{offer.supplierRef}</td>
-              <td>{offer.manufacturerCode ?? "—"}</td>
-              <td>{offer.manufacturerRef ?? "—"}</td>
-              <td className="number">{offer.listPrice === null ? "—" : formatMoney(offer.listPrice)}</td>
-              <td className="number">{offer.discountRate === null ? "—" : formatRate(offer.discountRate)}</td>
-              <td className="number">
-                <strong>{formatMoney(offer.netPrice)}</strong>
-                {offer.priceSource === "REXEL_TEST" && " (TEST)"}
-              </td>
-              <td>{formatDate(offer.validFrom ?? offer.importedAt)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
-  );
-}
