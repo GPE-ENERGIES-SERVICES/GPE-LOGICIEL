@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import eu.gpefrance.tenders.analysis.PriceScheduleChecker;
 import eu.gpefrance.tenders.analysis.PriceScheduleChecker.ScheduleLine;
 import eu.gpefrance.tenders.document.DocumentProcessor;
+import eu.gpefrance.tenders.document.FileStorage;
 import eu.gpefrance.tenders.document.Spreadsheet;
 import eu.gpefrance.tenders.document.SpreadsheetExtractor;
 
@@ -50,14 +51,22 @@ public class PriceLibraryService {
 
 	private final Clock clock;
 
-	public PriceLibraryService(JdbcTemplate jdbc, SpreadsheetExtractor extractor, Clock clock) {
+	private final FileStorage storage;
+
+	public PriceLibraryService(JdbcTemplate jdbc, SpreadsheetExtractor extractor, Clock clock, FileStorage storage) {
 		this.jdbc = jdbc;
 		this.extractor = extractor;
 		this.clock = clock;
+		this.storage = storage;
 	}
 
+	/** @param hasFile its price schedule can be opened; not for the imports made before it was kept */
 	public record Import(Long id, String label, String fileName, Integer priceYear, String domain, int itemCount,
-			String importedBy, Instant importedAt) {
+			String importedBy, Instant importedAt, boolean hasFile) {
+	}
+
+	/** The price schedule of an import, to open. */
+	public record ImportFile(String fileName, Path path) {
 	}
 
 	public record Item(Long id, String designation, String unit, BigDecimal unitPrice, BigDecimal quantity,
@@ -88,10 +97,28 @@ public class PriceLibraryService {
 					+ "(désignation, quantité, prix unitaire) et des prix remplis.");
 		}
 		Instant now = clock.instant();
+		Path kept;
+		try (InputStream content = file.getInputStream()) {
+			kept = storage.store(content, storage.resolve("price-library"), name);
+		}
+		catch (IOException ex) {
+			throw problem("Cadre de prix non enregistré : " + ex.getMessage());
+		}
+		// Not imported after all: the file kept goes too.
+		org.springframework.transaction.support.TransactionSynchronizationManager
+			.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
+				@Override
+				public void afterCompletion(int status) {
+					if (status != STATUS_COMMITTED) {
+						deleteQuietly(kept);
+					}
+				}
+			});
 		Long id = jdbc.queryForObject("""
-				INSERT INTO price_library_import (label, file_name, price_year, domain, item_count, imported_by, imported_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id""", Long.class, label.strip(), name, priceYear, domain,
-				lines.size(), user, Timestamp.from(now));
+				INSERT INTO price_library_import (label, file_name, price_year, domain, item_count, imported_by, imported_at,
+				    storage_path)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id""", Long.class, label.strip(), name, priceYear, domain,
+				lines.size(), user, Timestamp.from(now), storage.relativize(kept));
 		for (int start = 0; start < lines.size(); start += BATCH) {
 			jdbc.batchUpdate("""
 					INSERT INTO price_library_item (import_id, sheet, source_row, chapter, reference, designation, unit,
@@ -110,7 +137,7 @@ public class PriceLibraryService {
 					});
 		}
 		log.info("{} prices of « {} » added to the price library by {}", lines.size(), label, user);
-		return new Import(id, label.strip(), name, priceYear, domain, lines.size(), user, now);
+		return new Import(id, label.strip(), name, priceYear, domain, lines.size(), user, now, true);
 	}
 
 	private record Line(String sheet, ScheduleLine line) {
@@ -118,26 +145,57 @@ public class PriceLibraryService {
 
 	public List<Import> imports() {
 		return jdbc.query("""
-				SELECT id, label, file_name, price_year, domain, item_count, imported_by, imported_at
+				SELECT id, label, file_name, price_year, domain, item_count, imported_by, imported_at, storage_path
 				FROM price_library_import ORDER BY imported_at DESC""",
 				(row, n) -> new Import(row.getLong("id"), row.getString("label"), row.getString("file_name"),
 						(Integer) row.getObject("price_year"), row.getString("domain"), row.getInt("item_count"),
-						row.getString("imported_by"), row.getTimestamp("imported_at").toInstant()));
+						row.getString("imported_by"), row.getTimestamp("imported_at").toInstant(),
+						row.getString("storage_path") != null));
 	}
 
+	/** Deletes the import, its lines and its file. */
 	@Transactional
 	public void deleteImport(Long id) {
-		if (jdbc.update("DELETE FROM price_library_import WHERE id = ?", id) == 0) {
+		// Optional of a list: an import made before has a null path, which findFirst refuses.
+		List<java.util.Optional<String>> found = jdbc.query("SELECT storage_path FROM price_library_import WHERE id = ?",
+				(row, n) -> java.util.Optional.ofNullable(row.getString("storage_path")), id);
+		if (found.isEmpty()) {
 			throw new ErrorResponseException(HttpStatus.NOT_FOUND,
 					ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Import introuvable."), null);
+		}
+		jdbc.update("DELETE FROM price_library_import WHERE id = ?", id);
+		found.getFirst().ifPresent((path) -> deleteQuietly(storage.resolve(path)));
+	}
+
+	public ImportFile file(Long id) {
+		return jdbc.query("SELECT file_name, storage_path FROM price_library_import WHERE id = ? AND storage_path IS NOT NULL",
+				(row, n) -> new ImportFile(row.getString("file_name"), storage.resolve(row.getString("storage_path"))), id)
+			.stream()
+			.findFirst()
+			.filter((found) -> Files.exists(found.path()))
+			.orElseThrow(PriceLibraryService::notFound);
+	}
+
+	private static ErrorResponseException notFound() {
+		return new ErrorResponseException(HttpStatus.NOT_FOUND,
+				ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Fichier introuvable."), null);
+	}
+
+	private static void deleteQuietly(Path path) {
+		try {
+			Files.deleteIfExists(path);
+		}
+		catch (IOException ex) {
+			log.warn("Price library file not deleted: {}", ex.getClass().getSimpleName());
 		}
 	}
 
 	/**
 	 * The lines whose designation holds every word searched, regardless of case
 	 * and accents, the most recent prices first.
+	 * @param domain ELECTRICITY or PHOTOVOLTAIC, or null for every domain
 	 */
-	public List<Item> search(String query, String unit) {
+	public List<Item> search(String query, String unit, String domain) {
 		List<String> words = query == null ? List.of()
 				: Arrays.stream(query.strip().split("\\s+")).filter(word -> word.length() >= 2).limit(8).toList();
 		StringBuilder sql = new StringBuilder("""
@@ -152,6 +210,10 @@ public class PriceLibraryService {
 		if (unit != null && !unit.isBlank()) {
 			sql.append(" AND lower(i.unit) = lower(?)");
 			parameters.add(unit.strip());
+		}
+		if (domain != null && !domain.isBlank()) {
+			sql.append(" AND m.domain = ?");
+			parameters.add(domain);
 		}
 		sql.append(" ORDER BY m.price_year DESC NULLS LAST, m.imported_at DESC, i.id LIMIT ").append(MAX_RESULTS);
 		return jdbc.query(sql.toString(),

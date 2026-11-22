@@ -1,8 +1,16 @@
 package eu.gpefrance.tenders.estimate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -59,10 +67,22 @@ public class PriceLibraryController {
 		service.deleteImport(id);
 	}
 
+	/** The price schedule as it was sent, to open. */
+	@GetMapping("/api/price-library/imports/{id}/file")
+	public ResponseEntity<Resource> file(@PathVariable Long id) {
+		PriceLibraryService.ImportFile found = service.file(id);
+		return ResponseEntity.ok()
+			.contentType(MediaTypeFactory.getMediaType(found.fileName()).orElse(MediaType.APPLICATION_OCTET_STREAM))
+			.header(HttpHeaders.CONTENT_DISPOSITION,
+					ContentDisposition.attachment().filename(found.fileName(), StandardCharsets.UTF_8).build().toString())
+			.body(new FileSystemResource(found.path()));
+	}
+
 	@GetMapping("/api/price-library")
 	public List<Item> search(@RequestParam(required = false) @Size(max = 200) String q,
-			@RequestParam(required = false) @Size(max = 30) String unit) {
-		return service.search(q, unit);
+			@RequestParam(required = false) @Size(max = 30) String unit,
+			@RequestParam(required = false) @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC") String domain) {
+		return service.search(q, unit, domain);
 	}
 
 }

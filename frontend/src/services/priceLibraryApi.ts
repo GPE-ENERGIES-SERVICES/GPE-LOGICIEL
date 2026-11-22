@@ -10,7 +10,13 @@ export type PriceLibraryImport = {
   itemCount: number;
   importedBy: string | null;
   importedAt: string;
+  /** Its price schedule can be opened; not for the imports made before it was kept. */
+  hasFile: boolean;
 };
+
+export function priceLibraryFileUrl(id: number): string {
+  return `/api/price-library/imports/${id}/file`;
+}
 
 /** A line of a schedule GPE sent: its sale price, never a cost. */
 export type PriceLibraryItem = {
@@ -48,8 +54,10 @@ export function deletePriceLibraryImport(id: number): Promise<void> {
   return api(`/api/price-library/imports/${id}`, { method: "DELETE" });
 }
 
-export function searchPriceLibrary(query: string, unit: string): Promise<PriceLibraryItem[]> {
+/** @param domain ELECTRICITY or PHOTOVOLTAIC, empty for every domain */
+export function searchPriceLibrary(query: string, unit: string, domain = ""): Promise<PriceLibraryItem[]> {
   const params = new URLSearchParams({ q: query });
   if (unit) params.set("unit", unit);
+  if (domain) params.set("domain", domain);
   return api(`/api/price-library?${params}`);
 }

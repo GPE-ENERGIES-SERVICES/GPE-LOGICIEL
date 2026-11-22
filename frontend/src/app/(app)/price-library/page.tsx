@@ -10,9 +10,26 @@ import {
   deletePriceLibraryImport,
   getPriceLibraryImports,
   importPriceSchedule,
+  priceLibraryFileUrl,
   searchPriceLibrary,
   type PriceLibraryItem,
 } from "@/services/priceLibraryApi";
+
+function DomainFilter({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <label>
+      Domaine
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">Tous</option>
+        {Object.entries(ACTIVITY_LABELS).map(([code, label]) => (
+          <option key={code} value={code}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 /**
  * The prices GPE already gave: the price schedules it filled and sent, searched
@@ -25,13 +42,16 @@ export default function PriceLibraryPage() {
   const [results, setResults] = useState<PriceLibraryItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [domain, setDomain] = useState("");
+  const [listDomain, setListDomain] = useState("");
+  const listed = (imports.data ?? []).filter((entry) => !listDomain || entry.domain === listDomain);
 
   const search = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setError(null);
     try {
-      setResults(await searchPriceLibrary(String(form.get("q") ?? ""), String(form.get("unit") ?? "")));
+      setResults(await searchPriceLibrary(String(form.get("q") ?? ""), String(form.get("unit") ?? ""), domain));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Recherche impossible.");
     }
@@ -89,6 +109,7 @@ export default function PriceLibraryPage() {
             Unité
             <input name="unit" maxLength={30} size={6} placeholder="U, ml…" />
           </label>
+          <DomainFilter value={domain} onChange={setDomain} />
           <button type="submit" className="primary">
             Rechercher
           </button>
@@ -126,8 +147,18 @@ export default function PriceLibraryPage() {
 
       <section className="card">
         <h2>DPGF de la bibliothèque</h2>
-        {imports.data && imports.data.length === 0 && <p className="muted">Aucun DPGF pour l&apos;instant.</p>}
         {imports.data && imports.data.length > 0 && (
+          <div className="inline-form">
+            <DomainFilter value={listDomain} onChange={setListDomain} />
+            <span className="muted">
+              {listed.length} DPGF · {listed.reduce((sum, entry) => sum + entry.itemCount, 0)} prix
+            </span>
+          </div>
+        )}
+        {imports.data && listed.length === 0 && (
+          <p className="muted">{listDomain ? "Aucun DPGF de ce domaine." : "Aucun DPGF pour l'instant."}</p>
+        )}
+        {listed.length > 0 && (
           <table>
             <thead>
               <tr>
@@ -139,12 +170,22 @@ export default function PriceLibraryPage() {
               </tr>
             </thead>
             <tbody>
-              {imports.data.map((entry) => (
+              {listed.map((entry) => (
                 <tr key={entry.id}>
                   <td>
                     {entry.label}
                     {entry.priceYear && <span className="muted"> · {entry.priceYear}</span>}
-                    <div className="small muted">{entry.fileName}</div>
+                    <div className="small">
+                      {entry.hasFile ? (
+                        <a href={priceLibraryFileUrl(entry.id)} title="Ouvrir le DPGF tel qu'il a été envoyé">
+                          {entry.fileName}
+                        </a>
+                      ) : (
+                        <span className="muted" title="Ajouté avant que les fichiers ne soient gardés : réimportez-le pour pouvoir l'ouvrir">
+                          {entry.fileName}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td>{entry.domain ? ACTIVITY_LABELS[entry.domain] : "–"}</td>
                   <td className="number">{entry.itemCount}</td>

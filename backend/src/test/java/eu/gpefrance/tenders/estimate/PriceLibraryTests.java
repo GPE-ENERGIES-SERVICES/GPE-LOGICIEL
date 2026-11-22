@@ -69,10 +69,42 @@ class PriceLibraryTests {
 		assertThat(mvc.get().uri("/api/price-library?q=1,5&unit=ML").with(TestUsers.user())).bodyJson()
 			.extractingPath("$[0].unitPrice")
 			.isEqualTo(2.9);
+		// By domain: the schedule is CFO/CFA.
+		assertThat(mvc.get().uri("/api/price-library?q=pc encastree&domain=ELECTRICITY").with(TestUsers.user()))
+			.bodyJson()
+			.extractingPath("$.length()")
+			.isEqualTo(1);
+		assertThat(mvc.get().uri("/api/price-library?q=pc encastree&domain=PHOTOVOLTAIC").with(TestUsers.user()))
+			.bodyJson()
+			.extractingPath("$.length()")
+			.isEqualTo(0);
 
+		// The schedule is kept as sent, to be opened, and goes with its import.
+		assertThat(mvc.get().uri("/api/price-library/imports").with(TestUsers.user())).bodyJson()
+			.extractingPath("$[0].hasFile")
+			.isEqualTo(true);
+		assertThat(mvc.get().uri("/api/price-library/imports/1/file").with(TestUsers.user())).hasStatusOk()
+			.body()
+			.isEqualTo(DPGF.getBytes(StandardCharsets.UTF_8));
 		assertThat(mvc.delete().uri("/api/price-library/imports/1").with(csrf()).with(TestUsers.admin()))
 			.hasStatus(HttpStatus.NO_CONTENT);
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM price_library_item", Long.class)).isZero();
+		assertThat(mvc.get().uri("/api/price-library/imports/1/file").with(TestUsers.user()))
+			.hasStatus(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void anImportMadeBeforeTheFilesWereKeptIsDeletedWithoutFile() {
+		assertThat(upload(TestUsers.admin())).hasStatus(HttpStatus.CREATED);
+		jdbc.update("UPDATE price_library_import SET storage_path = NULL");
+
+		assertThat(mvc.get().uri("/api/price-library/imports").with(TestUsers.user())).bodyJson()
+			.extractingPath("$[0].hasFile")
+			.isEqualTo(false);
+		assertThat(mvc.get().uri("/api/price-library/imports/1/file").with(TestUsers.user()))
+			.hasStatus(HttpStatus.NOT_FOUND);
+		assertThat(mvc.delete().uri("/api/price-library/imports/1").with(csrf()).with(TestUsers.admin()))
+			.hasStatus(HttpStatus.NO_CONTENT);
 	}
 
 	private MvcTestResult upload(RequestPostProcessor user) {

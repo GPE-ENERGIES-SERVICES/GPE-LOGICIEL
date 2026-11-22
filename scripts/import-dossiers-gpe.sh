@@ -3,6 +3,7 @@
 # Mémoires > Bibliothèque and Entreprise > Documents do one file at a time:
 # - the technical memoir of each job ("<job>/03-Dossier RAO/01-Pieces
 #   principales", Word preferred to PDF), titled with the job folder name;
+# - the filled price schedules of "01-Pieces principales", into the price library;
 # - the company documents of "03-Dossier RAO/02-Situation GPE",
 #   "03-Assurance et Rib", "04-Références" and "05-Qualification", one per
 #   name, the copy of the last job folder.
@@ -101,6 +102,24 @@ for file in "$ROOT"/[Mm][Tt]*; do
   case "$file" in *.doc|*.docx|*.odt|*.pdf|*.DOC|*.DOCX|*.PDF) ;; *) continue ;; esac
   name=$(basename "$file")
   memoir "${name%.*}" "$file"
+done
+
+echo "== Price schedules"
+curl -fsS -b "$JAR" "$API_URL/api/price-library/imports" -o "$JAR.prices"
+# The filled schedules sent (DPGF, BPU, DQE): their unit prices go to the price library
+find "$ROOT" -path "*/03-Dossier RAO/01-Pieces principales/*" -type f \
+  \( -iname "*.xlsx" -o -iname "*.xlsm" -o -iname "*.xls" -o -iname "*.ods" -o -iname "*.csv" \) |
+while IFS= read -r file; do
+  label=$(basename "$(dirname "$(dirname "$(dirname "$file")")")")
+  case "$(basename "$file")" in "~"*) continue ;; esac
+  if grep -qF "\"label\":\"$(json_escape "$label")\"" "$JAR.prices"; then
+    echo "Already there: $label"
+    continue
+  fi
+  if answer=$(post /api/price-library/imports -F "file=@$file" --form-string "label=$label" \
+      --form-string "domain=$ACTIVITY"); then
+    echo "$label: $(printf '%s' "$answer" | sed -n 's/.*"itemCount":\([0-9]*\).*/\1/p') prix"
+  fi
 done
 
 category() {
