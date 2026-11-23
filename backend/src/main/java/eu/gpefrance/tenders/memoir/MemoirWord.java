@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -31,6 +32,8 @@ import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.apache.xmlbeans.XmlCursor;
 import org.apache.xmlbeans.XmlObject;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBookmark;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STFldCharType;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
@@ -86,11 +89,12 @@ public final class MemoirWord {
 				ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			word.getProperties().getCoreProperties().setTitle(clean(memoir.title()));
 			cover(word, memoir, cover, "MT GPE – " + Objects.requireNonNullElse(memoir.tenderTitle(), memoir.title()));
+			tableOfContents(word, sections);
 			for (SectionRow section : sections) {
 				if (section.proposed()) {
 					continue;
 				}
-				heading(word, section.level(), section.title());
+				heading(word, section.level(), section.title(), section.level() <= TOC_LEVELS ? section.id() : null);
 				if (section.content() == null) {
 					word.createParagraph().createRun().setText(TO_WRITE);
 				}
@@ -192,7 +196,70 @@ public final class MemoirWord {
 		}
 	}
 
-	private static void heading(XWPFDocument word, int level, String text) {
+	/** The levels listed in the table of contents. */
+	private static final int TOC_LEVELS = 3;
+
+	private static String bookmark(Long sectionId) {
+		return "_TocGpe" + sectionId;
+	}
+
+	/**
+	 * The table of contents of the template, written with the outline: each
+	 * entry with its number, its title and its page (a field of Word, given
+	 * when the document is opened), as Word itself writes it.
+	 */
+	private static void tableOfContents(XWPFDocument word, List<SectionRow> sections) {
+		XWPFParagraph field = word.getParagraphs()
+			.stream()
+			.filter((paragraph) -> paragraph.getRuns().stream().anyMatch((run) -> run.getCTR().getInstrTextList().stream()
+				.anyMatch((instruction) -> instruction.getStringValue().contains("TOC"))))
+			.findFirst()
+			.orElse(null);
+		if (field == null) {
+			return;
+		}
+		// The hint and the end of the field of the template give way to the entries.
+		for (int index = field.getRuns().size() - 1; index >= 0; index--) {
+			XWPFRun run = field.getRuns().get(index);
+			if (run.getCTR().getFldCharList().stream().anyMatch((mark) -> mark.getFldCharType() == STFldCharType.SEPARATE)) {
+				break;
+			}
+			field.removeRun(index);
+		}
+		List<SectionRow> listed = sections.stream()
+			.filter((section) -> !section.proposed() && section.level() <= TOC_LEVELS)
+			.toList();
+		// The table of contents on a page of its own, after the cover.
+		field.setPageBreak(true);
+		XWPFParagraph entry = field;
+		for (int index = 0; index < listed.size(); index++) {
+			SectionRow section = listed.get(index);
+			if (index > 0) {
+				try (XmlCursor cursor = entry.getCTP().newCursor()) {
+					cursor.toNextSibling();
+					entry = word.insertNewParagraph(cursor);
+				}
+			}
+			entry.setStyle("TM" + Math.max(section.level(), 1));
+			entry.createRun().setText(clean(section.number()));
+			entry.createRun().addTab();
+			entry.createRun().setText(clean(section.title()));
+			entry.createRun().addTab();
+			fieldRun(entry, STFldCharType.BEGIN);
+			entry.createRun().getCTR().addNewInstrText().setStringValue(" PAGEREF " + bookmark(section.id()) + " \\h ");
+			fieldRun(entry, STFldCharType.SEPARATE);
+			entry.createRun().setText(" ");
+			fieldRun(entry, STFldCharType.END);
+		}
+		fieldRun(entry, STFldCharType.END);
+	}
+
+	private static void fieldRun(XWPFParagraph paragraph, STFldCharType.Enum type) {
+		paragraph.createRun().getCTR().addNewFldChar().setFldCharType(type);
+	}
+
+	/** @param sectionId the section, to be found from the table of contents; null when it is not listed there */
+	private static void heading(XWPFDocument word, int level, String text, Long sectionId) {
 		XWPFParagraph paragraph = word.createParagraph();
 		paragraph.setStyle(switch (level) {
 			case 0, 1 -> PART;
@@ -201,7 +268,17 @@ public final class MemoirWord {
 			default -> POINT;
 		});
 		paragraph.setKeepNext(true);
+		if (sectionId == null) {
+			paragraph.createRun().setText(clean(text));
+			return;
+		}
+		// A bookmark around the title: the table of contents gives its page.
+		BigInteger id = BigInteger.valueOf(sectionId);
+		CTBookmark start = paragraph.getCTP().addNewBookmarkStart();
+		start.setId(id);
+		start.setName(bookmark(sectionId));
 		paragraph.createRun().setText(clean(text));
+		paragraph.getCTP().addNewBookmarkEnd().setId(id);
 	}
 
 	private static void blocks(XWPFDocument word, Element parent, int level, Function<Long, Optional<Path>> images)

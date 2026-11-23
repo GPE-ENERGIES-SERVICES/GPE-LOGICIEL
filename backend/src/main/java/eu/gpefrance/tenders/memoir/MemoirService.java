@@ -110,7 +110,8 @@ public class MemoirService {
 	 * @param ai whether the AI may be called, and why not
 	 */
 	public record Workspace(MemoirRow memoir, List<SectionRow> sections, List<RequirementRow> requirements,
-			MemoirStore.JobRow job, List<MemoirAi.SourceDocument> documents, AiAssistant.Availability ai) {
+			MemoirStore.JobRow job, List<MemoirAi.SourceDocument> documents, AiAssistant.Availability ai,
+			List<Long> styleReferences, List<MemoirStore.LibraryChoice> library) {
 	}
 
 	/** A memoir as a Word document, read again and finished by a user before it is sent. */
@@ -140,7 +141,30 @@ public class MemoirService {
 	public Workspace workspace(Long id) {
 		MemoirRow memoir = found(id);
 		return new Workspace(memoir, store.sections(id), store.requirements(id), store.lastJob(id).orElse(null),
-				ai.sources(memoir.tenderId()), ai.availability());
+				ai.sources(memoir.tenderId()), ai.availability(), store.styleReferences(id), store.libraryChoices());
+	}
+
+	/** At most this many former memoirs are models of writing for a memoir. */
+	static final int STYLE_REFERENCES = 2;
+
+	/**
+	 * The former memoirs the AI follows for the way of writing of this memoir,
+	 * never for its content; none to let the application choose them.
+	 */
+	@Transactional
+	public Workspace chooseStyleReferences(Long id, List<Long> libraryIds, String user) {
+		found(id);
+		List<Long> chosen = libraryIds == null ? List.of() : libraryIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+		if (chosen.size() > STYLE_REFERENCES) {
+			throw MemoirRuleException.invalid("Choisissez au plus " + STYLE_REFERENCES + " mémoires de référence.");
+		}
+		java.util.Set<Long> known = store.libraryChoices().stream().map(MemoirStore.LibraryChoice::id).collect(java.util.stream.Collectors.toSet());
+		if (!known.containsAll(chosen)) {
+			throw MemoirRuleException.invalid("Ce mémoire n'est pas dans la bibliothèque.");
+		}
+		store.setStyleReferences(id, chosen);
+		store.touch(id, user, clock.instant());
+		return workspace(id);
 	}
 
 	@Transactional

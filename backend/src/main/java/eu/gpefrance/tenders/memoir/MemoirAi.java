@@ -44,7 +44,10 @@ import tools.jackson.databind.node.ObjectNode;
 @Component
 class MemoirAi {
 
-	static final String VERSION = "memoir-1";
+	static final String VERSION = "memoir-2";
+
+	/** How much of each model of writing is given for a section. */
+	private static final int STYLE_EXCERPT = 6000;
 
 	static final Set<String> CATEGORIES = Set.of("CRITERION", "SUBCRITERION", "MANDATORY", "FORM", "MEANS", "DEADLINE",
 			"METHOD", "OTHER");
@@ -337,8 +340,15 @@ class MemoirAi {
 		store.equipment(memoir.tenderId()).forEach((item) -> content.withArray("materiel_retenu").add(item));
 		// The technical choices of GPE for this tender, entered by hand: facts of the memoir.
 		technical.describe(memoir.tenderId()).forEach((line) -> content.withArray("choix_techniques").add(line));
-		store.libraryExcerpts(properties.libraryExcerpts(), properties.excerptLength(), memoir.tenderId())
-			.forEach(excerpt -> content.withArray("anciens_memoires_de_reference").add(excerpt));
+		// The models of writing chosen by a user, at the place that speaks of this section; otherwise the closest memoirs.
+		List<String> models = store.styleExcerpts(memoir.id(), section.title(), STYLE_EXCERPT);
+		if (!models.isEmpty()) {
+			models.forEach(excerpt -> content.withArray("memoires_modeles_de_redaction").add(excerpt));
+		}
+		else {
+			store.libraryExcerpts(properties.libraryExcerpts(), properties.excerptLength(), memoir.tenderId())
+				.forEach(excerpt -> content.withArray("anciens_memoires_de_reference").add(excerpt));
+		}
 		JsonNode root = root(ai.ask("MEMOIR_SECTION", VERSION, writingInstructions(), context(memoir) + content,
 				writingSchema(), 6000, user).text());
 		return new Written(MemoirHtml.clean(text(root.path("html"), 60_000)), strings(root.path("missing")));
@@ -547,6 +557,11 @@ class MemoirAi {
 				jamais un ancien chantier, une ancienne information ou un ancien chiffre qui ne figure pas dans les \
 				données actuelles de l'entreprise.
 				- Réponds précisément aux exigences du DCE de la section, de façon concrète et professionnelle.
+				- « memoires_modeles_de_redaction », s'il est donné, ce sont les mémoires que GPE a choisis comme \
+				modèles : écris cette section comme eux (ton, organisation, longueur des paragraphes, intertitres, \
+				listes et tableaux, vocabulaire, façon de présenter GPE et sa méthode). N'en reprends jamais le \
+				contenu : ni chantier, ni nom, ni chiffre, ni matériel, ni date qui n'est pas dans les données de \
+				ce marché.
 				- « materiel_retenu », s'il est donné, est le matériel choisi pour ce marché (modules, onduleurs, \
 				fixation…) : c'est le seul que tu peux nommer, avec sa marque et sa référence exactes ; sans lui, \
 				parle du matériel sans marque ni référence et signale-le dans missing.

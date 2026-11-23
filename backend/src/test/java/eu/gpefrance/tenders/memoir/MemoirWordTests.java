@@ -55,6 +55,14 @@ class MemoirWordTests {
 				.findFirst()
 				.orElseThrow();
 			assertThat(heading.getStyle()).isEqualTo(MemoirWord.SUB_PART);
+			// A real table of contents: each entry with its number, its title and its page, found by a bookmark.
+			assertThat(word.getParagraphs().stream().filter((paragraph) -> "TM1".equals(paragraph.getStyle()))
+				.map(XWPFParagraph::getText)).anyMatch((text) -> text.startsWith("1	Présentation"));
+			assertThat(word.getParagraphs().stream().filter((paragraph) -> "TM2".equals(paragraph.getStyle()))
+				.map(XWPFParagraph::getText)).anyMatch((text) -> text.startsWith("1.1	Moyens"));
+			assertThat(word.getDocument().xmlText()).contains("PAGEREF _TocGpe1").doesNotContain("Mettez la table");
+			String title = heading.getCTP().xmlText();
+			assertThat(title.indexOf("bookmarkStart")).isPositive().isLessThan(title.indexOf("Moyens"));
 			assertThat(word.getStyles().styleExist(MemoirWord.SUB_PART)).isTrue();
 			assertThat(word.getStyles().styleExist(MemoirWord.PART)).isTrue();
 			assertThat(word.getHeaderList()).isNotEmpty();

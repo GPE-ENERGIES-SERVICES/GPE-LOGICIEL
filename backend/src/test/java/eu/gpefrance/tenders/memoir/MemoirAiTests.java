@@ -192,6 +192,33 @@ class MemoirAiTests {
 					   {"id": 4, "category": "FORM"}, {"id": 5, "category": "METHOD", "verified": false}]}""");
 	}
 
+	@Test
+	void writesLikeTheMemoirsChosenAsModelsWithoutTheirContent() {
+		for (String title : new String[] { "MT SITTEU", "MT Fontaine", "MT Béziers" }) {
+			jdbc.update("""
+					INSERT INTO memoir_library (title, use_for_ai, file_name, storage_path, size_bytes, text, uploaded_at)
+					VALUES (?, true, 'mt.docx', 'x', 1, ?, now())""", title,
+					"Préambule de " + title + ". ".repeat(200) + "Moyens humains : notre équipe de " + title + " est structurée.");
+		}
+		assertThat(mvc.put().uri("/api/memoirs/1/style-references").with(csrf()).with(TestUsers.user())
+			.contentType(MediaType.APPLICATION_JSON).content("{\"libraryIds\": [1, 2, 3]}")).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(mvc.put().uri("/api/memoirs/1/style-references").with(csrf()).with(TestUsers.user())
+			.contentType(MediaType.APPLICATION_JSON).content("{\"libraryIds\": [2, 1]}")).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("{\"styleReferences\": [2, 1]}");
+
+		post("/api/memoirs/1/sections", "{\"title\": \"Moyens humains\"}").exchange();
+		post("/api/memoirs/1/outline/validation", "").exchange();
+		assertThat(post("/api/memoirs/1/writing", "")).hasStatus(HttpStatus.ACCEPTED);
+
+		String written = sent.getLast().documents();
+		// The passage of each model about the section, in the order chosen; the others left out.
+		assertThat(written).contains("memoires_modeles_de_redaction", "notre équipe de MT Fontaine",
+				"notre équipe de MT SITTEU").doesNotContain("anciens_memoires_de_reference", "MT Béziers");
+		assertThat(written.indexOf("MT Fontaine")).isLessThan(written.indexOf("MT SITTEU"));
+		assertThat(sent.getLast().instructions()).contains("N'en reprends jamais le", "contenu");
+	}
+
 	private MockMvcTester.MockMvcRequestBuilder post(String uri, String body) {
 		return mvc.post().uri(uri).with(csrf()).with(TestUsers.user()).contentType(MediaType.APPLICATION_JSON).content(body);
 	}

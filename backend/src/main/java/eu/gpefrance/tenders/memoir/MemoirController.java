@@ -145,6 +145,16 @@ public class MemoirController {
 		return service.acceptAllSections(id, user.displayName());
 	}
 
+	public record StyleReferences(List<Long> libraryIds) {
+	}
+
+	/** The former memoirs whose way of writing the AI follows for this memoir (2 at most). */
+	@PutMapping("/api/memoirs/{id}/style-references")
+	public Workspace styleReferences(@PathVariable Long id, @RequestBody StyleReferences request,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return service.chooseStyleReferences(id, request.libraryIds(), user.displayName());
+	}
+
 	@PutMapping("/api/memoirs/{id}/outline")
 	public Workspace reorder(@PathVariable Long id, @Valid @RequestBody OutlineRequest request,
 			@AuthenticationPrincipal AppUserPrincipal user) {

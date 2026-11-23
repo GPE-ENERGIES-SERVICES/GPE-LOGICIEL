@@ -9,6 +9,7 @@ import {
   addRequirement,
   addSection,
   applyTemplate,
+  chooseStyleReferences,
   deleteRequirement,
   deleteSection,
   linkRequirements,
@@ -102,6 +103,48 @@ export function OutlinePanel({ workspace, onChanged, onError, onShow }: Props) {
           Exigences du DCE
           {uncovered > 0 && <span className="nav-badge">{uncovered}</span>}
         </button>
+      </div>
+
+      <div className="memoir-panel-block">
+        <strong>Mémoires modèles (façon de rédiger)</strong>
+        <p className="hint">
+          L&apos;IA rédige comme ces mémoires : ton, organisation, longueur,
+          intertitres. Elle n&apos;en reprend jamais le contenu. Sans choix,
+          elle prend les mémoires les plus proches de la bibliothèque.
+        </p>
+        {[0, 1].map((slot) => (
+          <select
+            key={slot}
+            aria-label={`Mémoire modèle ${slot + 1}`}
+            value={workspace.styleReferences[slot] ?? ""}
+            disabled={
+              busy || (slot === 1 && workspace.styleReferences.length === 0)
+            }
+            onChange={(event) => {
+              const chosen = [...workspace.styleReferences];
+              chosen[slot] = Number(event.target.value);
+              run(() =>
+                chooseStyleReferences(
+                  memoir.id,
+                  chosen.filter(
+                    (id, index) => id > 0 && chosen.indexOf(id) === index,
+                  ),
+                ),
+              );
+            }}
+          >
+            <option value="">
+              {slot === 0
+                ? "Choisir un mémoire modèle…"
+                : "Un second (facultatif)…"}
+            </option>
+            {workspace.library.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title}
+              </option>
+            ))}
+          </select>
+        ))}
       </div>
 
       {memoir.tenderId && (

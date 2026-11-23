@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { AiProgress, useAiRun } from "@/components/AiProgress";
 import { formatDateTime } from "@/lib/format";
+import { useLoader } from "@/lib/useLoader";
+import { companyFileUrl, getProfile } from "@/services/companyApi";
 import {
   AI_ACTION_LABELS,
   COMPANY_BLOCK_LABELS,
@@ -51,6 +53,11 @@ export function DocumentEditor({
   onError,
 }: Props) {
   const { memoir, sections, job, ai } = workspace;
+  // The logo of the company as entered in Entreprise; the one of the template memoir until there is one.
+  const profile = useLoader(() => getProfile(), "company-profile");
+  const logo = profile.data?.logo
+    ? companyFileUrl(profile.data.logo.id)
+    : "/memoir/gpe-logo.png";
   const caret = useRef<Caret>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   // The image clicked in the text, to replace or remove; the state only shows its buttons.
@@ -373,11 +380,7 @@ export function DocumentEditor({
         {/* Laid out as the Word export: header, cover and footer of the template memoir of GPE. */}
         <div className="memoir-sheet-header" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/memoir/gpe-logo.png"
-            alt=""
-            className="memoir-sheet-logo"
-          />
+          <img src={logo} alt="" className="memoir-sheet-logo" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/memoir/panneau.jpg"
@@ -393,7 +396,28 @@ export function DocumentEditor({
           <h1 className="memoir-cover-banner">
             {memoir.tenderTitle ?? memoir.title}
           </h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logo}
+            alt="GPE Énergies &amp; Services"
+            className="memoir-cover-logo"
+          />
         </div>
+        <nav className="memoir-toc" aria-label="Sommaire du mémoire">
+          <p className="memoir-toc-title">Sommaire</p>
+          <ol>
+            {visible
+              .filter((section) => section.level <= 3)
+              .map((section) => (
+                <li key={section.id} className={`level-${section.level}`}>
+                  <a href={`#memoir-section-${section.id}`}>
+                    <span className="memoir-toc-number">{section.number}</span>
+                    <span>{section.title}</span>
+                  </a>
+                </li>
+              ))}
+          </ol>
+        </nav>
         {visible.map((section) => (
           <SectionEditor
             key={section.id}

@@ -4484,3 +4484,67 @@ select.status-dismissed {
   color: #1f2430;
   font-weight: 700;
 }
+
+.memoir-cover-logo {
+  display: block;
+  width: 14rem;
+  max-width: 60%;
+  height: auto;
+  margin: 2.5rem 2rem 0 auto;
+}
+
+/* The table of contents, as in the memoirs of GPE: parts in capitals, sub-parts in small capitals. */
+.memoir-toc {
+  margin: 0 0 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #dfe3ea;
+}
+
+.memoir-toc-title {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1f4e79;
+}
+
+.memoir-toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.memoir-toc li a {
+  display: flex;
+  gap: 1rem;
+  padding: 0.15rem 0;
+  color: #1f2430;
+  text-decoration: none;
+}
+
+.memoir-toc li a:hover {
+  color: #1f4e79;
+  text-decoration: underline;
+}
+
+.memoir-toc li.level-1 a {
+  margin-top: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #1f4e79;
+}
+
+.memoir-toc li.level-2 a {
+  padding-left: 1.2rem;
+  font-variant: small-caps;
+  font-weight: 600;
+}
+
+.memoir-toc li.level-3 a {
+  padding-left: 2.4rem;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.memoir-toc-number {
+  min-width: 2.6rem;
+}

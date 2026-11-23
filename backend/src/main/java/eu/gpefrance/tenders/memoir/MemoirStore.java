@@ -429,6 +429,50 @@ class MemoirStore {
 			.toList();
 	}
 
+	/** A former memoir of the library, as a user chooses it. */
+	public record LibraryChoice(Long id, String title, String context) {
+	}
+
+	/** The former memoirs that may be chosen as models of writing, the latest first. */
+	List<LibraryChoice> libraryChoices() {
+		return jdbc.query("""
+				SELECT id, title, context FROM memoir_library WHERE text IS NOT NULL
+				ORDER BY written_on DESC NULLS LAST, id DESC""",
+				(row, n) -> new LibraryChoice(row.getLong("id"), row.getString("title"), row.getString("context")));
+	}
+
+	/** The models of writing chosen for a memoir, still in the library, in the order chosen. */
+	List<Long> styleReferences(Long memoirId) {
+		return jdbc.queryForList("""
+				SELECT l.id FROM memoir m, unnest(m.style_references) WITH ORDINALITY AS r(id, position)
+				JOIN memoir_library l ON l.id = r.id WHERE m.id = ? ORDER BY r.position""", Long.class, memoirId);
+	}
+
+	void setStyleReferences(Long memoirId, List<Long> libraryIds) {
+		jdbc.update("UPDATE memoir SET style_references = CAST(? AS bigint[]) WHERE id = ?", libraryIds.toArray(Long[]::new),
+				memoirId);
+	}
+
+	/**
+	 * The passages of the models of writing near what a section is about: the
+	 * place where its title is written, or the text after its beginning.
+	 */
+	List<String> styleExcerpts(Long memoirId, String sectionTitle, int length) {
+		String wanted = plain(sectionTitle == null ? "" : sectionTitle).strip();
+		return jdbc.query("""
+				SELECT l.title, l.text FROM memoir m, unnest(m.style_references) WITH ORDINALITY AS r(id, position)
+				JOIN memoir_library l ON l.id = r.id WHERE m.id = ? AND l.text IS NOT NULL ORDER BY r.position""",
+				(row, n) -> {
+					String text = row.getString("text");
+					String flat = plain(text);
+					int at = wanted.length() < 6 ? -1 : flat.indexOf(wanted);
+					// shortcut: the place in the plain text, brought back in proportion; close enough for a passage.
+					int start = at >= 0 ? (int) ((long) at * text.length() / Math.max(1, flat.length())) : text.length() / 5;
+					int end = Math.min(text.length(), start + length);
+					return row.getString("title") + "\n" + text.substring(start, end);
+				}, memoirId);
+	}
+
 	/**
 	 * The equipment chosen for a tender, as the equipment table says it:
 	 * « Onduleur : Huawei SUN2000-50KTL-M3 »; none without tender.

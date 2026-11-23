@@ -1,4 +1,10 @@
-export type MemoirStatus = "DRAFT" | "OUTLINE_TO_VALIDATE" | "READY_TO_WRITE" | "WRITING" | "TO_REVIEW" | "DONE";
+export type MemoirStatus =
+  | "DRAFT"
+  | "OUTLINE_TO_VALIDATE"
+  | "READY_TO_WRITE"
+  | "WRITING"
+  | "TO_REVIEW"
+  | "DONE";
 
 export type Memoir = {
   id: number;
@@ -81,7 +87,12 @@ export type MemoirJob = {
   finishedAt: string | null;
 };
 
-export type SourceDocument = { id: number; fileName: string; pieceType: string; pageCount: number | null };
+export type SourceDocument = {
+  id: number;
+  fileName: string;
+  pieceType: string;
+  pageCount: number | null;
+};
 
 export type MemoirWorkspace = {
   memoir: Memoir;
@@ -90,13 +101,32 @@ export type MemoirWorkspace = {
   job: MemoirJob | null;
   documents: SourceDocument[];
   ai: { available: boolean; message: string };
+  /** The former memoirs whose way of writing the AI follows (2 at most), in the order chosen. */
+  styleReferences: number[];
+  /** The former memoirs that may be chosen. */
+  library: { id: number; title: string; context: string | null }[];
 };
 
-export type MemoirRevision = { id: number; content: string; origin: string | null; replacedBy: string | null; createdAt: string };
+export type MemoirRevision = {
+  id: number;
+  content: string;
+  origin: string | null;
+  replacedBy: string | null;
+  createdAt: string;
+};
 
-export type AiAction = "WRITE" | "REWRITE" | "EXPAND" | "SHORTEN" | "IMPROVE" | "CORRECT" | "DETAIL" | "ADAPT";
+export type AiAction =
+  | "WRITE"
+  | "REWRITE"
+  | "EXPAND"
+  | "SHORTEN"
+  | "IMPROVE"
+  | "CORRECT"
+  | "DETAIL"
+  | "ADAPT";
 
-export type CompanyBlock = "PRESENTATION" | "STAFF" | "EQUIPMENT" | "CERTIFICATIONS" | "REFERENCES";
+export type CompanyBlock =
+  "PRESENTATION" | "STAFF" | "EQUIPMENT" | "CERTIFICATIONS" | "REFERENCES";
 
 export type FormerMemoir = {
   id: number;
