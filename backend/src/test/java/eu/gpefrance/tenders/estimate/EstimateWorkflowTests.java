@@ -198,6 +198,15 @@ class EstimateWorkflowTests {
 		assertThat(mvc.get().uri("/api/estimates/1/events").with(TestUsers.user())).bodyJson()
 			.isLenientlyEqualTo("[{\"kind\": \"IMPORTED\", \"detail\": \"6 poste(s) importé(s) de « DPGF.xlsx »\"}, "
 					+ "{\"kind\": \"CREATED\"}]");
+		// Imported once: not twice.
+		assertThat(post("/api/estimates/1/imports", "{\"documentId\": 1}", TestUsers.user()))
+			.hasStatus(HttpStatus.CONFLICT);
+		// A line without price takes its price from its first cost.
+		assertThat(post("/api/estimate-items/5/components", """
+				{"type": "SUPPLY", "label": "Grave", "quantity": 1, "unitCost": 10}""", TestUsers.user())).hasStatus(HttpStatus.CREATED)
+			.bodyJson()
+			.extractingPath("$.items[4].priceMode")
+			.isEqualTo("COMPOSED");
 
 		// The frame given back filled: the quantity of the company and the price on their row, the formulas kept.
 		put("/api/estimate-items/1", """

@@ -139,6 +139,10 @@ public class EstimateItem {
 	}
 
 	void add(EstimateComponent component) {
+		// A line of a price schedule comes without price: its first cost makes its price.
+		if (priceMode == PriceMode.FIXED && fixedUnitPrice == null) {
+			priceMode = PriceMode.COMPOSED;
+		}
 		component.attach(this, components.size() + 1);
 		components.add(component);
 	}

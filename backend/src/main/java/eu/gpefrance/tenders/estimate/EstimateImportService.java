@@ -71,6 +71,10 @@ public class EstimateImportService {
 		if (!document.getDossier().getTenderId().equals(estimate.getTenderId())) {
 			throw EstimateRuleException.invalid("Ce document n'appartient pas au marché du chiffrage.");
 		}
+		if (estimate.getItems().stream().anyMatch(item -> documentId.equals(item.getSourceDocumentId()))) {
+			throw EstimateRuleException.conflict("« " + document.getFileName() + " » est déjà importé dans ce chiffrage : "
+					+ "ses postes y sont déjà. Supprimez-les d'abord pour l'importer à nouveau.");
+		}
 		List<EstimateItem> items = read(document);
 		if (items.isEmpty()) {
 			throw EstimateRuleException.invalid("Aucune ligne de prix reconnue dans « " + document.getFileName()

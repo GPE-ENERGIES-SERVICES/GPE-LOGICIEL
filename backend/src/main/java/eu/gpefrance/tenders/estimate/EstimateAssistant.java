@@ -171,7 +171,8 @@ public class EstimateAssistant {
 		Estimate estimate = draft(estimateId);
 		List<EstimateItem> items = estimate.getItems()
 			.stream()
-			.filter(item -> item.getPriceMode() == PriceMode.COMPOSED && item.getComponents().isEmpty())
+			.filter(item -> item.getComponents().isEmpty() && (item.getPriceMode() == PriceMode.COMPOSED
+					|| (item.getPriceMode() == PriceMode.FIXED && item.getFixedUnitPrice() == null)))
 			.limit(MAX_DRAFTED_ITEMS)
 			.toList();
 		if (items.isEmpty()) {
