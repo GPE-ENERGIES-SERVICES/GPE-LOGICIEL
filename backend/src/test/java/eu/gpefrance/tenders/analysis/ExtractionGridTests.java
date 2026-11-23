@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import eu.gpefrance.tenders.company.CompanyDirectory;
 import eu.gpefrance.tenders.filter.FilterCriteria;
 import eu.gpefrance.tenders.tender.MarketType;
 import tools.jackson.databind.JsonNode;
@@ -57,7 +58,7 @@ class ExtractionGridTests {
 				.containsExactlyInAnyOrderElementsOf(object.path("properties").propertyNames());
 		}
 		assertThat(decision.at("/properties/verdict/enum").valueStream().map(JsonNode::asString).toList())
-			.containsExactly("PRIORITY", "EXAMINE", "POOR_FIT", "INSUFFICIENT");
+			.containsExactly("GO", "GO_CONDITIONS", "NO_GO", "INSUFFICIENT");
 	}
 
 	@Test
@@ -76,8 +77,27 @@ class ExtractionGridTests {
 	}
 
 	@Test
+	void givesWhatTheCompanyDeclaredToCompareItWithTheRequirements() {
+		CompanyDirectory.Snapshot declared = new CompanyDirectory.Snapshot(
+				new CompanyDirectory.Identity("GPE", null, null, null, "Marseille", List.of("13", "84"), null), List.of(),
+				List.of(new CompanyDirectory.Person("A", "Électricien", null, List.of("BR", "H0V"))), List.of(),
+				List.of(new CompanyDirectory.Certification("QUALIFICATION", "QualiPV Elec", "Qualit'EnR", "36 à 250 kWc",
+						java.time.LocalDate.of(2027, 3, 31))),
+				List.of(new CompanyDirectory.Work("Centrale PV de Salon", "Commune", "Salon (13)", "Photovoltaïque",
+						new BigDecimal("180000"), java.time.LocalDate.of(2025, 6, 1), null, null)));
+
+		assertThat(ExtractionPrompt.company(null, declared)).startsWith("<entreprise>")
+			.contains("Aucun critère de veille", "a déclaré posséder", "Départements d'intervention : 13, 84",
+					"QualiPV Elec (Qualit'EnR), 36 à 250 kWc, valable jusqu'au 2027-03-31",
+					"1 personne(s) ; habilitations : BR, H0V", "Centrale PV de Salon – Photovoltaïque – Salon (13) – 2025")
+			.doesNotContain("Aucune information n'est enregistrée")
+			.endsWith("</entreprise>\n");
+		assertThat(ExtractionPrompt.company(null, null)).contains("Aucune information n'est enregistrée");
+	}
+
+	@Test
 	void theVersionNamesTheGridAndTheInstructions() {
-		assertThat(ExtractionPrompt.VERSION).isEqualTo("grid-5/prompt-4");
+		assertThat(ExtractionPrompt.VERSION).isEqualTo("grid-5/prompt-5");
 	}
 
 }

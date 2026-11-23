@@ -293,7 +293,7 @@ class AnalysisQueueTests {
 		for (int view = 0; view < 2; view++) {
 			var json = assertThat(mvc.get().uri("/api/tenders/{id}/analysis", tender.getId()).with(TestUsers.user()))
 				.bodyJson();
-			json.extractingPath("$.latest.decision.verdict").isEqualTo("EXAMINE");
+			json.extractingPath("$.latest.decision.verdict").isEqualTo("GO_CONDITIONS");
 			json.extractingPath("$.latest.decision.obstacles[*].kind").asArray().containsExactly("CONFIRMED", "TO_CHECK");
 			json.extractingPath("$.latest.decision.obstacles[1].quote").isNull();
 			json.extractingPath("$.latest.decision.obstacles[0].verified").isEqualTo(true);

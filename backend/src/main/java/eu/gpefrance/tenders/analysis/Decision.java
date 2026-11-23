@@ -19,7 +19,8 @@ public record Decision(Verdict verdict, String conclusion, List<Point> strengths
 
 	public enum Verdict {
 
-		PRIORITY, EXAMINE, POOR_FIT, INSUFFICIENT
+		/** The last three for the analyses made before the go / no-go. */
+		GO, GO_CONDITIONS, NO_GO, INSUFFICIENT, PRIORITY, EXAMINE, POOR_FIT
 
 	}
 

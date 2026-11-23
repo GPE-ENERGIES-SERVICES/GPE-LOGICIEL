@@ -3,17 +3,39 @@
 import { useEffect, useState } from "react";
 
 import { Fold } from "@/components/Fold";
-import { useLoader } from "@/lib/useLoader";
+import { formatDateTime } from "@/lib/format";
+import { refreshData, useLoader } from "@/lib/useLoader";
 import { getTenderAnalysis } from "@/services/analysisApi";
-import type { Analysis, DecisionPoint, ObstacleKind, Verdict } from "@/types/analysis";
+import { updateFollowUp } from "@/services/tenderApi";
+import type {
+  Analysis,
+  DecisionPoint,
+  ObstacleKind,
+  Verdict,
+} from "@/types/analysis";
+import type { FollowUpStatus } from "@/types/tender";
 import { KeyValues, PartTitle } from "@/components/analysis/PartTitle";
 import { Icon } from "@/components/Icon";
 
 const VERDICT_LABELS: Record<Verdict, string> = {
+  GO: "GO : ça vaut le coup",
+  GO_CONDITIONS: "GO sous conditions",
+  NO_GO: "NO-GO : à laisser passer",
+  INSUFFICIENT: "Informations insuffisantes",
   PRIORITY: "À étudier en priorité",
   EXAMINE: "À examiner",
   POOR_FIT: "Peu adapté a priori",
-  INSUFFICIENT: "Informations insuffisantes",
+};
+
+/** The colour of a verdict; the former verdicts keep theirs. */
+const VERDICT_TONES: Record<Verdict, string> = {
+  GO: "priority",
+  GO_CONDITIONS: "examine",
+  NO_GO: "poor-fit",
+  INSUFFICIENT: "insufficient",
+  PRIORITY: "priority",
+  EXAMINE: "examine",
+  POOR_FIT: "poor-fit",
 };
 
 const OBSTACLE_LABELS: Record<ObstacleKind, string> = {
@@ -28,21 +50,32 @@ function obstacleCount(kind: ObstacleKind, count: number): string {
   if (kind === "CONFIRMED") {
     return `${count} confirmé${s}`;
   }
-  return kind === "TO_CHECK" ? `${count} à vérifier` : `${count} information${s} manquante${s}`;
+  return kind === "TO_CHECK"
+    ? `${count} à vérifier`
+    : `${count} information${s} manquante${s}`;
 }
 
 /** Where to go to start, follow or run again the analysis. */
-const ANALYSIS_LINK = (
-  <a href="#fiche">Fiche IA</a>
-);
+const ANALYSIS_LINK = <a href="#fiche">Fiche IA</a>;
 
 /** The source of an argument or an obstacle: shown on request when its quote was found, flagged otherwise. */
-function PointSource({ point, analysis }: { point: DecisionPoint; analysis: Analysis }) {
+function PointSource({
+  point,
+  analysis,
+}: {
+  point: DecisionPoint;
+  analysis: Analysis;
+}) {
   const [shown, setShown] = useState(false);
-  const document = analysis.documents.find((item) => item.id === point.documentId);
+  const document = analysis.documents.find(
+    (item) => item.id === point.documentId,
+  );
   if (!point.verified) {
     return point.documentId !== null ? (
-      <span className="badge urgent" title="L'extrait cité par l'IA n'a pas été retrouvé dans le document.">
+      <span
+        className="badge urgent"
+        title="L'extrait cité par l'IA n'a pas été retrouvé dans le document."
+      >
         Source non retrouvée
       </span>
     ) : null;
@@ -54,7 +87,9 @@ function PointSource({ point, analysis }: { point: DecisionPoint; analysis: Anal
         className="field-toggle quiet"
         aria-expanded={shown}
         aria-label={`Source vérifiée : ${shown ? "masquer" : "afficher"} la source et l'extrait cité`}
-        title={shown ? "Masquer la source" : "Afficher la source et l'extrait cité"}
+        title={
+          shown ? "Masquer la source" : "Afficher la source et l'extrait cité"
+        }
         onClick={() => setShown(!shown)}
       >
         ✓
@@ -67,7 +102,11 @@ function PointSource({ point, analysis }: { point: DecisionPoint; analysis: Anal
           {document && (
             <span className="source">
               {document.readable ? (
-                <a href={`/api/documents/${document.id}/pdf#page=${point.page}`} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={`/api/documents/${document.id}/pdf#page=${point.page}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {document.fileName}, page {point.page}
                 </a>
               ) : (
@@ -102,13 +141,18 @@ function Points({
         <li key={index}>
           <span className="decision-point-text">
             {point.kind && (
-              <span className={`decision-kind kind-${point.kind.toLowerCase().replace("_", "-")}`}>
+              <span
+                className={`decision-kind kind-${point.kind.toLowerCase().replace("_", "-")}`}
+              >
                 {OBSTACLE_LABELS[point.kind]}
               </span>
             )}
             <KeyValues text={point.text} />
             {point.deduced && (
-              <span className="decision-deduced" title="Déduit de plusieurs éléments, non écrit tel quel dans le DCE">
+              <span
+                className="decision-deduced"
+                title="Déduit de plusieurs éléments, non écrit tel quel dans le DCE"
+              >
                 {" "}
                 (déduction)
               </span>
@@ -126,56 +170,96 @@ const MAX_LIMITS = 3;
 
 function DecisionSheet({ analysis }: { analysis: Analysis }) {
   const decision = analysis.decision!;
-  const documentName = (id: number | null) => analysis.documents.find((document) => document.id === id)?.fileName;
-  const analysed = analysis.documents.filter((document) => document.analysed).length;
+  const documentName = (id: number | null) =>
+    analysis.documents.find((document) => document.id === id)?.fileName;
+  const analysed = analysis.documents.filter(
+    (document) => document.analysed,
+  ).length;
   const notAnalysed = analysis.documents.length - analysed;
   const limits = decision.limits.slice(0, MAX_LIMITS);
 
   const kinds = (["CONFIRMED", "TO_CHECK", "MISSING"] as const)
-    .map((kind) => [kind, decision.obstacles.filter((point) => point.kind === kind).length] as const)
+    .map(
+      (kind) =>
+        [
+          kind,
+          decision.obstacles.filter((point) => point.kind === kind).length,
+        ] as const,
+    )
     .filter(([, count]) => count > 0)
     .map(([kind, count]) => obstacleCount(kind, count))
     .join(" · ");
 
   return (
     <div className="decision">
-      <div className={`verdict verdict-${decision.verdict.toLowerCase().replace("_", "-")}`}>
-        <span className="verdict-label">{VERDICT_LABELS[decision.verdict]}</span>
-        {decision.conclusion && <p className="verdict-conclusion">{decision.conclusion}</p>}
+      <div className={`verdict verdict-${VERDICT_TONES[decision.verdict]}`}>
+        <span className="verdict-label">
+          {VERDICT_LABELS[decision.verdict]}
+        </span>
+        {decision.conclusion && (
+          <p className="verdict-conclusion">{decision.conclusion}</p>
+        )}
       </div>
       <p className="decision-scope">
-        {analysed} pièce{analysed > 1 ? "s" : ""} analysée{analysed > 1 ? "s" : ""} sur {analysis.documents.length}
+        {analysed} pièce{analysed > 1 ? "s" : ""} analysée
+        {analysed > 1 ? "s" : ""} sur {analysis.documents.length}
         {notAnalysed > 0 && <> (détail dans {ANALYSIS_LINK})</>}
       </p>
 
-      <Fold title={
+      <Fold
+        title={
           <PartTitle icon="valid" tone="success">
-            Pourquoi l&apos;étudier
+            Pourquoi y aller
           </PartTitle>
-        } count={decision.strengths.length > 0 ? `${decision.strengths.length}` : "aucun argument"}>
-        <Points points={decision.strengths} analysis={analysis} empty="Aucun argument favorable identifié dans les documents." />
+        }
+        count={
+          decision.strengths.length > 0
+            ? `${decision.strengths.length}`
+            : "aucun argument"
+        }
+      >
+        <Points
+          points={decision.strengths}
+          analysis={analysis}
+          empty="Aucun argument favorable identifié dans les documents."
+        />
       </Fold>
 
-      <Fold title={
+      <Fold
+        title={
           <PartTitle icon="warning" tone="danger">
             Obstacles et risques
           </PartTitle>
-        } count={kinds || "aucun"}>
-        <Points points={decision.obstacles} analysis={analysis} empty="Aucun obstacle identifié dans les documents analysés." />
+        }
+        count={kinds || "aucun"}
+      >
+        <Points
+          points={decision.obstacles}
+          analysis={analysis}
+          empty="Aucun obstacle identifié dans les documents analysés."
+        />
       </Fold>
 
       {decision.checks.length > 0 && (
-        <Fold title={
-          <PartTitle icon="clipboard" tone="warning">
-            À vérifier avant de décider
-          </PartTitle>
-        } count={`${decision.checks.length}`}>
+        <Fold
+          title={
+            <PartTitle icon="clipboard" tone="warning">
+              À lever avant de s&apos;engager
+            </PartTitle>
+          }
+          count={`${decision.checks.length}`}
+        >
           <ol className="decision-checks">
             {decision.checks.map((check, index) => (
               <li key={index}>
                 <strong>{check.action}</strong>
                 {check.reason && <> — {check.reason}</>}
-                {documentName(check.documentId) && <span className="muted"> ({documentName(check.documentId)})</span>}
+                {documentName(check.documentId) && (
+                  <span className="muted">
+                    {" "}
+                    ({documentName(check.documentId)})
+                  </span>
+                )}
               </li>
             ))}
           </ol>
@@ -191,7 +275,10 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
           </ul>
         )}
         <p>
-          Capacités de GPE inconnues du logiciel ; seuls les points marqués ✓ sont appuyés par un extrait retrouvé dans le document.
+          Comparé à ce que GPE a déclaré dans l&apos;onglet Entreprise
+          (certifications, personnel, matériel, références, zone) : ce qui
+          n&apos;y figure pas reste à vérifier. Seuls les points marqués ✓ sont
+          appuyés par un extrait retrouvé dans le document.
         </p>
       </Fold>
     </div>
@@ -203,11 +290,99 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
  * arguments, obstacles, checks and limits. It only shows what was stored:
  * displaying it never starts an analysis.
  */
-export function DecisionSection({ tenderId }: { tenderId: number }) {
+/** Where the tender stands for GPE, as its follow-up says. */
+type FollowUp = {
+  status: FollowUpStatus;
+  by: string | null;
+  at: string | null;
+};
+
+/** The decision of GPE, recorded in the follow-up of the tender: the AI only advises. */
+function Choice({
+  tenderId,
+  followUp,
+}: {
+  tenderId: number;
+  followUp: FollowUp;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const decide = async (status: FollowUpStatus) => {
+    const comment =
+      status === "DISMISSED"
+        ? window.prompt("Pourquoi on passe ? (facultatif)")
+        : null;
+    if (status === "DISMISSED" && comment === null) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await updateFollowUp(tenderId, status, comment ?? undefined);
+      refreshData(String(tenderId));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Décision non enregistrée.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  const decided =
+    followUp.status === "RESPONDING" || followUp.status === "SUBMITTED"
+      ? "GO"
+      : followUp.status === "DISMISSED"
+        ? "NO-GO"
+        : null;
+  return (
+    <div className="form-actions">
+      {decided ? (
+        <span className={decided === "GO" ? "badge verified" : "badge"}>
+          Décision : {decided}
+          {followUp.by
+            ? ` (${followUp.by}${followUp.at ? `, ${formatDateTime(followUp.at)}` : ""})`
+            : ""}
+        </span>
+      ) : (
+        <span className="hint">Votre décision :</span>
+      )}
+      {followUp.status !== "SUBMITTED" && (
+        <>
+          <button
+            type="button"
+            className={decided === "GO" ? "" : "primary"}
+            disabled={busy || decided === "GO"}
+            onClick={() => decide("RESPONDING")}
+          >
+            On y va (GO)
+          </button>
+          <button
+            type="button"
+            disabled={busy || decided === "NO-GO"}
+            onClick={() => decide("DISMISSED")}
+          >
+            On passe (NO-GO)
+          </button>
+        </>
+      )}
+      {error && <span className="banner error">{error}</span>}
+    </div>
+  );
+}
+
+export function DecisionSection({
+  tenderId,
+  followUp,
+}: {
+  tenderId: number;
+  followUp?: FollowUp;
+}) {
   const loaded = useLoader(() => getTenderAnalysis(tenderId), String(tenderId));
   const analysis = loaded.data?.latest ?? null;
   const running =
-    analysis?.status === "PENDING" || analysis?.status === "PROCESSING" || analysis?.status === "RETRY_WAITING";
+    analysis?.status === "PENDING" ||
+    analysis?.status === "PROCESSING" ||
+    analysis?.status === "RETRY_WAITING";
   const { reload } = loaded;
 
   // An analysis in progress: refresh until it is over.
@@ -221,35 +396,51 @@ export function DecisionSection({ tenderId }: { tenderId: number }) {
 
   let content;
   if (loaded.error && !loaded.data) {
-    content = <p className="muted">Aide à la décision indisponible pour le moment. Le reste de la fiche n&apos;est pas concerné.</p>;
+    content = (
+      <p className="muted">
+        Aide à la décision indisponible pour le moment. Le reste de la fiche
+        n&apos;est pas concerné.
+      </p>
+    );
   } else if (!loaded.data) {
     content = <p className="muted">Chargement…</p>;
   } else if (!analysis) {
     content = loaded.data.configured ? (
       <p className="muted">
-        Aucune analyse du DCE pour l&apos;instant : aucune recommandation n&apos;est proposée. Déposez le DCE dans la
-        section {ANALYSIS_LINK} ; l&apos;aide à la décision est produite avec la fiche de synthèse.
+        Aucune analyse du DCE pour l&apos;instant : aucune recommandation
+        n&apos;est proposée. Déposez le DCE dans la section {ANALYSIS_LINK} ;
+        l&apos;aide à la décision est produite avec la fiche de synthèse.
       </p>
     ) : (
       <p className="muted">
-        Aide à la décision indisponible : l&apos;analyse par IA n&apos;est pas active
-        {loaded.data.unavailableReason ? ` (${loaded.data.unavailableReason.replace(/\.$/, "")})` : ""}.
+        Aide à la décision indisponible : l&apos;analyse par IA n&apos;est pas
+        active
+        {loaded.data.unavailableReason
+          ? ` (${loaded.data.unavailableReason.replace(/\.$/, "")})`
+          : ""}
+        .
       </p>
     );
   } else if (running) {
-    content = <p className="muted">Analyse du DCE en cours : la recommandation s&apos;affichera ici à la fin.</p>;
+    content = (
+      <p className="muted">
+        Analyse du DCE en cours : la recommandation s&apos;affichera ici à la
+        fin.
+      </p>
+    );
   } else if (analysis.status !== "DONE") {
     content = (
       <p className="muted">
-        La dernière analyse n&apos;a pas abouti : aucune recommandation n&apos;est proposée. Détails dans la section{" "}
-        {ANALYSIS_LINK}.
+        La dernière analyse n&apos;a pas abouti : aucune recommandation
+        n&apos;est proposée. Détails dans la section {ANALYSIS_LINK}.
       </p>
     );
   } else if (!analysis.decision) {
     content = (
       <p className="muted">
-        Cette analyse a été faite avant l&apos;aide à la décision. Pour obtenir une recommandation, relancez
-        l&apos;analyse dans la section {ANALYSIS_LINK} (nouvel appel à l&apos;IA, payant).
+        Cette analyse a été faite avant l&apos;aide à la décision. Pour obtenir
+        une recommandation, relancez l&apos;analyse dans la section{" "}
+        {ANALYSIS_LINK} (nouvel appel à l&apos;IA, payant).
       </p>
     );
   } else {
@@ -258,8 +449,11 @@ export function DecisionSection({ tenderId }: { tenderId: number }) {
 
   return (
     <section className="card decision-card" aria-labelledby="decision-title">
-      <h2 id="decision-title">Analyse IA — Aide à la décision</h2>
+      <h2 id="decision-title">Go / No-Go</h2>
       {content}
+      {followUp && analysis?.decision && !running && (
+        <Choice tenderId={tenderId} followUp={followUp} />
+      )}
     </section>
   );
 }

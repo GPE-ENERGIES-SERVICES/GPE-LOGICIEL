@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import eu.gpefrance.tenders.company.CompanyDirectory;
 import eu.gpefrance.tenders.document.PieceType;
 import eu.gpefrance.tenders.filter.FilterCriteria;
 import tools.jackson.databind.json.JsonMapper;
@@ -19,7 +20,7 @@ import tools.jackson.databind.node.ObjectNode;
 final class ExtractionPrompt {
 
 	/** Changes whenever the grid or the wording of the instructions changes. */
-	static final String VERSION = ExtractionGrid.VERSION + "/prompt-4";
+	static final String VERSION = ExtractionGrid.VERSION + "/prompt-5";
 
 	static final List<String> STATUSES = List.of("FOUND", "NOT_INDICATED", "AMBIGUOUS", "CONTRADICTORY");
 
@@ -83,7 +84,7 @@ final class ExtractionPrompt {
 
 		ObjectNode decision = object("verdict", "conclusion", "strengths", "obstacles", "checks", "limits");
 		ObjectNode properties = (ObjectNode) decision.path("properties");
-		properties.putObject("verdict").putArray("enum").add("PRIORITY").add("EXAMINE").add("POOR_FIT").add("INSUFFICIENT");
+		properties.putObject("verdict").putArray("enum").add("GO").add("GO_CONDITIONS").add("NO_GO").add("INSUFFICIENT");
 		properties.putObject("conclusion").put("type", "string");
 		properties.putObject("strengths").put("type", "array").set("items", point);
 		properties.putObject("obstacles").put("type", "array").set("items", obstacle);
@@ -152,22 +153,26 @@ final class ExtractionPrompt {
 				Grille (clé, forme de la valeur, ce qui est demandé) :
 				%s
 
-				Aide à la décision (« decision ») :
-				Une fois la grille remplie, donne un avis court pour décider si l'entreprise doit étudier ce marché. \
-				Ce n'est pas un résumé : la grille et l'avis décrivent déjà le marché. Ne répète ni l'objet, ni \
+				Go / No-Go (« decision ») :
+				Une fois la grille remplie, dis si l'entreprise doit répondre à ce marché : est-ce que ça vaut le \
+				coup ? Ce n'est pas un résumé : la grille décrit déjà le marché. Ne répète ni l'objet, ni \
 				l'acheteur, ni les dates, ni les montants, sauf quand l'un d'eux justifie une conclusion.
-				- Ce que le logiciel sait de l'entreprise est dans la balise <entreprise> : ses critères de veille, \
-				c'est-à-dire ce qu'elle recherche, jamais ses capacités. Un marché intéressant n'est pas un marché \
-				qu'elle peut remporter. N'affirme jamais qu'elle a ou n'a pas une qualification, un chiffre \
-				d'affaires, des références ou des moyens : c'est une vérification à faire.
+				- Ce que le logiciel sait de l'entreprise est dans la balise <entreprise> : ses critères de veille \
+				(ce qu'elle recherche) et, s'ils sont renseignés, ce qu'elle a déclaré posséder (certifications et \
+				leur date de fin, habilitations du personnel, matériel, références, zone d'intervention). Compare \
+				chaque exigence du DCE à ces déclarations. Une exigence couverte par une déclaration est un \
+				argument ; une certification expirée avant la date limite est un obstacle. Une capacité absente des \
+				listes n'est pas une absence prouvée : c'est un obstacle TO_CHECK, jamais CONFIRMED.
 				- Aucun score, pourcentage, note ni probabilité.
-				- verdict : PRIORITY si le marché correspond nettement à ce que l'entreprise recherche et qu'aucun \
-				obstacle confirmé n'est connu ; EXAMINE s'il présente un intérêt réel mais des obstacles ou des points \
-				à vérifier ; POOR_FIT s'il est hors de ce qu'elle recherche ou qu'un obstacle confirmé est difficile à \
-				lever ; INSUFFICIENT si les documents ou les informations ne permettent pas de conclure.
-				- conclusion : une à deux phrases qui disent pourquoi.
-				- strengths : au plus 3 arguments qui justifient d'y consacrer du temps (travaux proches de ce que \
-				l'entreprise recherche, lot pertinent, opportunité technique ou commerciale). Aucun s'il n'y en a pas.
+				- verdict : GO si le marché correspond à ce que l'entreprise fait et qu'aucun obstacle sérieux n'est \
+				connu ; GO_CONDITIONS s'il vaut le coup mais qu'au moins un obstacle ou point est à lever avant de \
+				s'engager ; NO_GO s'il est hors de ce qu'elle fait ou qu'un obstacle confirmé ne peut pas être levé \
+				(qualification exigée non détenue, délai impossible, visite obligatoire passée…) ; INSUFFICIENT si \
+				les documents ou les informations ne permettent pas de conclure.
+				- conclusion : une à deux phrases qui disent pourquoi, et pour GO_CONDITIONS ce qu'il faut lever.
+				- strengths : au plus 3 arguments pour répondre (travaux dans le métier de l'entreprise, exigence \
+				couverte par ce qu'elle a déclaré, lot pertinent, opportunité technique ou commerciale). Aucun s'il \
+				n'y en a pas.
 				- obstacles : au plus 6, les plus importants d'abord (qualifications ou habilitations exigées, chiffre \
 				d'affaires, références, moyens exigés, délais, visite obligatoire, pénalités ou responsabilités \
 				lourdes, contradictions entre pièces, pièce importante absente). kind : CONFIRMED pour une exigence \
@@ -188,7 +193,7 @@ final class ExtractionPrompt {
 				Réponds par un objet JSON seul, sans texte autour, de la forme :
 				{"fields": [{"key": "deadline", "status": "FOUND", "value": "2026-11-15T12:00", \
 				"quote": "Les offres devront parvenir avant le 15 novembre 2026 à 12h00", "document_id": 12, "page": 4}], \
-				"decision": {"verdict": "EXAMINE", "conclusion": "…", "strengths": [{"text": "…", "basis": \
+				"decision": {"verdict": "GO_CONDITIONS", "conclusion": "…", "strengths": [{"text": "…", "basis": \
 				"DOCUMENT", "quote": "…", "document_id": 12, "page": 2}], "obstacles": [{"text": "…", "kind": \
 				"CONFIRMED", "basis": "DOCUMENT", "quote": "…", "document_id": 12, "page": 5}], "checks": \
 				[{"action": "…", "why": "…", "document_id": 12}], "limits": ["…"]}}
@@ -205,6 +210,59 @@ final class ExtractionPrompt {
 			case TEXT -> field.multiple() ? "liste" : "texte";
 		};
 		return "- " + field.key() + " (" + form + ") : " + field.question();
+	}
+
+	/** At most this many references of the company are listed, the latest first. */
+	private static final int REFERENCES = 15;
+
+	/**
+	 * What the application knows of the company: its search criteria, said as
+	 * such, and what it declared it has (certifications, staff, equipment,
+	 * references, area), to be compared with the requirements of the file.
+	 * @param criteria the criteria of the company, null when there are none
+	 * @param declared what the company entered, null or empty when nothing
+	 */
+	static String company(FilterCriteria criteria, CompanyDirectory.Snapshot declared) {
+		String searched = company(criteria);
+		if (declared == null || declared.isEmpty()) {
+			return searched;
+		}
+		StringBuilder text = new StringBuilder(searched.substring(0, searched.indexOf("Aucune information n'est")));
+		text.append("Ce que l'entreprise a déclaré posséder (à comparer aux exigences ; ce qui n'y figure pas reste à "
+				+ "vérifier) :\n");
+		CompanyDirectory.Identity identity = declared.identity();
+		if (identity.city() != null) {
+			text.append("- Siège : ").append(identity.city()).append('\n');
+		}
+		if (!identity.interventionDepartments().isEmpty()) {
+			text.append("- Départements d'intervention : ").append(String.join(", ", identity.interventionDepartments()))
+				.append('\n');
+		}
+		declared.activities().forEach(activity -> text.append("- Activité : ").append(activity.label()).append('\n'));
+		declared.certifications().forEach(certification -> text.append("- Certification : ")
+			.append(certification.name())
+			.append(certification.organism() == null ? "" : " (" + certification.organism() + ")")
+			.append(certification.scope() == null ? "" : ", " + certification.scope())
+			.append(certification.expiresOn() == null ? "" : ", valable jusqu'au " + certification.expiresOn())
+			.append('\n'));
+		if (!declared.staff().isEmpty()) {
+			text.append("- Personnel : ").append(declared.staff().size()).append(" personne(s)");
+			String credentials = declared.staff().stream().flatMap(person -> person.credentials().stream()).distinct()
+				.collect(Collectors.joining(", "));
+			text.append(credentials.isEmpty() ? "" : " ; habilitations : " + credentials).append('\n');
+		}
+		declared.equipment().forEach(item -> text.append("- Matériel : ").append(item.label())
+			.append(item.quantity() > 1 ? " (x" + item.quantity() + ")" : "").append('\n'));
+		if (!declared.references().isEmpty()) {
+			text.append("- Références (").append(declared.references().size()).append(" chantiers déclarés, les plus récents) :\n");
+			declared.references().stream().limit(REFERENCES).forEach(work -> text.append("  - ").append(work.projectName())
+				.append(work.nature() == null ? "" : " – " + work.nature())
+				.append(work.location() == null ? "" : " – " + work.location())
+				.append(work.finishedOn() == null ? "" : " – " + work.finishedOn().getYear())
+				.append(work.amount() == null ? "" : " – " + work.amount().toPlainString() + " € HT")
+				.append('\n'));
+		}
+		return text.append("</entreprise>\n").toString();
 	}
 
 	/**

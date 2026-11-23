@@ -370,7 +370,14 @@ function TenderDetails() {
         retained={tender.retained ?? null}
       />
 
-      <DecisionSection tenderId={tender.id} />
+      <DecisionSection
+        tenderId={tender.id}
+        followUp={{
+          status: tender.followUpStatus,
+          by: tender.followUpBy,
+          at: tender.followUpAt,
+        }}
+      />
 
       <Tabs
         label="Sections de l'appel d'offres"

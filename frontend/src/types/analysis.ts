@@ -2,13 +2,16 @@ import type { DocumentState, PieceType } from "./document";
 
 export type FieldKind = "TEXT" | "DATE" | "DATE_TIME" | "AMOUNT" | "CHOICE";
 
-export type SummarySection = "AT_A_GLANCE" | "ATTENTION" | "REQUESTED" | "TO_ANSWER" | "TECHNICAL";
+export type SummarySection =
+  "AT_A_GLANCE" | "ATTENTION" | "REQUESTED" | "TO_ANSWER" | "TECHNICAL";
 
-export type FieldState = "VERIFIED" | "UNVERIFIED" | "NOT_INDICATED" | "AMBIGUOUS" | "CONTRADICTORY";
+export type FieldState =
+  "VERIFIED" | "UNVERIFIED" | "NOT_INDICATED" | "AMBIGUOUS" | "CONTRADICTORY";
 
 export type FieldDecision = "VALIDATED" | "CORRECTED" | "REJECTED";
 
-export type AnalysisStatus = "PENDING" | "PROCESSING" | "DONE" | "FAILED" | "RETRY_WAITING" | "CANCELLED";
+export type AnalysisStatus =
+  "PENDING" | "PROCESSING" | "DONE" | "FAILED" | "RETRY_WAITING" | "CANCELLED";
 
 /** Why an analysis failed or waits for a new attempt. */
 export type FailureKind =
@@ -92,7 +95,15 @@ export type Analysis = {
   documents: AnalysisDocument[];
 };
 
-export type Verdict = "PRIORITY" | "EXAMINE" | "POOR_FIT" | "INSUFFICIENT";
+/** GO, GO_CONDITIONS, NO_GO; PRIORITY, EXAMINE and POOR_FIT for the analyses made before. */
+export type Verdict =
+  | "GO"
+  | "GO_CONDITIONS"
+  | "NO_GO"
+  | "INSUFFICIENT"
+  | "PRIORITY"
+  | "EXAMINE"
+  | "POOR_FIT";
 
 /** CONFIRMED only when the quote was found in the document; TO_CHECK is plausible; MISSING prevents concluding. */
 export type ObstacleKind = "CONFIRMED" | "TO_CHECK" | "MISSING";
@@ -208,7 +219,12 @@ export type AnalysisConfiguration = {
     outputTokens: number;
     estimatedCost: number | null;
     /** By kind of analysis (DCE_SUMMARY…) or of assistance (ESTIMATE_SUPPLY, MEMOIR_SECTION…). */
-    byUse: { kind: string; inputTokens: number; outputTokens: number; estimatedCost: number | null }[];
+    byUse: {
+      kind: string;
+      inputTokens: number;
+      outputTokens: number;
+      estimatedCost: number | null;
+    }[];
   };
 };
 
@@ -217,7 +233,17 @@ export type PriceCheck = {
   documentId: number;
   fileName: string;
   sheet: string;
-  columns: { role: "REFERENCE" | "DESIGNATION" | "UNIT" | "QUANTITY" | "UNIT_PRICE" | "AMOUNT"; ref: string; header: string }[];
+  columns: {
+    role:
+      | "REFERENCE"
+      | "DESIGNATION"
+      | "UNIT"
+      | "QUANTITY"
+      | "UNIT_PRICE"
+      | "AMOUNT";
+    ref: string;
+    header: string;
+  }[];
   headerRow: number | null;
   items: number;
   withQuantity: number;
@@ -236,7 +262,12 @@ export type PriceCheck = {
     computed: number | null;
     consistent: boolean | null;
   }[];
-  issues: { kind: string; message: string; ref: string | null; row: number | null }[];
+  issues: {
+    kind: string;
+    message: string;
+    ref: string | null;
+    row: number | null;
+  }[];
   moreIssues: number;
 };
 

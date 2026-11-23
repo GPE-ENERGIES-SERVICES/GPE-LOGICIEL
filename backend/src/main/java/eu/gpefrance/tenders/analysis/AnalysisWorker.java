@@ -3,6 +3,7 @@ package eu.gpefrance.tenders.analysis;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,6 +27,7 @@ import eu.gpefrance.tenders.analysis.AnswerReader.Proposal;
 import eu.gpefrance.tenders.analysis.AnswerReader.UnreadableAnswerException;
 import eu.gpefrance.tenders.analysis.ExtractionClient.ModelAnswer;
 import eu.gpefrance.tenders.analysis.ExtractionPrompt.SourceDocument;
+import eu.gpefrance.tenders.company.CompanyDirectory;
 import eu.gpefrance.tenders.document.Document;
 import eu.gpefrance.tenders.document.DocumentPageRepository;
 import eu.gpefrance.tenders.document.Dossier;
@@ -76,6 +78,8 @@ public class AnalysisWorker {
 
 	private final Clock clock;
 
+	private final CompanyDirectory company;
+
 	private final ApplicationEventPublisher events;
 
 	/** Threads of the calls to the provider only. */
@@ -88,7 +92,8 @@ public class AnalysisWorker {
 	public AnalysisWorker(AnalysisRepository analyses, DossierRepository dossiers, DocumentPageRepository pages,
 			TenderRepository tenders, FilterCriteriaRepository criteria, PriceSchedules priceSchedules,
 			AnalysisGate gate, AnalysisProperties properties, JdbcTemplate jdbc, TransactionTemplate transaction,
-			Clock clock, ApplicationEventPublisher events) {
+			Clock clock, ApplicationEventPublisher events, CompanyDirectory company) {
+		this.company = company;
 		this.events = events;
 		this.analyses = analyses;
 		this.dossiers = dossiers;
@@ -314,7 +319,8 @@ public class AnalysisWorker {
 			.map(document -> AnalysisService.load(document, pages))
 			.toList();
 		Instant noticeDeadline = tenders.findById(analysis.getTenderId()).map(Tender::getDeadline).orElse(null);
-		String company = ExtractionPrompt.company(criteria.findAll().stream().findFirst().orElse(null));
+		String company = ExtractionPrompt.company(criteria.findAll().stream().findFirst().orElse(null),
+				this.company == null ? null : this.company.snapshot(LocalDate.now(clock)));
 		return new Prepared(AnalysisKind.DCE_SUMMARY, sources,
 				sources.stream().mapToLong(SourceDocument::length).sum() + company.length(), noticeDeadline, company,
 				List.of(), List.of());

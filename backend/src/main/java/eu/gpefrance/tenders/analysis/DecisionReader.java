@@ -45,9 +45,9 @@ final class DecisionReader {
 			return null;
 		}
 		Verdict verdict = switch (node.path("verdict").asString("").toUpperCase(Locale.ROOT)) {
-			case "PRIORITY" -> Verdict.PRIORITY;
-			case "EXAMINE" -> Verdict.EXAMINE;
-			case "POOR_FIT" -> Verdict.POOR_FIT;
+			case "GO", "PRIORITY" -> Verdict.GO;
+			case "GO_CONDITIONS", "EXAMINE" -> Verdict.GO_CONDITIONS;
+			case "NO_GO", "POOR_FIT" -> Verdict.NO_GO;
 			default -> Verdict.INSUFFICIENT;
 		};
 		List<Point> strengths = new ArrayList<>();

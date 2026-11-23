@@ -41,7 +41,7 @@ class DecisionReaderTests {
 				   "quote": null, "document_id": null, "page": null}
 				 ]}}""", PAGES);
 
-		assertThat(decision.verdict()).isEqualTo(Verdict.EXAMINE);
+		assertThat(decision.verdict()).isEqualTo(Verdict.GO_CONDITIONS);
 		assertThat(decision.obstacles())
 			.extracting(Point::text, Point::kind, Point::verified, Point::quote, Point::documentId, Point::page)
 			.containsExactly(
