@@ -108,6 +108,16 @@ final class PieceMatcher {
 	 * The folder of a piece in the answer, as GPE files its answers, inside its
 	 * envelope (candidature or offer): « 05-Qualification », « 06-Fiches techniques »...
 	 */
+	/** The technical sheets or documentation of the equipment. */
+	static boolean technical(String label) {
+		return TECHNICAL.matcher(plain(label)).find();
+	}
+
+	/** A drawing: made by the design office, joined as a file. */
+	static boolean drawing(String label) {
+		return DRAWINGS.matcher(plain(label)).find();
+	}
+
 	static String section(ResponsePiece.Category category, String label) {
 		String text = plain(label);
 		Kind kind = kind(label);
@@ -138,7 +148,7 @@ final class PieceMatcher {
 		return category == ResponsePiece.Category.APPLICATION ? "02-Situation GPE" : "01-Pieces principales";
 	}
 
-	private static String plain(String label) {
+	static String plain(String label) {
 		return Normalizer.normalize(label, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase();
 	}
 

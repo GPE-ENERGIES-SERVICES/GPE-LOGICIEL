@@ -1,6 +1,7 @@
 export type PieceCategory = "APPLICATION" | "OFFER";
 
-export type PieceState = "MISSING" | "EXPIRED" | "TO_CHECK" | "READY" | "NOT_NEEDED";
+export type PieceState =
+  "MISSING" | "EXPIRED" | "TO_CHECK" | "READY" | "NOT_NEEDED";
 
 export type ResponsePiece = {
   id: number;
@@ -21,11 +22,19 @@ export type ResponsePiece = {
   checkedAt: string | null;
   /** A form of the consultation file the software can fill. */
   fillable: boolean;
+  /** How the piece is filled besides an uploaded file; null for an official document of the company. */
+  fill: "FORM" | "MEMOIR" | "PRICES" | "EQUIPMENT" | "WRITE" | null;
+  /** The text written in the application (HTML). */
+  content: string | null;
+  contentOrigin: "AI" | "USER" | null;
+  /** What the AI could not find. */
+  missing: string[];
   /** Its folder of GPE inside its envelope: « 05-Qualification », « 06-Fiches techniques »… */
   section: string;
 };
 
-export type FormFieldSource = "COMPANY" | "ESTIMATE" | "TENDER" | "AI" | "MANUAL" | "MISSING" | "NONE";
+export type FormFieldSource =
+  "COMPANY" | "ESTIMATE" | "TENDER" | "AI" | "MANUAL" | "MISSING" | "NONE";
 
 export type FormField = {
   id: number;
@@ -60,7 +69,8 @@ export type ResponseForm = {
 };
 
 /** TODO: nothing filled yet; TO_VALIDATE: filled by the AI, waiting for a user. */
-export type FormStatus = "TODO" | "IN_PROGRESS" | "TO_VALIDATE" | "VALIDATED" | "REJECTED";
+export type FormStatus =
+  "TODO" | "IN_PROGRESS" | "TO_VALIDATE" | "VALIDATED" | "REJECTED";
 
 export type FormDecision = "VALIDATE" | "REJECT" | "REOPEN";
 
@@ -80,7 +90,12 @@ export type AdministrativeForm = {
   reviewedAt: string | null;
 };
 
-export type ResponseStep = { title: string; ready: boolean; detail: string; anchor: string };
+export type ResponseStep = {
+  title: string;
+  ready: boolean;
+  detail: string;
+  anchor: string;
+};
 
 export type DocumentChoice = {
   id: number;

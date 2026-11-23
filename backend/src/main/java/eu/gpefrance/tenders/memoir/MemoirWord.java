@@ -45,7 +45,7 @@ import eu.gpefrance.tenders.memoir.MemoirStore.SectionRow;
  * (Word builds a table of contents from them). What is still to write shows,
  * nothing is invented: a part without text says so, as does an image to add.
  */
-final class MemoirWord {
+public final class MemoirWord {
 
 	private static final Pattern IMAGE = Pattern.compile("/api/memoirs/files/(\\d+)");
 
@@ -86,7 +86,7 @@ final class MemoirWord {
 				XWPFDocument word = new XWPFDocument(template);
 				ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			word.getProperties().getCoreProperties().setTitle(clean(memoir.title()));
-			cover(word, memoir, cover);
+			cover(word, memoir, cover, MEMOIR_FOOTER);
 			for (SectionRow section : sections) {
 				if (section.proposed()) {
 					continue;
@@ -115,15 +115,66 @@ final class MemoirWord {
 	}
 
 	/** The cover of the template holds markers, in its text boxes: each becomes what is known of the tender. */
-	private static void cover(XWPFDocument word, MemoirRow memoir, Cover cover) {
+	/**
+	 * A piece of the answer written in the application (a list of works, a
+	 * guarantee, a note...), in the style of GPE: its header, footer, fonts and
+	 * styles, without the cover of a memoir.
+	 * @param html the text, cleaned
+	 */
+	public static byte[] piece(String title, String tenderTitle, String buyer, String place, String html) {
+		MemoirRow row = new MemoirRow(null, null, tenderTitle, null, title, MemoirStatus.WRITING, null, null, null,
+				java.time.Instant.EPOCH, null, java.time.Instant.EPOCH, 0, 0);
+		try (InputStream template = MemoirWord.class.getResourceAsStream(TEMPLATE);
+				XWPFDocument word = bare(template);
+				ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+			word.getProperties().getCoreProperties().setTitle(clean(title));
+			cover(word, row, new Cover(buyer, place), clean(title) + " – ");
+			XWPFRun heading = word.createParagraph().createRun();
+			heading.setBold(true);
+			heading.setFontSize(16);
+			heading.setColor("0F4761");
+			heading.setText(clean(title));
+			blocks(word, Jsoup.parseBodyFragment(html == null ? "" : html).body(), 1, (id) -> Optional.empty());
+			word.write(out);
+			return out.toByteArray();
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
+
+	/** The template without its body: cover and table of contents left out, header, footer and styles kept. */
+	private static XWPFDocument bare(InputStream template) throws IOException {
+		try (XWPFDocument full = new XWPFDocument(template); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+			try (XmlCursor cursor = full.getDocument().getBody().newCursor()) {
+				boolean more = cursor.toFirstChild();
+				while (more) {
+					if ("sectPr".equals(cursor.getName().getLocalPart())) {
+						more = cursor.toNextSibling();
+					}
+					else {
+						cursor.removeXml();
+						more = cursor.isStart();
+					}
+				}
+			}
+			full.write(out);
+			return new XWPFDocument(new ByteArrayInputStream(out.toByteArray()));
+		}
+	}
+
+	/** The first words of the footer of the template, followed by the object of the tender. */
+	private static final String MEMOIR_FOOTER = "Mémoire technique – ";
+
+	private static void cover(XWPFDocument word, MemoirRow memoir, Cover cover, String footer) {
 		String lot = memoir.lotNumber() == null || memoir.lotNumber().isBlank() ? ""
 				: "LOT N°" + memoir.lotNumber().strip() + " ";
 		Map<String, String> values = Map.of("{{LOT}}", lot, "{{LOT_TITLE}}", memoir.title(), "{{OBJECT}}",
 				Objects.requireNonNullElse(memoir.tenderTitle(), ""), "{{BUYER}}",
 				Objects.requireNonNullElse(cover.buyer(), ""), "{{PLACE_LABEL}}", cover.place() == null ? "" : "Lieu : ",
-				"{{PLACE}}", Objects.requireNonNullElse(cover.place(), ""));
+				"{{PLACE}}", Objects.requireNonNullElse(cover.place(), ""), MEMOIR_FOOTER, footer);
 		List<XmlObject> parts = new ArrayList<>(List.of(word.getDocument()));
-		word.getFooterList().forEach((footer) -> parts.add(footer._getHdrFtr()));
+		word.getFooterList().forEach((part) -> parts.add(part._getHdrFtr()));
 		for (XmlObject part : parts) {
 			try (XmlCursor cursor = part.newCursor()) {
 				cursor.selectPath("declare namespace w='http://schemas.openxmlformats.org/wordprocessingml/2006/main' .//w:t");

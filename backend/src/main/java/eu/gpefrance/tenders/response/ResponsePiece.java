@@ -57,6 +57,17 @@ class ResponsePiece {
 	@Column(name = "size_bytes")
 	private Long sizeBytes;
 
+	/** The text written in the application (HTML), null for a piece joined as a file. */
+	private String content;
+
+	/** AI while the draft of the AI was not changed, USER otherwise. */
+	@Column(name = "content_origin")
+	private String contentOrigin;
+
+	/** What the AI could not find, one per line. */
+	@Column(name = "content_missing")
+	private String contentMissing;
+
 	@Column(name = "not_needed", nullable = false)
 	private boolean notNeeded;
 
@@ -116,6 +127,27 @@ class ResponsePiece {
 		this.sizeBytes = null;
 		uncheck();
 		touch(user, now);
+	}
+
+	/** A text written in the application; its Word file is joined with {@link #attach}. */
+	void write(String html, String origin, String missing, String user, Instant now) {
+		this.content = html;
+		this.contentOrigin = origin;
+		this.contentMissing = missing;
+		uncheck();
+		touch(user, now);
+	}
+
+	String getContent() {
+		return content;
+	}
+
+	String getContentOrigin() {
+		return contentOrigin;
+	}
+
+	String getContentMissing() {
+		return contentMissing;
 	}
 
 	void check(boolean checked, String user, Instant now) {

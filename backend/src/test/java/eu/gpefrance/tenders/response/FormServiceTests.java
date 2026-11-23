@@ -115,6 +115,11 @@ class FormServiceTests {
 
 	/** What a model would answer, and attempts a good one would not make. */
 	private static ModelAnswer answer(ExtractionRequest request) {
+		if (request.analysisType().equals(PieceWriter.KIND)) {
+			return new ModelAnswer("""
+					{"html": "<p>GPE garantit les modules.</p><script>x</script><p>[À compléter : durée]</p>",
+					 "missing": ["Durée de garantie des onduleurs"]}""", 100, 50);
+		}
 		JsonNode content = JSON.readTree(request.documents());
 		var answer = JSON.createObjectNode();
 		var places = answer.putArray("emplacements");
@@ -238,6 +243,78 @@ class FormServiceTests {
 			assertThat(lines).contains("SIRET : " + SIRET, "☒ Refuse de percevoir l'avance", "Montant HT (en chiffres) (€) : 10 000,00 €", "Vitrolles");
 			assertThat(lines).contains("Nom du signataire : ..........", "☐ ne pas entrer dans un cas d'exclusion");
 		}
+	}
+
+	@Test
+	void eachPieceSaysHowItIsFilled() {
+		assertThat(ResponseService.fillOf("Mémoire justificatif")).isEqualTo(ResponseService.Fill.MEMOIR);
+		assertThat(ResponseService.fillOf("DPGF datée et tamponnée")).isEqualTo(ResponseService.Fill.PRICES);
+		assertThat(ResponseService.fillOf("Documentation technique du matériel")).isEqualTo(ResponseService.Fill.EQUIPMENT);
+		assertThat(ResponseService.fillOf("Liste des travaux des 5 dernières années")).isEqualTo(ResponseService.Fill.WRITE);
+		assertThat(ResponseService.fillOf("Annexe bilan carbone simplifié")).isEqualTo(ResponseService.Fill.WRITE);
+		assertThat(ResponseService.fillOf("Modèle de contrat de maintenance")).isEqualTo(ResponseService.Fill.WRITE);
+		assertThat(ResponseService.fillOf("Acte d'engagement")).isEqualTo(ResponseService.Fill.FORM);
+		assertThat(ResponseService.fillOf("Extrait Kbis")).isNull();
+		assertThat(ResponseService.fillOf("Attestation d'assurance décennale")).isNull();
+		assertThat(ResponseService.fillOf("Plan de calepinage sommaire")).isNull();
+	}
+
+	@Test
+	void aPieceWrittenByHandOrByTheAiIsJoinedAsAWordFileToCheck() throws IOException {
+		Long piece = responses.add(tenderId, ResponsePiece.Category.OFFER, "Modèle de contrat de maintenance", "Marie")
+			.pieces().getFirst().id();
+
+		ResponseService.PieceResponse written = responses.write(piece, "<p>Visite annuelle.</p><script>x</script>", "Marie")
+			.pieces().getFirst();
+		assertThat(written.fill()).isEqualTo(ResponseService.Fill.WRITE);
+		assertThat(written.state()).isEqualTo(ResponseService.PieceState.TO_CHECK);
+		assertThat(written.content()).isEqualTo("<p>Visite annuelle.</p>");
+		assertThat(written.fileName()).isEqualTo("Modèle de contrat de maintenance.docx");
+		assertThat(written.detail()).startsWith("Rédigée dans l'application");
+		assertThat(wordText(piece)).contains("Modèle de contrat de maintenance", "Visite annuelle.");
+
+		ResponseService.PieceResponse drafted = responses.draft(piece, "Marie").pieces().getFirst();
+		assertThat(drafted.contentOrigin()).isEqualTo("AI");
+		assertThat(drafted.content()).contains("GPE garantit les modules.").doesNotContain("script");
+		assertThat(drafted.missing()).containsExactly("Durée de garantie des onduleurs");
+		assertThat(drafted.detail()).startsWith("Rédigée par l'IA, à relire");
+		assertThat(wordText(piece)).contains("GPE garantit les modules.").doesNotContain("Visite annuelle.");
+		// One file only: the former one is replaced.
+		assertThat(Files.list(storage.resolve("responses/" + tenderId + "/" + piece))
+			.filter((file) -> file.getFileName().toString().startsWith("Modèle de contrat"))).hasSize(1);
+
+		Long kbis = responses.add(tenderId, ResponsePiece.Category.APPLICATION, "Extrait Kbis", "Marie").pieces().stream()
+			.filter((item) -> item.label().equals("Extrait Kbis")).findFirst().orElseThrow().id();
+		org.assertj.core.api.Assertions.assertThatThrownBy(() -> responses.draft(kbis, "Marie"))
+			.hasMessageContaining("ne se rédige pas");
+		org.assertj.core.api.Assertions.assertThatThrownBy(() -> responses.fromStep(kbis, "Marie"))
+			.hasMessageContaining("autre étape");
+	}
+
+	private String wordText(Long piece) throws IOException {
+		String path = jdbc.queryForObject("SELECT storage_path FROM response_piece WHERE id = ?", String.class, piece);
+		try (XWPFDocument word = new XWPFDocument(new ByteArrayInputStream(Files.readAllBytes(storage.resolve(path))))) {
+			return word.getParagraphs().stream().map(XWPFParagraph::getText).collect(java.util.stream.Collectors.joining("\n"));
+		}
+	}
+
+	@Test
+	void takesTheFileOfAnotherStep() throws IOException {
+		jdbc.update("""
+				INSERT INTO memoir (tender_id, title, status, created_by, created_at, updated_by, updated_at)
+				VALUES (?, 'Mémoire Toiture', 'DRAFT', 'Marie', now(), 'Marie', now())""", tenderId);
+		Long memoir = responses.add(tenderId, ResponsePiece.Category.OFFER, "Mémoire technique", "Marie").pieces()
+			.getFirst().id();
+
+		ResponseService.PieceResponse joined = responses.fromStep(memoir, "Marie").pieces().getFirst();
+		assertThat(joined.fill()).isEqualTo(ResponseService.Fill.MEMOIR);
+		assertThat(joined.fileName()).isEqualTo("Mémoire Toiture.docx");
+		assertThat(joined.state()).isEqualTo(ResponseService.PieceState.TO_CHECK);
+
+		Long prices = responses.add(tenderId, ResponsePiece.Category.OFFER, "DPGF", "Marie").pieces().stream()
+			.filter((item) -> item.label().equals("DPGF")).findFirst().orElseThrow().id();
+		org.assertj.core.api.Assertions.assertThatThrownBy(() -> responses.fromStep(prices, "Marie"))
+			.hasMessageContaining("Aucun chiffrage");
 	}
 
 	@Test

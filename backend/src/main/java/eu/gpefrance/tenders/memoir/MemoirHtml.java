@@ -13,7 +13,7 @@ import org.jsoup.safety.Safelist;
  * memoir or a placeholder. Anything else (scripts, styles, links, outside
  * images, attributes) is removed, whoever wrote it, a user or the AI.
  */
-final class MemoirHtml {
+public final class MemoirHtml {
 
 	/** Only the images of the memoir, served by the application. */
 	private static final Pattern IMAGE = Pattern.compile("/api/memoirs/files/\\d+");
@@ -29,7 +29,7 @@ final class MemoirHtml {
 	}
 
 	/** The content as stored: allowed tags only, empty when nothing is written. */
-	static String clean(String html) {
+	public static String clean(String html) {
 		if (html == null || html.isBlank()) {
 			return null;
 		}

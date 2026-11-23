@@ -106,6 +106,28 @@ public class ResponseController {
 		return service.removeFile(id, user.displayName());
 	}
 
+	public record Written(@Size(max = 200_000) String html) {
+	}
+
+	/** The text of a piece written in the application, saved and joined as a Word file in the style of GPE. */
+	@PutMapping("/api/response-pieces/{id}/content")
+	public ResponseView write(@PathVariable Long id, @Valid @RequestBody Written written,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return service.write(id, written.html(), user.displayName());
+	}
+
+	/** A draft of the piece by the AI, from what the application knows; a user reads and checks it. */
+	@PostMapping("/api/response-pieces/{id}/draft")
+	public ResponseView draft(@PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal user) {
+		return service.draft(id, user.displayName());
+	}
+
+	/** Joins the file made by another step: the memoir in Word, the price schedule filled by the estimate. */
+	@PostMapping("/api/response-pieces/{id}/from-step")
+	public ResponseView fromStep(@PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal user) {
+		return service.fromStep(id, user.displayName());
+	}
+
 	/** Always downloaded: an uploaded file is never displayed as a page of the application. */
 	@GetMapping("/api/response-pieces/{id}/file")
 	public ResponseEntity<Resource> file(@PathVariable Long id) {

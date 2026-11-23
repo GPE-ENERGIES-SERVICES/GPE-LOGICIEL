@@ -4378,3 +4378,14 @@ select.status-dismissed {
   display: block;
   padding: 0.15rem 0;
 }
+
+/* A piece of the answer written in the application, under its row. */
+.response-writer {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.5rem 0 1rem;
+}
+
+.response-writer .memoir-body {
+  min-height: 10rem;
+}
