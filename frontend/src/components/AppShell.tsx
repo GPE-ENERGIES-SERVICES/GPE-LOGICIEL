@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Fragment, Suspense, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  Fragment,
+  Suspense,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 
 import { PRODUCT_NAME } from "@/lib/brand";
 import { useLoader } from "@/lib/useLoader";
@@ -22,27 +29,120 @@ import { ThemeToggle } from "./ThemeToggle";
  * @param admin shown to administrators only
  * @param separator a line above it, apart from what precedes
  */
-type Section = { href: string; label: string; title?: string; icon: IconName; group?: string; admin?: boolean; separator?: boolean };
+type Section = {
+  href: string;
+  label: string;
+  title?: string;
+  icon: IconName;
+  group?: string;
+  admin?: boolean;
+  separator?: boolean;
+};
 
 /** Main sections, in the order of the work; a section is active on its page and on the pages below it. */
 const SECTIONS: Section[] = [
   { href: "/", label: "Tableau de bord", icon: "dashboard" },
-  { href: "/tenders", label: "Tous les AO", title: "Tous les appels d'offres", icon: "tenders", group: "Appels d'offres" },
-  { href: "/follows", label: "Mes suivis", icon: "star", group: "Appels d'offres" },
-  { href: "/alerts", label: "Mes veilles", icon: "alerts", group: "Appels d'offres" },
-  { href: "/tenders/new", label: "Nouvel appel d'offres", icon: "file", group: "Appels d'offres" },
-  { href: "/awards", label: "Marchés attribués", icon: "award", group: "Appels d'offres" },
-  { href: "/archives", label: "Archives", icon: "archive", group: "Appels d'offres" },
-  { href: "/estimates", label: "Chiffrages", icon: "calculator", group: "Chiffrage" },
-  { href: "/price-library", label: "Bibliothèque de prix", icon: "archive", group: "Chiffrage" },
-  { href: "/suppliers", label: "Tarifs fournisseurs", icon: "tag", group: "Chiffrage", admin: true },
-  { href: "/memoirs", label: "Mémoires", icon: "file", group: "Mémoire technique" },
-  { href: "/memoirs/library", label: "Bibliothèque", icon: "archive", group: "Mémoire technique" },
-  { href: "/administrative", label: "Administratif", icon: "clipboard", group: "Réponse" },
-  { href: "/equipment-sheets", label: "Fiches techniques", icon: "file", group: "Réponse" },
-  { href: "/responses", label: "Dossiers de réponse", icon: "archive", group: "Réponse" },
+  {
+    href: "/tenders",
+    label: "Tous les AO",
+    title: "Tous les appels d'offres",
+    icon: "tenders",
+    group: "Appels d'offres",
+  },
+  {
+    href: "/follows",
+    label: "Mes suivis",
+    icon: "star",
+    group: "Appels d'offres",
+  },
+  {
+    href: "/alerts",
+    label: "Mes veilles",
+    icon: "alerts",
+    group: "Appels d'offres",
+  },
+  {
+    href: "/tenders/new",
+    label: "Nouvel appel d'offres",
+    icon: "file",
+    group: "Appels d'offres",
+  },
+  {
+    href: "/awards",
+    label: "Marchés attribués",
+    icon: "award",
+    group: "Appels d'offres",
+  },
+  {
+    href: "/archives",
+    label: "Archives",
+    icon: "archive",
+    group: "Appels d'offres",
+  },
+  {
+    href: "/estimates",
+    label: "Chiffrages",
+    icon: "calculator",
+    group: "Chiffrage",
+  },
+  {
+    href: "/price-library",
+    label: "Bibliothèque de prix",
+    icon: "archive",
+    group: "Chiffrage",
+  },
+  {
+    href: "/suppliers",
+    label: "Tarifs fournisseurs",
+    icon: "tag",
+    group: "Chiffrage",
+    admin: true,
+  },
+  {
+    href: "/estimate-settings",
+    label: "Paramètres du chiffrage",
+    icon: "calculator",
+    group: "Chiffrage",
+    admin: true,
+  },
+  {
+    href: "/memoirs",
+    label: "Mémoires",
+    icon: "file",
+    group: "Mémoire technique",
+  },
+  {
+    href: "/memoirs/library",
+    label: "Bibliothèque",
+    icon: "archive",
+    group: "Mémoire technique",
+  },
+  {
+    href: "/administrative",
+    label: "Administratif",
+    icon: "clipboard",
+    group: "Réponse",
+  },
+  {
+    href: "/equipment-sheets",
+    label: "Fiches techniques",
+    icon: "file",
+    group: "Réponse",
+  },
+  {
+    href: "/responses",
+    label: "Dossiers de réponse",
+    icon: "archive",
+    group: "Réponse",
+  },
   { href: "/company", label: "Entreprise", icon: "building", separator: true },
-  { href: "/supervision", label: "Supervision", icon: "eye", admin: true, separator: true },
+  {
+    href: "/supervision",
+    label: "Supervision",
+    icon: "eye",
+    admin: true,
+    separator: true,
+  },
   { href: "/settings", label: "Paramètres", icon: "settings", admin: true },
 ];
 
@@ -77,17 +177,28 @@ function chooseNavCollapsed(collapsed: boolean) {
 }
 
 /** The section of the current page, or of the page a tender was opened from. */
-function activeSection(sections: Section[], current: string): Section | undefined {
-  const isActive = (href: string) => (href === "/" ? current === "/" : current.startsWith(href));
+function activeSection(
+  sections: Section[],
+  current: string,
+): Section | undefined {
+  const isActive = (href: string) =>
+    href === "/" ? current === "/" : current.startsWith(href);
   // The most precise entry: /memoirs/library before /memoirs.
-  return sections.filter(({ href }) => isActive(href)).sort((a, b) => b.href.length - a.href.length)[0];
+  return sections
+    .filter(({ href }) => isActive(href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
 }
 
 /**
  * Reduced to its icons, the menu shows the first entry of each group only
  * (nav-sub hides the others); it stays lit while on another page of its group.
  */
-function navClass(href: string, group: string | undefined, sub: boolean, active: Section | undefined): string {
+function navClass(
+  href: string,
+  group: string | undefined,
+  sub: boolean,
+  active: Section | undefined,
+): string {
   if (active?.href === href) {
     return sub ? "active nav-sub" : "active";
   }
@@ -118,11 +229,18 @@ function SectionNav({
     <nav className="app-nav" aria-label="Rubriques">
       {sections.map(({ href, label, icon, group, separator }, index) => (
         <Fragment key={href}>
-          {group && group !== sections[index - 1]?.group && <span className="app-nav-group">{group}</span>}
+          {group && group !== sections[index - 1]?.group && (
+            <span className="app-nav-group">{group}</span>
+          )}
           {separator && <span className="app-nav-group" aria-hidden="true" />}
           <Link
             href={href}
-            className={navClass(href, group, Boolean(group) && group === sections[index - 1]?.group, active)}
+            className={navClass(
+              href,
+              group,
+              Boolean(group) && group === sections[index - 1]?.group,
+              active,
+            )}
             aria-current={active?.href === href ? "page" : undefined}
             onClick={onNavigate}
             title={collapsed ? (group ?? label) : undefined}
@@ -130,7 +248,10 @@ function SectionNav({
             <Icon name={icon} />
             <span className="nav-label">{label}</span>
             {Boolean(badges[href]) && (
-              <span className="nav-badge" aria-label={`${badges[href]} à traiter`}>
+              <span
+                className="nav-badge"
+                aria-label={`${badges[href]} à traiter`}
+              >
                 {badges[href]}
               </span>
             )}
@@ -141,7 +262,13 @@ function SectionNav({
   );
 }
 
-function SectionTitle({ sections, origin }: { sections: Section[]; origin: string | null }) {
+function SectionTitle({
+  sections,
+  origin,
+}: {
+  sections: Section[];
+  origin: string | null;
+}) {
   const pathname = usePathname();
   const section = activeSection(sections, origin ?? pathname);
   return <p className="app-context">{section?.title ?? section?.label}</p>;
@@ -151,7 +278,10 @@ function SectionTitle({ sections, origin }: { sections: Section[]; origin: strin
 function useOrigin(sections: Section[]) {
   const pathname = usePathname();
   const from = useSearchParams().get("from")?.split("?")[0] ?? null;
-  return pathname.startsWith("/tenders/") && sections.some(({ href }) => href === from) ? from : null;
+  return pathname.startsWith("/tenders/") &&
+    sections.some(({ href }) => href === from)
+    ? from
+    : null;
 }
 
 function SectionNavWithOrigin({
@@ -166,7 +296,13 @@ function SectionNavWithOrigin({
   collapsed: boolean;
 }) {
   return (
-    <SectionNav sections={sections} origin={useOrigin(sections)} onNavigate={onNavigate} badges={badges} collapsed={collapsed} />
+    <SectionNav
+      sections={sections}
+      origin={useOrigin(sections)}
+      onNavigate={onNavigate}
+      badges={badges}
+      collapsed={collapsed}
+    />
   );
 }
 
@@ -176,7 +312,11 @@ function SectionTitleWithOrigin({ sections }: { sections: Section[] }) {
 
 function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
-  return (words.length > 1 ? words[0][0] + words[words.length - 1][0] : name.slice(0, 2)).toUpperCase();
+  return (
+    words.length > 1
+      ? words[0][0] + words[words.length - 1][0]
+      : name.slice(0, 2)
+  ).toUpperCase();
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -184,20 +324,34 @@ export function AppShell({ children }: { children: ReactNode }) {
   const admin = user.role === "ADMIN";
   const sections = SECTIONS.filter((section) => !section.admin || admin);
   // shortcut: read when the application opens, not again after each decision; a reload updates it.
-  const duplicates = useLoader(() => (admin ? getDuplicateGroups() : Promise.resolve([])), "nav-duplicates");
+  const duplicates = useLoader(
+    () => (admin ? getDuplicateGroups() : Promise.resolve([])),
+    "nav-duplicates",
+  );
   // shortcut: same as the duplicates, read when the application opens; a reload updates it.
-  const alerts = useLoader(() => (available("alerts") ? getAlerts() : Promise.resolve([])), "nav-alerts");
+  const alerts = useLoader(
+    () => (available("alerts") ? getAlerts() : Promise.resolve([])),
+    "nav-alerts",
+  );
   // shortcut: same as the duplicates, read when the application opens; a reload updates it.
   const forms = useLoader(() => getAdministrativeForms(), "nav-administrative");
   const badges = {
-    "/administrative": (forms.data ?? []).filter((form) => form.status === "TO_VALIDATE").length,
+    "/administrative": (forms.data ?? []).filter(
+      (form) => form.status === "TO_VALIDATE",
+    ).length,
     "/supervision": duplicates.data?.length ?? 0,
-    "/alerts": (alerts.data ?? []).filter((alert) => alert.active).reduce((sum, alert) => sum + alert.newCount, 0),
+    "/alerts": (alerts.data ?? [])
+      .filter((alert) => alert.active)
+      .reduce((sum, alert) => sum + alert.newCount, 0),
   };
   // The navigation is a drawer on small screens only.
   const [menuOpen, setMenuOpen] = useState(false);
   // On large screens: the menu reduced to its icons, or unfolded.
-  const collapsed = useSyncExternalStore(subscribeNavCollapsed, readNavCollapsed, () => false);
+  const collapsed = useSyncExternalStore(
+    subscribeNavCollapsed,
+    readNavCollapsed,
+    () => false,
+  );
   const closeButton = useRef<HTMLButtonElement>(null);
   const closeMenu = () => setMenuOpen(false);
   const openMenu = () => {
@@ -244,9 +398,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         </div>
         <Suspense
-          fallback={<SectionNav sections={sections} origin={null} onNavigate={closeMenu} badges={badges} collapsed={collapsed} />}
+          fallback={
+            <SectionNav
+              sections={sections}
+              origin={null}
+              onNavigate={closeMenu}
+              badges={badges}
+              collapsed={collapsed}
+            />
+          }
         >
-          <SectionNavWithOrigin sections={sections} onNavigate={closeMenu} badges={badges} collapsed={collapsed} />
+          <SectionNavWithOrigin
+            sections={sections}
+            onNavigate={closeMenu}
+            badges={badges}
+            collapsed={collapsed}
+          />
         </Suspense>
         <div className="app-user">
           <span className="avatar" aria-hidden="true">
@@ -256,12 +423,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             <strong>{user.displayName}</strong>
             <span className="small muted">{user.email}</span>
           </span>
-          <button type="button" className="icon-button" onClick={logout} aria-label="Se déconnecter" title="Se déconnecter">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={logout}
+            aria-label="Se déconnecter"
+            title="Se déconnecter"
+          >
             <Icon name="logout" />
           </button>
         </div>
       </aside>
-      {menuOpen && <div className="app-backdrop" onClick={closeMenu} aria-hidden="true" />}
+      {menuOpen && (
+        <div className="app-backdrop" onClick={closeMenu} aria-hidden="true" />
+      )}
 
       <div className="app-body">
         <header className="app-topbar">
@@ -275,7 +450,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Icon name="menu" />
           </button>
-          <Suspense fallback={<SectionTitle sections={sections} origin={null} />}>
+          <Suspense
+            fallback={<SectionTitle sections={sections} origin={null} />}
+          >
             <SectionTitleWithOrigin sections={sections} />
           </Suspense>
           <ThemeToggle />

@@ -310,6 +310,16 @@ export function EstimateEditor({ id }: { id: number }) {
           </button>
         )}
       </div>
+      {editable &&
+        rates.data &&
+        !rates.data.some((rate) => rate.active && rate.type === "LABOR") && (
+          <p className="banner info">
+            Aucun coût horaire de main-d&apos;œuvre n&apos;est saisi : ni vous
+            ni l&apos;IA ne pouvez chiffrer la pose, les études, la mise en
+            service ou la maintenance. Saisissez-les dans{" "}
+            <Link href="/estimate-settings">Paramètres du chiffrage</Link>.
+          </p>
+        )}
       {draftAi.view}
       {libraryAi.view}
       {reviewAi.view}

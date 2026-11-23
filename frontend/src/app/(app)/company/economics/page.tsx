@@ -1,36 +1,29 @@
 "use client";
 
-import { useAuth } from "@/components/AuthProvider";
+import Link from "next/link";
+
 import { RecordTable } from "@/components/company/RecordTable";
-import { PricingPanel } from "@/components/settings/PricingPanel";
 
 /**
- * The economic data of GPE: the costs of labour by profile and the defaults
- * the estimates take (one source, read by the estimates), and the other
- * values of GPE, kept as entered until their rules are decided.
+ * The economic values of GPE, kept as entered until their rules are decided;
+ * the defaults of the estimates are with the estimates.
  */
 export default function CompanyEconomicsPage() {
-  const { user } = useAuth();
-
   return (
     <>
-      <section className="card">
-        <h2>Coûts horaires, TVA et coefficients</h2>
-        <p className="muted">
-          Utilisés par les chiffrages : un nouveau chiffrage reprend la TVA et les coefficients, et le détail d&apos;une ligne
-          peut reprendre un coût horaire. Un chiffrage garde les valeurs qu&apos;il a reprises.
-        </p>
-        {user.role === "ADMIN" ? (
-          <PricingPanel />
-        ) : (
-          <p className="muted">Réservé aux administrateurs.</p>
-        )}
-      </section>
+      <p className="hint">
+        Les coûts horaires, la TVA et les coefficients sont dans{" "}
+        <Link href="/estimate-settings">
+          Chiffrage › Paramètres du chiffrage
+        </Link>
+        .
+      </p>
       <section className="card">
         <h2>Autres paramètres économiques</h2>
         <p className="muted">
-          Frais généraux, marges visées, informations tarifaires internes… Enregistrés tels quels : aucun calcul ne les utilise
-          tant que leurs règles ne sont pas définies avec GPE.
+          Frais généraux, marges visées, informations tarifaires internes…
+          Enregistrés tels quels : aucun calcul ne les utilise tant que leurs
+          règles ne sont pas définies avec GPE.
         </p>
         <RecordTable
           list="economic-parameters"
@@ -43,10 +36,20 @@ export default function CompanyEconomicsPage() {
             { key: "note", label: "Commentaire" },
           ]}
           fields={[
-            { name: "label", label: "Paramètre", required: true, placeholder: "Frais généraux" },
+            {
+              name: "label",
+              label: "Paramètre",
+              required: true,
+              placeholder: "Frais généraux",
+            },
             { name: "value", label: "Valeur", type: "number" },
             { name: "unit", label: "Unité", placeholder: "%, € / h…" },
-            { name: "note", label: "Commentaire", type: "textarea", wide: true },
+            {
+              name: "note",
+              label: "Commentaire",
+              type: "textarea",
+              wide: true,
+            },
           ]}
         />
       </section>
