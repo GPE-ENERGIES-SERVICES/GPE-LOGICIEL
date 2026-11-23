@@ -63,7 +63,7 @@ class MemoirAiTests {
 
 	@BeforeEach
 	void prepare() {
-		jdbc.execute("TRUNCATE memoir, memoir_library, ai_call, document_page, document, dossier, lot, tender "
+		jdbc.execute("TRUNCATE memoir, memoir_library, ai_call, extracted_field, analysis_document, analysis, document_page, document, dossier, lot, tender "
 				+ "RESTART IDENTITY CASCADE");
 		long tenderId = jdbc.queryForObject("""
 				INSERT INTO tender (source, external_id, title, status, created_at, updated_at)
@@ -151,6 +151,45 @@ class MemoirAiTests {
 			.isLenientlyEqualTo("{\"content\": \"<p>Notre méthode.</p>\", \"proposal\": \"<p>Texte rédigé par l'IA.</p>\"}");
 		assertThat(sent.getLast().documents()).contains("Méthodologie d'intervention", "Notre méthode");
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM ai_call", Long.class)).isEqualTo(3);
+	}
+
+	@Test
+	void anAnalysedFileGivesItsSummaryAndOnlyTheFrameOfTheMemoirIsReadAgain() {
+		jdbc.update("""
+				INSERT INTO document (dossier_id, file_name, storage_path, size_bytes, sha256, piece_type, state, page_count)
+				VALUES (1, 'Cadre de mémoire technique.docx', 'x/cadre.docx', 1, 'z', 'OTHER', 'READ', 1),
+				       (1, 'CCTP.pdf', 'x/CCTP.pdf', 1, 'w', 'CCTP', 'READ', 1)""");
+		jdbc.update("""
+				INSERT INTO document_page (document_id, page_number, text, method) VALUES
+				(3, 1, '1. Moyens humains. 2. Méthodologie. 3. Environnement.', 'NATIVE'),
+				(4, 1, 'Les câbles seront de section 6 mm².', 'NATIVE')""");
+		long analysis = jdbc.queryForObject("""
+				INSERT INTO analysis (tender_id, dossier_id, status, model, prompt_version, input_fingerprint, created_at, kind)
+				VALUES (1, 1, 'DONE', 'm', 'p', 'f', now(), 'DCE_SUMMARY') RETURNING id""", Long.class);
+		jdbc.update("""
+				INSERT INTO extracted_field (analysis_id, field_key, value, document_id, page_number, quote, state, decision)
+				VALUES (?, 'award_criteria', 'Valeur technique : 60 %', 1, 1, 'Valeur technique (60 %)', 'VERIFIED', NULL),
+				       (?, 'offer_documents', 'Acte d''engagement', 1, 1, NULL, 'VERIFIED', NULL),
+				       (?, 'offer_documents', 'Mémoire technique selon le cadre joint', 1, 1, NULL, 'VERIFIED', NULL),
+				       (?, 'tech_requirements', 'Luminaires LED IP65', 1, 1, NULL, 'VERIFIED', 'REJECTED')""", analysis,
+				analysis, analysis, analysis);
+
+		assertThat(post("/api/memoirs/1/analysis", "")).hasStatus(HttpStatus.ACCEPTED);
+		String sentText = sent.getFirst().documents();
+		// The summary, the frame and the page about the memoir; not the rest of the file.
+		assertThat(sentText).contains("exigences_relevees", "Valeur technique : 60 %", "selon le cadre joint",
+				"CADRE_DU_MEMOIRE", "1. Moyens humains", "Article 6")
+			.doesNotContain("Acte d'engagement", "Luminaires LED", "section 6 mm²", "Plan de masse");
+		assertThat(sent.getFirst().instructions()).contains("Plan habituel de GPE", "Moyens humains et matériels");
+		// The requirements of the summary come first, with their place; those of the AI after them.
+		assertThat(mvc.get().uri("/api/memoirs/1").with(TestUsers.user())).bodyJson()
+			.isLenientlyEqualTo("""
+					{"requirements": [
+					   {"id": 1, "category": "CRITERION", "text": "Valeur technique : 60 %", "weight": "60 %",
+					    "documentId": 1, "page": 1, "verified": true},
+					   {"id": 2, "category": "FORM", "text": "Mémoire technique selon le cadre joint"},
+					   {"id": 3, "category": "SUBCRITERION", "verified": true},
+					   {"id": 4, "category": "FORM"}, {"id": 5, "category": "METHOD", "verified": false}]}""");
 	}
 
 	private MockMvcTester.MockMvcRequestBuilder post(String uri, String body) {

@@ -4,10 +4,15 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -17,22 +22,19 @@ import javax.imageio.ImageIO;
 
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
-import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.UnderlinePatterns;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
-import org.apache.poi.xwpf.usermodel.XWPFStyle;
-import org.apache.poi.xwpf.usermodel.XWPFStyles;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import org.apache.xmlbeans.XmlCursor;
+import org.apache.xmlbeans.XmlObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStyle;
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.STStyleType;
 
 import eu.gpefrance.tenders.memoir.MemoirStore.MemoirRow;
 import eu.gpefrance.tenders.memoir.MemoirStore.SectionRow;
@@ -53,34 +55,43 @@ final class MemoirWord {
 	/** The width of an A4 page within its margins. */
 	private static final int MAX_WIDTH_POINTS = 450;
 
-	private static final String[] HEADING_SIZES = { "16", "13", "12", "11", "11", "11" };
+	/** The memoir of GPE without its text: cover page, logo in the header, fonts, styles, table of contents. */
+	private static final String TEMPLATE = "/memoir/modele-gpe.docx";
+
+	/** The headings of GPE: a part, a sub-part (both numbered by Word), then a point. */
+	static final String PART = "Titre1";
+
+	static final String SUB_PART = "SST";
+
+	static final String POINT = "POINT";
+
+	/** The numbering of the sub-parts in the template, whose third level is 1.1.1. */
+	private static final BigInteger SUB_PART_NUMBERING = BigInteger.valueOf(43);
 
 	private static final String TO_WRITE = "[Partie à rédiger]";
 
 	private MemoirWord() {
 	}
 
+	/** What the cover page says of the tender; null when unknown. */
+	record Cover(String buyer, String place) {
+	}
+
 	/**
 	 * @param images the file of an image of this memoir, by its id
 	 */
-	static byte[] write(MemoirRow memoir, List<SectionRow> sections, Function<Long, Optional<Path>> images) {
-		try (XWPFDocument word = new XWPFDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-			headingStyles(word);
+	static byte[] write(MemoirRow memoir, Cover cover, List<SectionRow> sections,
+			Function<Long, Optional<Path>> images) {
+		try (InputStream template = MemoirWord.class.getResourceAsStream(TEMPLATE);
+				XWPFDocument word = new XWPFDocument(template);
+				ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			word.getProperties().getCoreProperties().setTitle(clean(memoir.title()));
-			XWPFParagraph title = word.createParagraph();
-			title.setAlignment(ParagraphAlignment.LEFT);
-			XWPFRun titleRun = title.createRun();
-			titleRun.setBold(true);
-			titleRun.setFontSize(20);
-			titleRun.setText(clean(memoir.title()));
-			if (memoir.tenderTitle() != null) {
-				word.createParagraph().createRun().setText(clean(memoir.tenderTitle()));
-			}
+			cover(word, memoir, cover);
 			for (SectionRow section : sections) {
 				if (section.proposed()) {
 					continue;
 				}
-				heading(word, section.level(), section.number() + " " + section.title());
+				heading(word, section.level(), section.title());
 				if (section.content() == null) {
 					word.createParagraph().createRun().setText(TO_WRITE);
 				}
@@ -103,31 +114,36 @@ final class MemoirWord {
 		return (name.length() <= 120 ? name : name.substring(0, 120).strip()) + ".docx";
 	}
 
-	private static void headingStyles(XWPFDocument word) {
-		XWPFStyles styles = word.createStyles();
-		for (int level = 1; level <= HEADING_SIZES.length; level++) {
-			CTStyle style = CTStyle.Factory.newInstance();
-			style.setStyleId(headingId(level));
-			style.addNewName().setVal("heading " + level);
-			style.setType(STStyleType.PARAGRAPH);
-			style.addNewBasedOn().setVal("Normal");
-			style.addNewQFormat();
-			style.addNewPPr().addNewOutlineLvl().setVal(java.math.BigInteger.valueOf(level - 1L));
-			var run = style.addNewRPr();
-			run.addNewB();
-			run.addNewSz().setVal(java.math.BigInteger.valueOf(Long.parseLong(HEADING_SIZES[level - 1]) * 2));
-			styles.addStyle(new XWPFStyle(style));
+	/** The cover of the template holds markers, in its text boxes: each becomes what is known of the tender. */
+	private static void cover(XWPFDocument word, MemoirRow memoir, Cover cover) {
+		String lot = memoir.lotNumber() == null || memoir.lotNumber().isBlank() ? ""
+				: "LOT N°" + memoir.lotNumber().strip() + " ";
+		Map<String, String> values = Map.of("{{LOT}}", lot, "{{LOT_TITLE}}", memoir.title(), "{{OBJECT}}",
+				Objects.requireNonNullElse(memoir.tenderTitle(), ""), "{{BUYER}}",
+				Objects.requireNonNullElse(cover.buyer(), ""), "{{PLACE_LABEL}}", cover.place() == null ? "" : "Lieu : ",
+				"{{PLACE}}", Objects.requireNonNullElse(cover.place(), ""));
+		List<XmlObject> parts = new ArrayList<>(List.of(word.getDocument()));
+		word.getFooterList().forEach((footer) -> parts.add(footer._getHdrFtr()));
+		for (XmlObject part : parts) {
+			try (XmlCursor cursor = part.newCursor()) {
+				cursor.selectPath("declare namespace w='http://schemas.openxmlformats.org/wordprocessingml/2006/main' .//w:t");
+				while (cursor.toNextSelection()) {
+					String value = values.get(cursor.getTextValue());
+					if (value != null) {
+						cursor.setTextValue(clean(value));
+					}
+				}
+			}
 		}
-	}
-
-	private static String headingId(int level) {
-		return "Heading" + level;
 	}
 
 	private static void heading(XWPFDocument word, int level, String text) {
 		XWPFParagraph paragraph = word.createParagraph();
-		paragraph.setStyle(headingId(Math.min(Math.max(level, 1), HEADING_SIZES.length)));
-		paragraph.setSpacingBefore(240);
+		paragraph.setStyle(level <= 1 ? PART : level <= 3 ? SUB_PART : POINT);
+		if (level == 3) {
+			paragraph.setNumID(SUB_PART_NUMBERING);
+			paragraph.setNumILvl(BigInteger.TWO);
+		}
 		paragraph.setKeepNext(true);
 		paragraph.createRun().setText(clean(text));
 	}
@@ -167,6 +183,7 @@ final class MemoirWord {
 		int number = 1;
 		for (Element item : list.children()) {
 			XWPFParagraph paragraph = word.createParagraph();
+			paragraph.setStyle("Paragraphedeliste");
 			paragraph.setIndentationLeft(400);
 			paragraph.setIndentationHanging(250);
 			paragraph.createRun().setText(numbered ? number++ + ". " : "• ");

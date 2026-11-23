@@ -26,8 +26,10 @@ import eu.gpefrance.tenders.memoir.MemoirStore.SectionRow;
  */
 class MemoirWordTests {
 
-	private static final MemoirRow MEMOIR = new MemoirRow(1L, 2L, "Toiture", null, "Mémoire / toiture", MemoirStatus.WRITING,
+	private static final MemoirRow MEMOIR = new MemoirRow(1L, 2L, "Toiture", "16", "Mémoire / toiture", MemoirStatus.WRITING,
 			null, null, null, Instant.EPOCH, null, Instant.EPOCH, 3, 1);
+
+	private static final MemoirWord.Cover COVER = new MemoirWord.Cover("Mairie d'Eyragues", "Eyragues (13)");
 
 	private static SectionRow section(int level, String number, String title, boolean proposed, String content) {
 		return new SectionRow(1L, 1L, null, 1, level, number, title, null, proposed, content, "MANUAL", null, null,
@@ -35,7 +37,7 @@ class MemoirWordTests {
 	}
 
 	private static XWPFDocument word(List<SectionRow> sections) throws IOException {
-		return new XWPFDocument(new ByteArrayInputStream(MemoirWord.write(MEMOIR, sections, id -> Optional.empty())));
+		return new XWPFDocument(new ByteArrayInputStream(MemoirWord.write(MEMOIR, COVER, sections, id -> Optional.empty())));
 	}
 
 	private static List<String> texts(XWPFDocument word) {
@@ -46,15 +48,16 @@ class MemoirWordTests {
 	void writesTheHeadingsOfTheOutlineAndSaysWhatIsToWrite() throws IOException {
 		try (XWPFDocument word = word(List.of(section(1, "1", "Présentation", false, "<p>Notre société.</p>"),
 				section(2, "1.1", "Moyens", false, null), section(1, "2", "Proposée par l'IA", true, "<p>Secret</p>")))) {
-			assertThat(texts(word)).containsSubsequence("Mémoire / toiture", "Toiture", "1 Présentation", "Notre société.",
-					"1.1 Moyens", "[Partie à rédiger]");
+			assertThat(texts(word)).containsSubsequence("Présentation", "Notre société.", "Moyens", "[Partie à rédiger]");
 			assertThat(texts(word)).noneMatch((text) -> text.contains("Proposée par l'IA") || text.contains("Secret"));
 			XWPFParagraph heading = word.getParagraphs().stream()
-				.filter((paragraph) -> paragraph.getText().equals("1.1 Moyens"))
+				.filter((paragraph) -> paragraph.getText().equals("Moyens"))
 				.findFirst()
 				.orElseThrow();
-			assertThat(heading.getStyle()).isEqualTo("Heading2");
-			assertThat(word.getStyles().styleExist("Heading2")).isTrue();
+			assertThat(heading.getStyle()).isEqualTo(MemoirWord.SUB_PART);
+			assertThat(word.getStyles().styleExist(MemoirWord.SUB_PART)).isTrue();
+			assertThat(word.getStyles().styleExist(MemoirWord.PART)).isTrue();
+			assertThat(word.getHeaderList()).isNotEmpty();
 		}
 	}
 
@@ -73,7 +76,7 @@ class MemoirWordTests {
 				.orElseThrow();
 			assertThat(first.getRuns().stream().filter(XWPFRun::isBold).map(XWPFRun::text)).containsExactly("mot");
 			assertThat(first.getRuns().stream().filter(XWPFRun::isItalic).map(XWPFRun::text)).containsExactly("un autre");
-			assertThat(word.getTables()).singleElement().satisfies((table) -> {
+			assertThat(word.getTables()).last().satisfies((table) -> {
 				assertThat(table.getRow(0).getCell(1).getText()).isEqualTo("Durée");
 				assertThat(table.getRow(1).getCell(0).getText()).isEqualTo("Pose");
 			});
@@ -88,10 +91,10 @@ class MemoirWordTests {
 				<figure><img src="/api/memoirs/files/7" alt=""><figcaption>Le plan</figcaption></figure>
 				<figure><img src="/api/memoirs/files/8" alt=""></figure>
 				<figure class="placeholder" data-kind="photo"><figcaption>Photo du chantier</figcaption></figure>""";
-		byte[] content = MemoirWord.write(MEMOIR, List.of(section(1, "1", "Plans", false, html)),
+		byte[] content = MemoirWord.write(MEMOIR, COVER, List.of(section(1, "1", "Plans", false, html)),
 				(id) -> id == 7L ? Optional.of(png) : Optional.empty());
 		try (XWPFDocument word = new XWPFDocument(new ByteArrayInputStream(content))) {
-			assertThat(word.getAllPictures()).hasSize(1);
+			assertThat(word.getAllPictures()).hasSize(templatePictures() + 1);
 			assertThat(texts(word)).contains("Le plan", "[Image introuvable : à ajouter]",
 					"[Image à ajouter : Photo du chantier]");
 			// Within the width of the page.
@@ -108,9 +111,26 @@ class MemoirWordTests {
 	@Test
 	void refusesNothingAPastedTextMayHoldAndNamesTheFile() throws IOException {
 		try (XWPFDocument word = word(List.of(section(1, "1", "Titre\u0007", false, "<p>Avec\u0001 un caractère</p>")))) {
-			assertThat(texts(word)).contains("1 Titre", "Avec un caractère");
+			assertThat(texts(word)).contains("Titre", "Avec un caractère");
 		}
 		assertThat(MemoirWord.fileName(MEMOIR)).isEqualTo("Mémoire _ toiture.docx");
+	}
+
+	@Test
+	void startsFromTheMemoirOfGpeAndFillsItsCover() throws IOException {
+		try (XWPFDocument word = word(List.of())) {
+			String xml = word.getDocument().xmlText();
+			assertThat(xml).contains("LOT N°16 ", "Mémoire / toiture", "Toiture", "Mairie d'Eyragues", "Lieu : ", "Eyragues (13)")
+				.doesNotContain("{{");
+			assertThat(word.getFooterList()).allSatisfy((footer) -> assertThat(footer.getText()).doesNotContain("{{", "Mionnay"));
+			assertThat(word.getFooterList().getFirst().getText()).contains("Toiture");
+		}
+	}
+
+	private static int templatePictures() throws IOException {
+		try (XWPFDocument word = word(List.of())) {
+			return word.getAllPictures().size();
+		}
 	}
 
 }

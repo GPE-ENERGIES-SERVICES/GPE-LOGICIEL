@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -36,18 +37,30 @@ public class MemoirService {
 	private static final Logger log = LoggerFactory.getLogger(MemoirService.class);
 
 	/**
-	 * The outline usual in a technical memoir of works, when no analysis is
-	 * made: a starting point, changed by the user.
+	 * The outline of the memoirs of GPE, as its template memoir has it, when no
+	 * analysis is made: a part with its sub-parts, a starting point changed by
+	 * the user.
 	 */
-	private static final List<String[]> TEMPLATE = List.of(
-			new String[] { "Présentation de l'entreprise", "Identité, activités, certifications et qualifications utiles au marché." },
-			new String[] { "Compréhension du marché et des enjeux", "Lecture du besoin de l'acheteur, contraintes du site, points sensibles." },
-			new String[] { "Organisation et moyens humains", "Équipe affectée au chantier, encadrement, qualifications et habilitations." },
-			new String[] { "Moyens matériels", "Véhicules, matériel et outillage mobilisés pour ce marché." },
-			new String[] { "Méthodologie d'exécution", "Phasage, modes opératoires, interfaces avec les autres lots, continuité de service." },
-			new String[] { "Planning et délais", "Durée, jalons, engagement sur les délais du DCE." },
-			new String[] { "Qualité, sécurité et environnement", "Contrôles, autocontrôles, prévention des risques, gestion des déchets." },
-			new String[] { "Références", "Chantiers comparables réalisés par l'entreprise." });
+	private static final List<Map.Entry<String[], List<String[]>>> TEMPLATE = List.of(
+			Map.entry(new String[] { "Moyens humains et matériels", "Équipe et matériel affectés à ce marché." }, List.of(
+					new String[] { "Personnel encadrant", "Interlocuteur principal, encadrement du projet, chef de chantier." },
+					new String[] { "Effectif du chantier", "Effectif affecté, qualifications et habilitations." },
+					new String[] { "Services supports", "Bureau d'études, achats, administratif." },
+					new String[] { "Approvisionnement", "Fournisseurs, délais et stockage du matériel." },
+					new String[] { "Matériel mis à disposition sur le chantier", "Matériel dédié, de sécurité et de transport." },
+					new String[] { "Matériels retenus dans le cadre de l'offre", "Tableau des références et garanties des matériels." })),
+			Map.entry(new String[] { "Organisation pour l'exécution des travaux", "Sécurité, méthode, coordination et délais." }, List.of(
+					new String[] { "Hygiène et sécurité sur le chantier et vis-à-vis des riverains",
+							"Organisation de la sécurité, riverains, reconnaissance du site, analyse des risques." },
+					new String[] { "Méthodologie d'exécution envisagée",
+							"Préparation, validation du matériel, études d'exécution, réalisation, essais et mise en service, formation." },
+					new String[] { "Coordination inter-lots", "Avec les autres lots, la maîtrise d'œuvre, le dossier ENEDIS." },
+					new String[] { "Calendrier d'exécution", "Durée des phases, présence des spécialistes, planning prévisionnel." })),
+			Map.entry(new String[] { "Approche environnementale", "Déchets, nuisances et empreinte carbone." }, List.of(
+					new String[] { "Réduction des déchets et gestion des tris", "Tri, traçabilité, sensibilisation sur le chantier." },
+					new String[] { "Maîtrise des nuisances et protection des existants", "Bruit, poussières, protection des ouvrages." },
+					new String[] { "Empreinte carbone et garantie de performance des matériels",
+							"Bilan carbone des modules, garanties de performance des modules et des onduleurs." })));
 
 	private final MemoirStore store;
 
@@ -83,7 +96,7 @@ public class MemoirService {
 	/** A memoir as a Word document, read again and finished by a user before it is sent. */
 	public Export exportWord(Long id) {
 		MemoirRow memoir = found(id);
-		byte[] content = MemoirWord.write(memoir, store.sections(id),
+		byte[] content = MemoirWord.write(memoir, cover(memoir), store.sections(id),
 				(fileId) -> store.file(fileId)
 					.filter((file) -> id.equals(file.memoirId()))
 					.map((file) -> files.resolve(file.storagePath())));
@@ -91,6 +104,13 @@ public class MemoirService {
 	}
 
 	public record Export(String fileName, byte[] content) {
+	}
+
+	private MemoirWord.Cover cover(MemoirRow memoir) {
+		return Optional.ofNullable(memoir.tenderId())
+			.flatMap(tenders::findById)
+			.map((tender) -> new MemoirWord.Cover(tender.getBuyer(), tender.getLocation()))
+			.orElse(new MemoirWord.Cover(null, null));
 	}
 
 	public List<MemoirRow> list() {
@@ -157,7 +177,10 @@ public class MemoirService {
 		if (store.sections(id).stream().anyMatch(section -> !section.proposed())) {
 			throw MemoirRuleException.conflict("Le sommaire n'est pas vide : ajoutez les parties une à une.");
 		}
-		TEMPLATE.forEach(part -> store.insertSection(id, null, part[0], part[1], false, user, clock.instant()));
+		for (Map.Entry<String[], List<String[]>> part : TEMPLATE) {
+			Long parentId = store.insertSection(id, null, part.getKey()[0], part.getKey()[1], false, user, clock.instant());
+			part.getValue().forEach((sub) -> store.insertSection(id, parentId, sub[0], sub[1], false, user, clock.instant()));
+		}
 		changed(id, user);
 		return workspace(id);
 	}

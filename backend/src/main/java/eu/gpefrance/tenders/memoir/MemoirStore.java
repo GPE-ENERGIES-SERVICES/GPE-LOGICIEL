@@ -445,6 +445,41 @@ class MemoirStore {
 				tenderId);
 	}
 
+	/** A value read by the analysis of the file (its summary sheet), where it was read. */
+	record ReadField(String key, String value, Long documentId, Integer page, String quote, boolean verified) {
+	}
+
+	/**
+	 * The values of the given fields read by the latest analysis of the file of
+	 * a tender, as corrected by a user and without those rejected; empty when
+	 * the file was not analysed.
+	 */
+	List<ReadField> analysedFields(Long tenderId, List<String> keys) {
+		if (tenderId == null) {
+			return List.of();
+		}
+		return jdbc.query("""
+				SELECT f.field_key, coalesce(f.corrected_value, f.value) AS value, f.document_id, f.page_number, f.quote, f.state
+				FROM extracted_field f
+				WHERE f.analysis_id = (SELECT max(a.id) FROM analysis a JOIN dossier d ON d.id = a.dossier_id
+				                       WHERE d.tender_id = ? AND a.kind = 'DCE_SUMMARY' AND a.status = 'DONE')
+				  AND f.field_key = ANY (CAST(? AS text[])) AND coalesce(f.corrected_value, f.value) IS NOT NULL
+				  AND coalesce(f.decision, '') <> 'REJECTED'
+				ORDER BY array_position(CAST(? AS text[]), CAST(f.field_key AS text)), f.id""",
+				(row, n) -> new ReadField(row.getString("field_key"), row.getString("value"),
+						(Long) row.getObject("document_id"), (Integer) row.getObject("page_number"), row.getString("quote"),
+						"VERIFIED".equals(row.getString("state"))),
+				tenderId, keys.toArray(String[]::new), keys.toArray(String[]::new));
+	}
+
+	/** Whether the file of a tender has a finished analysis. */
+	boolean analysed(Long tenderId) {
+		return tenderId != null && Boolean.TRUE.equals(jdbc.queryForObject("""
+				SELECT EXISTS (SELECT 1 FROM analysis a JOIN dossier d ON d.id = a.dossier_id
+				               WHERE d.tender_id = ? AND a.kind = 'DCE_SUMMARY' AND a.status = 'DONE')""", Boolean.class,
+				tenderId));
+	}
+
 	/** The words that tell each use of the energy in a memoir, without accents. */
 	private static final Map<String, String> VALORISATION_WORDS = Map.of("SELF_TOTAL", "autoconsommation totale",
 			"SELF_SURPLUS", "revente du surplus", "RESALE_TOTAL", "revente totale");
