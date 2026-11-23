@@ -1,6 +1,7 @@
 package eu.gpefrance.tenders.estimate;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -84,6 +85,37 @@ public class EstimateItem {
 	@Column(name = "to_check", nullable = false)
 	private boolean toCheck;
 
+	// The technical solution decided in the technical choices: see TechnicalSolution.
+	@Column(name = "tech_type")
+	private String techType;
+
+	@Column(name = "tech_characteristics")
+	private String techCharacteristics;
+
+	@Column(name = "tech_method")
+	private String techMethod;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "tech_status")
+	private TechnicalSolution.Status techStatus;
+
+	/** The facts read in the documents, as JSON. */
+	@Column(name = "tech_facts")
+	private String techFacts;
+
+	/** What is missing or to confirm, one per line. */
+	@Column(name = "tech_missing")
+	private String techMissing;
+
+	@Column(name = "tech_origin")
+	private String techOrigin;
+
+	@Column(name = "tech_validated_by")
+	private String techValidatedBy;
+
+	@Column(name = "tech_validated_at")
+	private Instant techValidatedAt;
+
 	@OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("position")
 	@BatchSize(size = 50)
@@ -108,7 +140,84 @@ public class EstimateItem {
 	EstimateItem copy() {
 		EstimateItem copy = new EstimateItem(request(), sourceDocumentId, sourceSheet, sourceRow);
 		components.forEach(component -> copy.add(component.copy()));
+		copy.techType = techType;
+		copy.techCharacteristics = techCharacteristics;
+		copy.techMethod = techMethod;
+		copy.techStatus = techStatus;
+		copy.techFacts = techFacts;
+		copy.techMissing = techMissing;
+		copy.techOrigin = techOrigin;
+		copy.techValidatedBy = techValidatedBy;
+		copy.techValidatedAt = techValidatedAt;
 		return copy;
+	}
+
+	private static final tools.jackson.databind.json.JsonMapper JSON = tools.jackson.databind.json.JsonMapper.builder()
+		.build();
+
+	/** The technical solution, read back. */
+	TechnicalSolution technical() {
+		List<TechnicalSolution.Fact> facts = techFacts == null ? List.of()
+				: List.of(JSON.readValue(techFacts, TechnicalSolution.Fact[].class));
+		List<String> missing = techMissing == null ? List.of() : List.of(techMissing.split("\n"));
+		return new TechnicalSolution(techType, techCharacteristics, techMethod, techStatus, facts, missing, techOrigin,
+				techValidatedBy, techValidatedAt);
+	}
+
+	/** Written by a user: the facts read in the documents stay, the validation is taken back. */
+	void writeTechnical(TechnicalSolution.Request request) {
+		this.techType = cut(request.type(), 300);
+		this.techCharacteristics = cut(request.characteristics(), 8000);
+		this.techMethod = cut(request.method(), 8000);
+		this.techStatus = request.status();
+		this.techMissing = lines(request.missing());
+		this.techOrigin = "USER";
+		this.techValidatedBy = null;
+		this.techValidatedAt = null;
+	}
+
+	/** Proposed by the AI: never over what a user wrote or validated. */
+	boolean proposeTechnical(TechnicalSolution solution) {
+		if ("USER".equals(techOrigin) || techValidatedAt != null) {
+			return false;
+		}
+		this.techType = cut(solution.type(), 300);
+		this.techCharacteristics = cut(solution.characteristics(), 8000);
+		this.techMethod = cut(solution.method(), 8000);
+		this.techStatus = solution.status();
+		this.techFacts = solution.facts().isEmpty() ? null : JSON.writeValueAsString(solution.facts());
+		this.techMissing = lines(solution.missing());
+		this.techOrigin = "AI";
+		return true;
+	}
+
+	void validateTechnical(String user, Instant now) {
+		this.techValidatedBy = user;
+		this.techValidatedAt = now;
+	}
+
+	/** Whether a user validated the solution, or wrote it. */
+	boolean technicalDecided() {
+		return techValidatedAt != null || "USER".equals(techOrigin);
+	}
+
+	private static String cut(String text, int length) {
+		if (text == null || text.isBlank()) {
+			return null;
+		}
+		String stripped = text.strip();
+		return stripped.length() <= length ? stripped : stripped.substring(0, length);
+	}
+
+	private static String lines(List<String> lines) {
+		if (lines == null) {
+			return null;
+		}
+		String joined = String.join("\n", lines.stream()
+			.filter(line -> line != null && !line.isBlank())
+			.map(line -> line.strip().replace('\n', ' '))
+			.toList());
+		return joined.isEmpty() ? null : joined;
 	}
 
 	ItemRequest request() {

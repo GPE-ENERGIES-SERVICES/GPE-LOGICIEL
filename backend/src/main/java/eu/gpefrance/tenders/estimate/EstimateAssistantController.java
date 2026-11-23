@@ -23,7 +23,11 @@ public class EstimateAssistantController {
 
 	private final LibraryPriceService libraryPrices;
 
-	public EstimateAssistantController(EstimateAssistant assistant, LibraryPriceService libraryPrices) {
+	private final TechnicalProposals technical;
+
+	public EstimateAssistantController(EstimateAssistant assistant, LibraryPriceService libraryPrices,
+			TechnicalProposals technical) {
+		this.technical = technical;
 		this.assistant = assistant;
 		this.libraryPrices = libraryPrices;
 	}
@@ -60,6 +64,13 @@ public class EstimateAssistantController {
 	public List<EstimateSuggestion.Response> suggestSupplies(@PathVariable Long itemId,
 			@AuthenticationPrincipal AppUserPrincipal user) {
 		return assistant.suggestSupplies(itemId, user.displayName());
+	}
+
+	/** The technical solution of each item not decided by a user, proposed by the AI (technical choices). */
+	@PostMapping("/api/estimates/{id}/technical-proposals")
+	public TechnicalProposals.Proposed technicalProposals(@PathVariable Long id,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return technical.propose(id, user.displayName());
 	}
 
 	/** A first estimate of the items still without cost: supplies and labour proposed, each to accept. */

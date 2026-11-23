@@ -62,7 +62,8 @@ class EstimateAssistantTests {
 
 	@BeforeEach
 	void prepare() {
-		jdbc.execute("TRUNCATE ai_call, supplier, estimate, lot, tender, price_library_import RESTART IDENTITY CASCADE");
+		jdbc.execute("TRUNCATE ai_call, supplier, estimate, document_page, document, dossier, lot, tender, price_library_import "
+				+ "RESTART IDENTITY CASCADE");
 		jdbc.update("UPDATE pricing_coefficient SET coefficient = 1.0000");
 		jdbc.update("UPDATE pricing_settings SET price_index_rate = 0.03");
 		jdbc.update("INSERT INTO supplier (code, name, created_at) VALUES ('REXEL', 'Rexel', now())");
@@ -90,6 +91,19 @@ class EstimateAssistantTests {
 						                   {"code_taux": "ROBOT", "heures_par_unite": 1, "explication": "Taux inventé."}],
 						   "a_verifier": "Boîte d'encastrement à prévoir."},
 						  {"item_id": 9, "fournitures": [], "main_oeuvre": [], "a_verifier": "Poste inventé."}]}""", 1500, 300);
+			}
+			if (request.analysisType().equals(TechnicalProposals.KIND)) {
+				return new ModelAnswer("""
+						{"prestations": [{"item_id": 1, "type": "Prise 2P+T 16 A Mosaic", "caracteristiques": "16 A, encastrée",
+						   "methode": "Pose en boîte d'encastrement.", "statut": "COMPLETE",
+						   "faits": [{"texte": "Prises 16 A encastrées", "document_id": 1, "page": 1,
+						              "citation": "prises de courant 16 A seront encastrées"},
+						             {"texte": "Couleur blanche", "document_id": 1, "page": 1, "citation": "texte absent"}],
+						   "manquant": []},
+						  {"item_id": 2, "type": "Écrasé ?", "caracteristiques": "", "methode": "", "statut": "INSUFFICIENT",
+						   "faits": [], "manquant": []},
+						  {"item_id": 9, "type": "Inventé", "caracteristiques": "", "methode": "", "statut": "COMPLETE",
+						   "faits": [], "manquant": []}]}""", 1200, 400);
 			}
 			if (request.analysisType().equals("ESTIMATE_PRICE")) {
 				return new ModelAnswer("""
@@ -210,6 +224,49 @@ class EstimateAssistantTests {
 		assertThat(mvc.get().uri("/api/estimate-assistant").with(TestUsers.user())).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("{\"available\": true}");
+	}
+
+	@Test
+	void proposesTheTechnicalSolutionOfEachItemWithItsSourcesAndKeepsWhatAUserDecided() {
+		jdbc.update("INSERT INTO dossier (tender_id, version, status, uploaded_at) VALUES (1, 1, 'DONE', now())");
+		jdbc.update("""
+				INSERT INTO document (dossier_id, file_name, storage_path, size_bytes, sha256, piece_type, state, page_count)
+				VALUES (1, 'CCTP.pdf', 'x/CCTP.pdf', 1, 'x', 'CCTP', 'READ', 1),
+				       (1, 'DPGF.xlsx', 'x/DPGF.xlsx', 1, 'y', 'DPGF', 'READ', 1)""");
+		jdbc.update("""
+				INSERT INTO document_page (document_id, page_number, text, method) VALUES
+				(1, 1, 'Article 4 - Les prises de courant 16 A seront encastrées.', 'NATIVE'),
+				(2, 1, 'Tableau des prix', 'NATIVE')""");
+		send("/api/estimates/1/items", "{\"designation\": \"Câble AC\", \"unit\": \"ml\", \"quantity\": 50, \"priceMode\": \"COMPOSED\"}");
+		// Written by the estimator: the AI never changes it.
+		assertThat(mvc.put().uri("/api/estimate-items/2/technical").with(csrf()).with(TestUsers.user())
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"type\": \"Câble U1000 R2V 5G16\", \"status\": \"TO_CONFIRM\", \"missing\": [\"Longueur à confirmer\"]}"))
+			.hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("{\"items\": [{\"id\": 1}, {\"id\": 2, \"technical\": {\"type\": \"Câble U1000 R2V 5G16\", "
+					+ "\"origin\": \"USER\", \"missing\": [\"Longueur à confirmer\"]}}]}");
+
+		assertThat(post("/api/estimates/1/technical-proposals")).hasStatusOk()
+			.bodyJson()
+			.isLenientlyEqualTo("""
+					{"proposed": 1, "estimate": {"items": [
+					  {"id": 1, "technical": {"type": "Prise 2P+T 16 A Mosaic", "origin": "AI", "status": "TO_CONFIRM",
+					   "facts": [{"text": "Prises 16 A encastrées", "fileName": "CCTP.pdf", "page": 1}],
+					   "missing": ["À confirmer : Couleur blanche"]}},
+					  {"id": 2, "technical": {"type": "Câble U1000 R2V 5G16", "origin": "USER"}}]}}""");
+		// The specifications are read, never the price schedule whose lines are the items.
+		assertThat(sent.getLast().documents()).contains("CCTP.pdf", "Prise de courant 2P+T").doesNotContain("Tableau des prix");
+
+		assertThat(post("/api/estimate-items/1/technical/validation")).hasStatusOk()
+			.bodyJson()
+			.extractingPath("$.items[0].technical.validatedBy")
+			.isNotNull();
+		assertThat(post("/api/estimates/1/technical-proposals")).hasStatus(HttpStatus.BAD_REQUEST);
+
+		// The resources proposed next follow the solution retained.
+		post("/api/estimates/1/ai-draft").exchange();
+		assertThat(sent.getLast().documents()).contains("solution_technique", "Prise 2P+T 16 A Mosaic");
 	}
 
 	private MockMvcTester.MockMvcRequestBuilder post(String uri) {

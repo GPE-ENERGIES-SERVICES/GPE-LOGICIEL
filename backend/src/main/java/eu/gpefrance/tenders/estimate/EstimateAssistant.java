@@ -205,6 +205,16 @@ public class EstimateAssistant {
 				.put("designation", item.getDesignation())
 				.put("unite", item.getUnit())
 				.put("quantite", item.getQuantity());
+			// The solution decided in the technical choices: the resources follow it.
+			TechnicalSolution solution = item.technical();
+			if (solution.type() != null) {
+				ObjectNode chosen = node.putObject("solution_technique");
+				chosen.put("type", solution.type());
+				chosen.put("caracteristiques", solution.characteristics());
+				chosen.put("methode", solution.method());
+				chosen.put("validee", solution.validatedAt() != null);
+				solution.missing().forEach(line -> chosen.withArray("a_confirmer").add(line));
+			}
 			Set<Long> ids = new HashSet<>(equipmentOffers.keySet());
 			candidates(item.getDesignation()).stream().limit(DRAFT_CANDIDATES).forEach(offer -> {
 				node.withArray("offres").add(offerNode(offer));
@@ -278,6 +288,8 @@ public class EstimateAssistant {
 		return """
 				Tu es un chiffreur expérimenté d'une entreprise d'électricité et de photovoltaïque (GPE). Tu prépares le
 				déboursé des postes d'un chiffrage de marché public. Pour CHAQUE poste reçu :
+				- « solution_technique », quand le poste en a une, est la solution retenue par le chiffreur (validée ou non) :
+				  fournitures et main-d'œuvre la suivent ; ses points « a_confirmer » restent des hypothèses à signaler.
 				- « fournitures » : les offres à acheter, choisies UNIQUEMENT parmi « offres » du poste ou
 				  « offres_du_materiel_retenu » (par leur offer_id), avec la quantité par unité du poste (pour un poste
 				  à l'unité de module : 1 module par u ; pour un poste au forfait ou à l'ensemble : la quantité totale).

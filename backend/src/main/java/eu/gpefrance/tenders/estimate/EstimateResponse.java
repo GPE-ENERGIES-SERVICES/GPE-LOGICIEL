@@ -27,7 +27,7 @@ public record EstimateResponse(Long id, Long tenderId, String lotNumber, int ver
 	public record Item(Long id, int position, String chapter, String reference, String designation, String unit,
 			BigDecimal quantity, PriceMode priceMode, BigDecimal fixedUnitPrice, String textPrice, boolean option,
 			BigDecimal unitCost, BigDecimal unitPrice, BigDecimal amount, Long sourceDocumentId, String sourceSheet,
-			Integer sourceRow, boolean toCheck, List<Component> components) {
+			Integer sourceRow, boolean toCheck, List<Component> components, TechnicalSolution technical) {
 
 		static Item from(EstimateItem item) {
 			return new Item(item.getId(), item.getPosition(), item.getChapter(), item.getReference(),
@@ -35,7 +35,7 @@ public record EstimateResponse(Long id, Long tenderId, String lotNumber, int ver
 					item.getFixedUnitPrice(), item.getTextPrice(), item.isOption(), item.getUnitCost(),
 					item.getUnitPrice(), item.getAmount(), item.getSourceDocumentId(), item.getSourceSheet(),
 					item.getSourceRow(), item.isToCheck(),
-					item.getComponents().stream().map(Component::from).toList());
+					item.getComponents().stream().map(Component::from).toList(), item.technical());
 		}
 
 	}

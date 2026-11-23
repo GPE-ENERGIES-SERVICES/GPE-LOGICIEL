@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { EquipmentSection } from "@/components/EquipmentSection";
+import { TechnicalItems } from "@/components/estimate/TechnicalItems";
 import { formatDateTime } from "@/lib/format";
 import { refreshData, useLoader } from "@/lib/useLoader";
 import {
@@ -779,6 +780,10 @@ export function TechnicalSection({ tenderId }: { tenderId: number }) {
       {notice && <p className="banner info">{notice}</p>}
       {error && <p className="banner error">{error}</p>}
 
+      <h3>Prestations du DPGF</h3>
+      <TechnicalItems tenderId={tenderId} />
+
+      <h3>Choix communs à toute l&apos;affaire</h3>
       <EquipmentSection
         tenderId={tenderId}
         details={{

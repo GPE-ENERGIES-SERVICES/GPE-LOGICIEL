@@ -278,6 +278,24 @@ public class EstimateService {
 		return change(estimateOfItem(itemId), user, estimate -> item(estimate, itemId).change(request));
 	}
 
+	/** The technical solution of an item, written by a user: its validation is taken back. */
+	@Transactional
+	public EstimateResponse writeTechnical(Long itemId, TechnicalSolution.Request request, String user) {
+		return change(estimateOfItem(itemId), user, estimate -> item(estimate, itemId).writeTechnical(request));
+	}
+
+	/** The solution of an item validated by a user: the AI no longer changes it. */
+	@Transactional
+	public EstimateResponse validateTechnical(Long itemId, String user) {
+		return change(estimateOfItem(itemId), user, estimate -> {
+			EstimateItem item = item(estimate, itemId);
+			if (item.technical().type() == null) {
+				throw EstimateRuleException.invalid("Décrivez d'abord la solution retenue pour ce poste.");
+			}
+			item.validateTechnical(user, clock.instant());
+		});
+	}
+
 	@Transactional
 	public EstimateResponse deleteItem(Long itemId, String user) {
 		return change(estimateOfItem(itemId), user, estimate -> estimate.remove(item(estimate, itemId)));

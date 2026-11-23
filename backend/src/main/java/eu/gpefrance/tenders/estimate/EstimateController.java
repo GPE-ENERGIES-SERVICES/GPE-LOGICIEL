@@ -121,6 +121,18 @@ public class EstimateController {
 		return service.updateItem(itemId, request, user.displayName());
 	}
 
+	/** The technical solution of an item (technical choices), written by a user. */
+	@PutMapping("/api/estimate-items/{itemId}/technical")
+	public EstimateResponse writeTechnical(@PathVariable Long itemId, @RequestBody TechnicalSolution.Request request,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return service.writeTechnical(itemId, request, user.displayName());
+	}
+
+	@PostMapping("/api/estimate-items/{itemId}/technical/validation")
+	public EstimateResponse validateTechnical(@PathVariable Long itemId, @AuthenticationPrincipal AppUserPrincipal user) {
+		return service.validateTechnical(itemId, user.displayName());
+	}
+
 	@DeleteMapping("/api/estimate-items/{itemId}")
 	public EstimateResponse deleteItem(@PathVariable Long itemId, @AuthenticationPrincipal AppUserPrincipal user) {
 		return service.deleteItem(itemId, user.displayName());

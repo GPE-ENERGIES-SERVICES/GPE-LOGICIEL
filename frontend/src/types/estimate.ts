@@ -57,6 +57,33 @@ export type EstimateItem = {
   sourceRow: number | null;
   toCheck: boolean;
   components: EstimateComponent[];
+  /** The solution decided in the technical choices; its resources are the components. */
+  technical: TechnicalSolution;
+};
+
+export type TechnicalStatus = "COMPLETE" | "TO_CONFIRM" | "INSUFFICIENT";
+
+/** What a document says of an item, with the words found on its page. */
+export type TechnicalFact = {
+  text: string;
+  documentId: number | null;
+  fileName: string | null;
+  page: number | null;
+  quote: string | null;
+};
+
+export type TechnicalSolution = {
+  type: string | null;
+  characteristics: string | null;
+  method: string | null;
+  status: TechnicalStatus | null;
+  facts: TechnicalFact[];
+  /** What is missing, and each supposition to confirm. */
+  missing: string[];
+  /** AI while a user did not change it. */
+  origin: "AI" | "USER" | null;
+  validatedBy: string | null;
+  validatedAt: string | null;
 };
 
 /** Every figure is computed by the backend; the screens compute none. */
@@ -88,7 +115,16 @@ export type Estimate = {
 
 export type EstimateSummary = Pick<
   Estimate,
-  "id" | "lotNumber" | "version" | "status" | "label" | "totalHt" | "totalTtc" | "incompleteItems" | "updatedBy" | "updatedAt"
+  | "id"
+  | "lotNumber"
+  | "version"
+  | "status"
+  | "label"
+  | "totalHt"
+  | "totalTtc"
+  | "incompleteItems"
+  | "updatedBy"
+  | "updatedAt"
 >;
 
 export type EstimateInput = {
@@ -129,7 +165,15 @@ export type ComponentInput = {
 
 export type EstimateEvent = {
   id: number;
-  kind: "CREATED" | "NEW_VERSION" | "IMPORTED" | "RATES_COPIED" | "SUPPLIER_PRICES_COPIED" | "VALIDATED" | "SUPERSEDED" | "SUGGESTION_ACCEPTED";
+  kind:
+    | "CREATED"
+    | "NEW_VERSION"
+    | "IMPORTED"
+    | "RATES_COPIED"
+    | "SUPPLIER_PRICES_COPIED"
+    | "VALIDATED"
+    | "SUPERSEDED"
+    | "SUGGESTION_ACCEPTED";
   detail: string | null;
   createdBy: string | null;
   createdAt: string;
@@ -163,7 +207,10 @@ export type PricingRate = {
   updatedAt: string;
 };
 
-export type RateInput = Pick<PricingRate, "code" | "label" | "type" | "unit" | "cost" | "active">;
+export type RateInput = Pick<
+  PricingRate,
+  "code" | "label" | "type" | "unit" | "cost" | "active"
+>;
 
 export type Supplier = {
   id: number;
@@ -198,7 +245,12 @@ export type SupplierOffer = {
   priceSource: string;
 };
 
-export type SupplierOfferPage = { content: SupplierOffer[]; total: number; page: number; size: number };
+export type SupplierOfferPage = {
+  content: SupplierOffer[];
+  total: number;
+  page: number;
+  size: number;
+};
 
 /** @property discountRate share deducted, 0.35 for 35 % */
 export type ManualOffer = {
@@ -264,7 +316,10 @@ export type PriceUpdate = {
   finishedAt: string | null;
 };
 
-export type OfferAvailability = { offerId: number; availability: Availability | null };
+export type OfferAvailability = {
+  offerId: number;
+  availability: Availability | null;
+};
 
 /** A cost of a draft against the price of its offer read from the supplier. */
 export type SupplierPriceLine = {
@@ -312,4 +367,8 @@ export type Suggestion = {
 export type AssistantAvailability = { available: boolean; message: string };
 
 /** An estimate of any tender, in the list of all estimates. */
-export type ListedEstimate = { tenderId: number; tenderTitle: string | null; estimate: EstimateSummary };
+export type ListedEstimate = {
+  tenderId: number;
+  tenderTitle: string | null;
+  estimate: EstimateSummary;
+};

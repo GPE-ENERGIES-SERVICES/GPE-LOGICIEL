@@ -88,7 +88,13 @@ export function EstimateEditor({ id }: { id: number }) {
     "ESTIMATE_DRAFT",
     "L'IA chiffre les postes sans coût…",
   );
-  const estimate = saved && saved.id === id ? saved : loaded.data;
+  // The latest of what this screen saved and what was reloaded (a change made in the technical choices).
+  const estimate =
+    saved &&
+    saved.id === id &&
+    (!loaded.data || saved.updatedAt >= loaded.data.updatedAt)
+      ? saved
+      : loaded.data;
 
   if (loaded.error) {
     return <p className="banner error">{loaded.error}</p>;
@@ -851,7 +857,7 @@ function FilledSchedule({
 }
 
 /** The price schedules of the DCE of the tender, the DPGF, BPU and DQE first. */
-function ImportForm({
+export function ImportForm({
   estimate,
   onImported,
 }: {

@@ -4548,3 +4548,68 @@ select.status-dismissed {
 .memoir-toc-number {
   min-width: 2.6rem;
 }
+
+/* The lines of the price schedule studied in the technical choices: the list, then the line chosen. */
+.tech-items {
+  display: grid;
+  grid-template-columns: minmax(14rem, 22rem) 1fr;
+  gap: 1.25rem;
+  align-items: start;
+  margin: 1rem 0 2rem;
+}
+
+.tech-items-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  border: 1px solid var(--border, #dfe3ea);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.tech-items-list button {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--border, #dfe3ea);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-weight: normal;
+}
+
+.tech-items-list button[aria-current="true"] {
+  background: var(--accent-soft, #e8f0fb);
+  box-shadow: inset 3px 0 0 var(--accent, #1f4e79);
+}
+
+.tech-item-name {
+  font-size: 0.9rem;
+}
+
+.tech-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--muted, #5b6474);
+}
+
+.tech-item-detail h3 {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .tech-items {
+    grid-template-columns: 1fr;
+  }
+
+  .tech-items-list {
+    max-height: 18rem;
+  }
+}

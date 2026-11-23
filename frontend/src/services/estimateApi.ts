@@ -38,15 +38,24 @@ export function getEstimates(tenderId: number): Promise<EstimateSummary[]> {
   return api(`/api/tenders/${tenderId}/estimates`);
 }
 
-export function createEstimate(tenderId: number, input: EstimateInput): Promise<Estimate> {
-  return api(`/api/tenders/${tenderId}/estimates`, { method: "POST", body: input });
+export function createEstimate(
+  tenderId: number,
+  input: EstimateInput,
+): Promise<Estimate> {
+  return api(`/api/tenders/${tenderId}/estimates`, {
+    method: "POST",
+    body: input,
+  });
 }
 
 export function getEstimate(id: number): Promise<Estimate> {
   return api(`/api/estimates/${id}`);
 }
 
-export function updateEstimate(id: number, input: EstimateInput): Promise<Estimate> {
+export function updateEstimate(
+  id: number,
+  input: EstimateInput,
+): Promise<Estimate> {
   return api(`/api/estimates/${id}`, { method: "PUT", body: input });
 }
 
@@ -70,8 +79,14 @@ export function getEstimateEvents(id: number): Promise<EstimateEvent[]> {
   return api(`/api/estimates/${id}/events`);
 }
 
-export function importPriceSchedule(id: number, documentId: number): Promise<Estimate> {
-  return api(`/api/estimates/${id}/imports`, { method: "POST", body: { documentId } });
+export function importPriceSchedule(
+  id: number,
+  documentId: number,
+): Promise<Estimate> {
+  return api(`/api/estimates/${id}/imports`, {
+    method: "POST",
+    body: { documentId },
+  });
 }
 
 /** The spreadsheet of the estimate, downloaded by the browser. */
@@ -79,13 +94,25 @@ export function estimateExportUrl(id: number): string {
   return `/api/estimates/${id}/export`;
 }
 
-export function addItem(estimateId: number, item: ItemInput): Promise<Estimate> {
-  return api(`/api/estimates/${estimateId}/items`, { method: "POST", body: item });
+export function addItem(
+  estimateId: number,
+  item: ItemInput,
+): Promise<Estimate> {
+  return api(`/api/estimates/${estimateId}/items`, {
+    method: "POST",
+    body: item,
+  });
 }
 
 /** Several lines at once (pasted from a spreadsheet): changed when they have an id, added otherwise. */
-export function saveItems(estimateId: number, rows: { id: number | null; item: ItemInput }[]): Promise<Estimate> {
-  return api(`/api/estimates/${estimateId}/items/batch`, { method: "POST", body: { rows } });
+export function saveItems(
+  estimateId: number,
+  rows: { id: number | null; item: ItemInput }[],
+): Promise<Estimate> {
+  return api(`/api/estimates/${estimateId}/items/batch`, {
+    method: "POST",
+    body: { rows },
+  });
 }
 
 export function updateItem(itemId: number, item: ItemInput): Promise<Estimate> {
@@ -96,16 +123,34 @@ export function deleteItem(itemId: number): Promise<Estimate> {
   return api(`/api/estimate-items/${itemId}`, { method: "DELETE" });
 }
 
-export function reorderItems(estimateId: number, itemIds: number[]): Promise<Estimate> {
-  return api(`/api/estimates/${estimateId}/items/order`, { method: "PUT", body: { itemIds } });
+export function reorderItems(
+  estimateId: number,
+  itemIds: number[],
+): Promise<Estimate> {
+  return api(`/api/estimates/${estimateId}/items/order`, {
+    method: "PUT",
+    body: { itemIds },
+  });
 }
 
-export function addComponent(itemId: number, component: ComponentInput): Promise<Estimate> {
-  return api(`/api/estimate-items/${itemId}/components`, { method: "POST", body: component });
+export function addComponent(
+  itemId: number,
+  component: ComponentInput,
+): Promise<Estimate> {
+  return api(`/api/estimate-items/${itemId}/components`, {
+    method: "POST",
+    body: component,
+  });
 }
 
-export function updateComponent(componentId: number, component: ComponentInput): Promise<Estimate> {
-  return api(`/api/estimate-components/${componentId}`, { method: "PUT", body: component });
+export function updateComponent(
+  componentId: number,
+  component: ComponentInput,
+): Promise<Estimate> {
+  return api(`/api/estimate-components/${componentId}`, {
+    method: "PUT",
+    body: component,
+  });
 }
 
 export function deleteComponent(componentId: number): Promise<Estimate> {
@@ -119,7 +164,8 @@ export function getPricingSettings(): Promise<PricingSettings> {
 }
 
 export function updatePricingSettings(
-  input: Pick<EstimateInput, "vatRate" | "coefficients"> & FeeRates & { priceIndexRate: number },
+  input: Pick<EstimateInput, "vatRate" | "coefficients"> &
+    FeeRates & { priceIndexRate: number },
 ): Promise<PricingSettings> {
   return api("/api/pricing-settings", { method: "PUT", body: input });
 }
@@ -150,7 +196,11 @@ export function createSupplier(code: string, name: string): Promise<Supplier> {
   return api("/api/suppliers", { method: "POST", body: { code, name } });
 }
 
-export function importOffers(supplierId: number, file: File, validFrom: string | null): Promise<OfferImport> {
+export function importOffers(
+  supplierId: number,
+  file: File,
+  validFrom: string | null,
+): Promise<OfferImport> {
   const form = new FormData();
   form.append("file", file);
   const query = validFrom ? `?validFrom=${encodeURIComponent(validFrom)}` : "";
@@ -158,8 +208,15 @@ export function importOffers(supplierId: number, file: File, validFrom: string |
 }
 
 /** A page of every price, of one supplier or all, by designation (administrators). */
-export function getOfferPage(params: { supplierId: number | null; q: string; page: number }): Promise<SupplierOfferPage> {
-  const query = new URLSearchParams({ page: String(params.page), size: String(OFFER_PAGE_SIZE) });
+export function getOfferPage(params: {
+  supplierId: number | null;
+  q: string;
+  page: number;
+}): Promise<SupplierOfferPage> {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    size: String(OFFER_PAGE_SIZE),
+  });
   if (params.supplierId) query.set("supplierId", String(params.supplierId));
   if (params.q.trim()) query.set("q", params.q.trim());
   return api(`/api/suppliers/offers?${query}`);
@@ -168,8 +225,14 @@ export function getOfferPage(params: { supplierId: number | null; q: string; pag
 export const OFFER_PAGE_SIZE = 50;
 
 /** A price entered by hand: it replaces the price of the same reference, the former one stays in the history. */
-export function addOffer(supplierId: number, body: ManualOffer): Promise<SupplierOffer> {
-  return api(`/api/suppliers/${supplierId}/offers/manual`, { method: "POST", body });
+export function addOffer(
+  supplierId: number,
+  body: ManualOffer,
+): Promise<SupplierOffer> {
+  return api(`/api/suppliers/${supplierId}/offers/manual`, {
+    method: "POST",
+    body,
+  });
 }
 
 export function searchOffers(query: string): Promise<SupplierOffer[]> {
@@ -177,26 +240,38 @@ export function searchOffers(query: string): Promise<SupplierOffer[]> {
 }
 
 /** Asks the suppliers the prices of the offers of a draft: its costs stay as they are. */
-export function checkSupplierPrices(estimateId: number): Promise<SupplierPriceLine[]> {
-  return api(`/api/estimates/${estimateId}/supplier-prices/check`, { method: "POST" });
+export function checkSupplierPrices(
+  estimateId: number,
+): Promise<SupplierPriceLine[]> {
+  return api(`/api/estimates/${estimateId}/supplier-prices/check`, {
+    method: "POST",
+  });
 }
 
 export function copySupplierPrices(estimateId: number): Promise<Estimate> {
-  return api(`/api/estimates/${estimateId}/supplier-prices/copy`, { method: "POST" });
+  return api(`/api/estimates/${estimateId}/supplier-prices/copy`, {
+    method: "POST",
+  });
 }
 
 /** Fills the catalogue from the past orders, in the background (administrators). */
 export function fillCatalogue(supplierCode: string): Promise<CatalogueFilling> {
-  return api(`/api/suppliers/connectors/${supplierCode}/catalogue`, { method: "POST" });
+  return api(`/api/suppliers/connectors/${supplierCode}/catalogue`, {
+    method: "POST",
+  });
 }
 
-export function getCatalogueFilling(supplierCode: string): Promise<CatalogueFilling> {
+export function getCatalogueFilling(
+  supplierCode: string,
+): Promise<CatalogueFilling> {
   return api(`/api/suppliers/connectors/${supplierCode}/catalogue`);
 }
 
 /** Asks the supplier again every price of its catalogue, in the background (administrators). */
 export function startPriceUpdate(supplierCode: string): Promise<PriceUpdate> {
-  return api(`/api/suppliers/connectors/${supplierCode}/prices`, { method: "POST" });
+  return api(`/api/suppliers/connectors/${supplierCode}/prices`, {
+    method: "POST",
+  });
 }
 
 export function getPriceUpdate(supplierCode: string): Promise<PriceUpdate> {
@@ -207,12 +282,24 @@ export function getSupplierConnectors(): Promise<SupplierConnector[]> {
   return api("/api/supplier-connectors");
 }
 
-export function refreshOffers(offerIds: number[], quantity: number): Promise<RefreshedOffer[]> {
-  return api("/api/supplier-offers/refresh", { method: "POST", body: { offerIds, quantity } });
+export function refreshOffers(
+  offerIds: number[],
+  quantity: number,
+): Promise<RefreshedOffer[]> {
+  return api("/api/supplier-offers/refresh", {
+    method: "POST",
+    body: { offerIds, quantity },
+  });
 }
 
-export function getOfferAvailability(offerIds: number[], quantity: number): Promise<OfferAvailability[]> {
-  return api("/api/supplier-offers/availability", { method: "POST", body: { offerIds, quantity } });
+export function getOfferAvailability(
+  offerIds: number[],
+  quantity: number,
+): Promise<OfferAvailability[]> {
+  return api("/api/supplier-offers/availability", {
+    method: "POST",
+    body: { offerIds, quantity },
+  });
 }
 
 /** A reference given by hand: the offer exists only if the supplier answers with a price. */
@@ -225,7 +312,13 @@ export function lookupOffer(
 ): Promise<SupplierOffer> {
   return api("/api/supplier-offers/lookup", {
     method: "POST",
-    body: { supplierCode, manufacturerCode, manufacturerRef, quantity, packQuantity },
+    body: {
+      supplierCode,
+      manufacturerCode,
+      manufacturerRef,
+      quantity,
+      packQuantity,
+    },
   });
 }
 
@@ -240,17 +333,29 @@ export function getSuggestions(estimateId: number): Promise<Suggestion[]> {
 }
 
 export function suggestSupplies(itemId: number): Promise<Suggestion[]> {
-  return api(`/api/estimate-items/${itemId}/supply-suggestions`, { method: "POST" });
+  return api(`/api/estimate-items/${itemId}/supply-suggestions`, {
+    method: "POST",
+  });
 }
 
 /** For every item without price, the same work in the price library, chosen by the AI. */
-export function suggestLibraryPrices(estimateId: number): Promise<Suggestion[]> {
-  return api(`/api/estimates/${estimateId}/library-price-suggestions`, { method: "POST" });
+export function suggestLibraryPrices(
+  estimateId: number,
+): Promise<Suggestion[]> {
+  return api(`/api/estimates/${estimateId}/library-price-suggestions`, {
+    method: "POST",
+  });
 }
 
 /** A line of the price library picked by hand: its price, brought to this year, becomes the item's. */
-export function pickLibraryPrice(itemId: number, libraryItemId: number): Promise<Estimate> {
-  return api(`/api/estimate-items/${itemId}/library-price`, { method: "POST", body: { libraryItemId } });
+export function pickLibraryPrice(
+  itemId: number,
+  libraryItemId: number,
+): Promise<Estimate> {
+  return api(`/api/estimate-items/${itemId}/library-price`, {
+    method: "POST",
+    body: { libraryItemId },
+  });
 }
 
 /** A first estimate by the AI of the items without cost: supplies and labour, each proposal to accept. */
@@ -271,6 +376,42 @@ export function rejectSuggestion(id: number): Promise<void> {
 }
 
 /** What to check in the filled price schedule before sending it, and its total excluding tax. */
-export function checkFilledSchedule(estimateId: number, documentId: number): Promise<{ problems: string[]; total: number | null }> {
+export function checkFilledSchedule(
+  estimateId: number,
+  documentId: number,
+): Promise<{ problems: string[]; total: number | null }> {
   return api(`/api/estimates/${estimateId}/schedules/${documentId}/check`);
+}
+
+// Technical choices: the solution of each item; its resources are its components.
+
+export function writeItemTechnical(
+  itemId: number,
+  body: {
+    type: string | null;
+    characteristics: string | null;
+    method: string | null;
+    status: string | null;
+    missing: string[];
+  },
+): Promise<Estimate> {
+  return api(`/api/estimate-items/${itemId}/technical`, {
+    method: "PUT",
+    body,
+  });
+}
+
+export function validateItemTechnical(itemId: number): Promise<Estimate> {
+  return api(`/api/estimate-items/${itemId}/technical/validation`, {
+    method: "POST",
+  });
+}
+
+/** The solution of each item not decided by a user, proposed by the AI from the file. */
+export function proposeTechnicalSolutions(
+  estimateId: number,
+): Promise<{ proposed: number; notSent: string[]; estimate: Estimate }> {
+  return api(`/api/estimates/${estimateId}/technical-proposals`, {
+    method: "POST",
+  });
 }
