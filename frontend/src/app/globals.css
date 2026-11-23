@@ -4579,7 +4579,6 @@ select.status-dismissed {
 
 .tech-items-list button[aria-current="true"] {
   background: var(--accent-soft, #e8f0fb);
-  box-shadow: inset 3px 0 0 var(--accent, #1f4e79);
 }
 
 .tech-item-name {
@@ -4766,16 +4765,8 @@ input[name="q"] {
   gap: 0.1rem 0.9rem;
   padding: 1rem 1.1rem;
   border-color: var(--tone-border, var(--border));
-  background: linear-gradient(135deg, var(--tone-soft, var(--surface-2)) 0%, var(--surface) 62%);
+  background: var(--surface);
   overflow: hidden;
-}
-
-.stat::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--tone, var(--border-strong));
 }
 
 .stat-head {
@@ -4919,30 +4910,22 @@ select.status-responding {
   color: var(--info);
 }
 
-/* Messages: a tint and a coloured edge on the left. */
-.banner {
-  border-left-width: 3px;
-}
-
+/* Messages: a tint and its edge. */
 .banner.error {
   border-color: var(--danger-border);
-  border-left-color: var(--danger-fill);
 }
 
 .banner.warning {
   border-color: var(--warning-border);
-  border-left-color: var(--warning-fill);
 }
 
 .banner.info {
   border-color: var(--info-border);
-  border-left-color: var(--primary);
 }
 
 .banner.success {
   background: var(--success-soft);
   border-color: var(--success-border);
-  border-left-color: var(--success-fill);
   color: var(--foreground);
 }
 
@@ -5134,4 +5117,153 @@ td > a:not(.button):not(.badge):hover {
 
 .stat > span:not(.stat-head) + span {
   margin-top: 0.15rem;
+}
+
+/*
+ * Statuses in full colour: a filled label, white text, slightly rounded corners.
+ * The tints are kept for large surfaces (messages, verdicts), never for a status.
+ */
+:root {
+  --neutral-fill: #6b7280;
+  --quiet-fill: #a3a9b4;
+  --white-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --neutral-fill: #4b5563;
+    --quiet-fill: #3a404c;
+  }
+}
+
+:root[data-theme="dark"] {
+  --neutral-fill: #4b5563;
+  --quiet-fill: #3a404c;
+}
+
+.badge,
+a.badge {
+  padding: 0.1rem 0.5rem;
+  border: none;
+  border-radius: 5px;
+  background: var(--badge-fill, var(--neutral-fill));
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.badge.urgent,
+.badge.warning,
+.badge.critical,
+.badge.danger,
+.badge.verified,
+.badge.success,
+.badge.info,
+.badge.violet {
+  background: var(--badge-fill);
+  color: #ffffff;
+}
+
+.badge::before,
+.badge.urgent::before,
+.badge.warning::before,
+.badge.critical::before,
+.badge.danger::before,
+.badge.verified::before,
+.badge.success::before,
+.badge.info::before,
+.badge.violet::before {
+  content: none;
+}
+
+.badge.urgent,
+.badge.warning {
+  --badge-fill: var(--warning-fill);
+}
+
+.badge.critical,
+.badge.danger {
+  --badge-fill: var(--danger-fill);
+}
+
+.badge.verified,
+.badge.success {
+  --badge-fill: var(--success-fill);
+}
+
+.badge.info {
+  --badge-fill: var(--primary);
+}
+
+.badge.violet {
+  --badge-fill: var(--violet-fill);
+}
+
+.badge.muted-badge {
+  --badge-fill: var(--quiet-fill);
+  border: none;
+}
+
+/* The status of a tender, chosen in the list: the select itself in full colour. */
+select.status-select {
+  border-color: transparent;
+  color: #ffffff;
+  font-weight: 600;
+  --chevron: var(--white-chevron);
+}
+
+select.status-new {
+  background-color: var(--primary);
+}
+
+select.status-to-study {
+  background-color: var(--warning-fill);
+}
+
+select.status-responding {
+  background-color: var(--violet-fill);
+}
+
+select.status-submitted {
+  background-color: var(--success-fill);
+}
+
+select.status-dismissed {
+  background-color: var(--neutral-fill);
+}
+
+select.status-select,
+select.status-new,
+select.status-to-study,
+select.status-responding,
+select.status-submitted,
+select.status-dismissed {
+  border-color: transparent;
+  color: #ffffff;
+}
+
+/* Indicators: a plain card, the icon on a full colour tile. */
+.tone-accent,
+.tone-info { --tone-fill: var(--primary); }
+.tone-success { --tone-fill: var(--success-fill); }
+.tone-warning { --tone-fill: var(--warning-fill); }
+.tone-danger { --tone-fill: var(--danger-fill); }
+.tone-violet { --tone-fill: var(--violet-fill); }
+.tone-muted { --tone-fill: var(--neutral-fill); }
+
+.stat {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.stat-head .icon {
+  background: var(--tone-fill, var(--neutral-fill));
+  color: #ffffff;
+}
+
+/* Work waiting in a section of the menu: full red. */
+.nav-badge {
+  border: none;
+  background: var(--danger-fill);
+  color: #ffffff;
 }
