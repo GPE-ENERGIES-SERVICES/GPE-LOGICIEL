@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { useAiRun } from "@/components/AiProgress";
 import { formatDateTime } from "@/lib/format";
@@ -113,12 +113,15 @@ export function FormPanel({
   lots,
   onGenerated,
   onChange,
+  withoutTemplate,
 }: {
   pieceId: number;
   lots: { number: string; title: string | null }[];
   onGenerated: (action: () => Promise<ResponseView>) => void;
   /** After a filling or a decision: where the form stands has changed. */
   onChange?: () => void;
+  /** Shown when the consultation file gives no Word form to fill: a way to write it all the same. */
+  withoutTemplate?: ReactNode;
 }) {
   const loaded = useLoader(() => getForm(pieceId), `form-${pieceId}`);
   const [saved, setSaved] = useState<ResponseForm | null>(null);
@@ -172,7 +175,7 @@ export function FormPanel({
   return (
     <div className="form-panel" aria-busy={busy}>
       {form.problem ? (
-        <p className="muted">{form.problem}</p>
+        withoutTemplate ?? <p className="muted">{form.problem}</p>
       ) : (
         <>
           <p className="hint">Formulaire du DCE : {form.documentName}</p>

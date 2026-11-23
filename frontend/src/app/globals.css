@@ -5409,3 +5409,19 @@ th.number {
 #consommation-ia .tabs {
   margin-top: -0.25rem;
 }
+
+.collect-button {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Indicators: the content from the top, the icon beside the figure, at the same height in every card. */
+.stats .stat {
+  align-content: start;
+}
+
+.stats .stat-head .icon {
+  align-self: start;
+  margin-top: 0.15rem;
+}

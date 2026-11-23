@@ -695,6 +695,14 @@ public class FormService {
 		return jdbc.queryForList("SELECT id FROM response_form WHERE piece_id = ?", Long.class, pieceId).stream().findFirst();
 	}
 
+	/**
+	 * Whether the latest consultation file holds this form as a Word document whose fields
+	 * can be filled; without one, the form is written like any other piece.
+	 */
+	public boolean hasTemplate(Long pieceId) {
+		return source(piece(pieceId)).document() != null;
+	}
+
 	private ResponsePiece piece(Long pieceId) {
 		return pieces.findById(pieceId)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pièce introuvable."));

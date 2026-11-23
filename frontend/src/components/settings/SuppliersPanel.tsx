@@ -7,6 +7,7 @@ import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import {
   createSupplier,
+  deleteSupplier,
   fillCatalogue,
   getCatalogueFilling,
   getPriceUpdate,
@@ -208,6 +209,28 @@ export function SuppliersPanel() {
                       </button>
                     </>
                   )}
+                  <button
+                    type="button"
+                    className="secondary danger"
+                    onClick={async () => {
+                      if (
+                        !window.confirm(
+                          `Supprimer le fournisseur « ${supplier.name} » et ses ${supplier.offers} tarifs ? Les chiffrages gardent leurs prix.`,
+                        )
+                      ) {
+                        return;
+                      }
+                      setError(null);
+                      try {
+                        await deleteSupplier(supplier.id);
+                        suppliers.reload();
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "Suppression impossible.");
+                      }
+                    }}
+                  >
+                    Supprimer
+                  </button>
                 </td>
               </tr>
             ))}

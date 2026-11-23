@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { formatMoney, formatRate } from "@/lib/estimate";
 import { formatDate } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
-import { addOffer, getOfferPage, OFFER_PAGE_SIZE } from "@/services/estimateApi";
+import { addOffer, deleteOffer, getOfferPage, OFFER_PAGE_SIZE } from "@/services/estimateApi";
 import { Pager } from "@/components/Pager";
 import type { Supplier } from "@/types/estimate";
 
@@ -200,6 +200,7 @@ export function OfferCatalogue({ suppliers, onChanged }: { suppliers: Supplier[]
               <th className="number">Remise</th>
               <th className="number">Prix net HT</th>
               <th>Date du prix</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -226,6 +227,25 @@ export function OfferCatalogue({ suppliers, onChanged }: { suppliers: Supplier[]
                 <td>
                   {formatDate(offer.validFrom ?? offer.importedAt)}
                   <div className="small muted">{SOURCE_LABELS[offer.priceSource] ?? "Service fournisseur"}</div>
+                </td>
+                <td className="row-actions">
+                  <button
+                    type="button"
+                    className="secondary danger"
+                    onClick={async () => {
+                      if (window.confirm(`Supprimer le tarif « ${offer.designation} » ?`)) {
+                        try {
+                          await deleteOffer(offer.id);
+                        } catch (err) {
+                          window.alert(err instanceof Error ? err.message : "Suppression impossible.");
+                        }
+                        setVersion((current) => current + 1);
+                        onChanged();
+                      }
+                    }}
+                  >
+                    Supprimer
+                  </button>
                 </td>
               </tr>
             ))}

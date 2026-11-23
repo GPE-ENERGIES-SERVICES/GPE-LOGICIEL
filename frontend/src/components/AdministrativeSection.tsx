@@ -3,10 +3,11 @@
 import { useState } from "react";
 
 import { useLoader } from "@/lib/useLoader";
-import { addPiece, getAdministrativeForms } from "@/services/responseApi";
-import type { AdministrativeForm, PieceCategory } from "@/types/response";
+import { addPiece, getAdministrativeForms, getResponse } from "@/services/responseApi";
+import type { AdministrativeForm, PieceCategory, ResponsePiece, ResponseView } from "@/types/response";
 
 import { FORM_STATUS_CLASSES, FORM_STATUS_LABELS, FormPanel } from "./FormPanel";
+import { PieceWriter } from "./ResponseSection";
 
 /** The forms the software fills today; others are added as pieces of the answer. */
 const STANDARD_FORMS: { label: string; category: PieceCategory; present: RegExp }[] = [
@@ -17,10 +18,15 @@ const STANDARD_FORMS: { label: string; category: PieceCategory; present: RegExp 
 
 function FormItem({
   form,
+  piece,
+  run,
   lots,
   onChange,
 }: {
   form: AdministrativeForm;
+  /** The piece of the answer this form is, to write it when the DCE gives no Word form. */
+  piece: ResponsePiece | undefined;
+  run: (action: () => Promise<ResponseView>) => void;
   lots: { number: string; title: string | null }[];
   onChange: () => void;
 }) {
@@ -47,6 +53,17 @@ function FormItem({
           pieceId={form.pieceId}
           lots={lots}
           onChange={onChange}
+          withoutTemplate={
+            piece && (
+              <>
+                <p className="hint">
+                  Le DCE ne fournit pas ce formulaire en Word : rédigez-le ici, à la main ou avec l&apos;IA. Il est joint au
+                  dossier de réponse en Word ; vous pouvez aussi y déposer votre propre fichier.
+                </p>
+                <PieceWriter piece={piece} run={run} />
+              </>
+            )
+          }
           onGenerated={(action) => {
             setError(null);
             action().then(onChange, (err) => setError(err instanceof Error ? err.message : "Génération impossible."));
@@ -64,6 +81,7 @@ function FormItem({
  */
 export function AdministrativeSection({ tenderId, lots }: { tenderId: number; lots: { number: string; title: string | null }[] }) {
   const forms = useLoader(() => getAdministrativeForms(tenderId), `administrative-${tenderId}`);
+  const response = useLoader(() => getResponse(tenderId), `administrative-response-${tenderId}`);
   const [error, setError] = useState<string | null>(null);
   const list = forms.data ?? [];
   const absent = STANDARD_FORMS.filter((standard) => !list.some((form) => standard.present.test(form.label)));
@@ -82,9 +100,8 @@ export function AdministrativeSection({ tenderId, lots }: { tenderId: number; lo
   return (
     <div>
       <p className="muted">
-        Les formulaires demandés par le DCE. Pour chacun : remplissez-le à la main, ou déléguez-le à l&apos;IA puis validez ou refusez
-        sa proposition. Un formulaire validé est joint au dossier de réponse. Les déclarations sur l&apos;honneur et la signature
-        restent toujours à faire vous-même sur le document.
+        Les formulaires du DCE, remplis ici à la main ou par l&apos;IA, puis joints au dossier de réponse. Signature et déclarations
+        sur l&apos;honneur restent à faire vous-même.
       </p>
       {forms.error && <p className="banner error">{forms.error}</p>}
       {error && <p className="banner error">{error}</p>}
@@ -103,7 +120,23 @@ export function AdministrativeSection({ tenderId, lots }: { tenderId: number; lo
       )}
       <ul className="admin-forms">
         {list.map((form) => (
-          <FormItem key={form.pieceId} form={form} lots={lots} onChange={forms.reload} />
+          <FormItem
+            key={form.pieceId}
+            form={form}
+            piece={response.data?.pieces.find((piece) => piece.id === form.pieceId)}
+            run={async (action) => {
+              setError(null);
+              try {
+                await action();
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Action impossible.");
+              }
+              response.reload();
+              forms.reload();
+            }}
+            lots={lots}
+            onChange={forms.reload}
+          />
         ))}
       </ul>
       {forms.data && absent.length > 0 && (

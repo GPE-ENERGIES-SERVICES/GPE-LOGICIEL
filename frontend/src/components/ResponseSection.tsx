@@ -67,7 +67,7 @@ const FROM_STEP_LABELS: Partial<
  * A piece written here, by hand or drafted by the AI from what the application
  * knows; saved, it is joined as a Word file in the style of GPE.
  */
-function PieceWriter({
+export function PieceWriter({
   piece,
   run,
 }: {

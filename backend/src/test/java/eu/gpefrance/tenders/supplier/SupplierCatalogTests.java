@@ -118,6 +118,25 @@ class SupplierCatalogTests {
 	}
 
 	@Test
+	void deletesAPriceThenTheSupplierWithAllItsPrices() {
+		post("/api/suppliers", "{\"code\": \"REXEL\", \"name\": \"Rexel\"}", TestUsers.admin()).exchange();
+		upload(PRICES, TestUsers.admin());
+		long offer = jdbc.queryForObject("SELECT min(id) FROM supplier_offer", Long.class);
+
+		assertThat(mvc.delete().uri("/api/suppliers/offers/" + offer).with(csrf()).with(TestUsers.user()))
+			.hasStatus(HttpStatus.FORBIDDEN);
+		assertThat(mvc.delete().uri("/api/suppliers/offers/" + offer).with(csrf()).with(TestUsers.admin()))
+			.hasStatus(HttpStatus.NO_CONTENT);
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM supplier_offer", Long.class)).isEqualTo(1);
+
+		assertThat(mvc.delete().uri("/api/suppliers/1").with(csrf()).with(TestUsers.admin()))
+			.hasStatus(HttpStatus.NO_CONTENT);
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM supplier_offer", Long.class)).isZero();
+		assertThat(mvc.delete().uri("/api/suppliers/1").with(csrf()).with(TestUsers.admin()))
+			.hasStatus(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
 	void refusesAFileWithoutRecognisedColumns() {
 		post("/api/suppliers", "{\"code\": \"REXEL\", \"name\": \"Rexel\"}", TestUsers.admin()).exchange();
 

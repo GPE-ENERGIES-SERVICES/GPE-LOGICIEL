@@ -192,6 +192,15 @@ export function getSuppliers(): Promise<Supplier[]> {
   return api("/api/suppliers");
 }
 
+/** A supplier and all its prices; the estimates keep the prices copied into them. */
+export function deleteSupplier(id: number): Promise<void> {
+  return api(`/api/suppliers/${id}`, { method: "DELETE" });
+}
+
+export function deleteOffer(id: number): Promise<void> {
+  return api(`/api/suppliers/offers/${id}`, { method: "DELETE" });
+}
+
 export function createSupplier(code: string, name: string): Promise<Supplier> {
   return api("/api/suppliers", { method: "POST", body: { code, name } });
 }

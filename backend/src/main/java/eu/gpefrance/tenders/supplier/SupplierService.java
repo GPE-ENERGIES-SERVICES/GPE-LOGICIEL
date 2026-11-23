@@ -87,6 +87,29 @@ public class SupplierService {
 	}
 
 	/**
+	 * A supplier and all its prices (their history with them). The estimates keep the
+	 * prices copied into them; the proposals of the AI still waiting on these prices go.
+	 */
+	@Transactional
+	public void delete(Long supplierId) {
+		jdbc.update("""
+				DELETE FROM estimate_suggestion WHERE status = 'PENDING'
+				  AND offer_id IN (SELECT id FROM supplier_offer WHERE supplier_id = ?)""", supplierId);
+		if (jdbc.update("DELETE FROM supplier WHERE id = ?", supplierId) == 0) {
+			throw problem(HttpStatus.NOT_FOUND, "Fournisseur introuvable.");
+		}
+	}
+
+	/** One price of a supplier, as {@link #delete} does for all of them. */
+	@Transactional
+	public void deleteOffer(Long offerId) {
+		jdbc.update("DELETE FROM estimate_suggestion WHERE status = 'PENDING' AND offer_id = ?", offerId);
+		if (jdbc.update("DELETE FROM supplier_offer WHERE id = ?", offerId) == 0) {
+			throw problem(HttpStatus.NOT_FOUND, "Tarif introuvable.");
+		}
+	}
+
+	/**
 	 * @param validFrom the date of the prices, kept with each offer, or null
 	 */
 	@Transactional

@@ -7,9 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { CollectStatus } from "@/components/CollectStatus";
 import { Fold } from "@/components/Fold";
 import { Icon } from "@/components/Icon";
-import { AnalysisJournal } from "@/components/settings/AnalysisJournal";
-import { CollectJournal } from "@/components/settings/CollectJournal";
-import { DcePanel } from "@/components/settings/DcePanel";
+import { CollectButton } from "@/components/settings/CollectButton";
 import { DuplicatesPanel } from "@/components/settings/DuplicatesPanel";
 import { AiBudgetCard, AiHealth, AiUsagePanel } from "@/components/supervision/AiUsage";
 import { formatCost } from "@/lib/aiServices";
@@ -23,8 +21,8 @@ const RECENT_QUERY = "publishedWithinDays=1";
 
 /**
  * What an administrator checks: the collect and the processing of the AI are
- * running, what the AI costs (by service, by tender, call by call), the
- * duplicates to decide, then the journals, folded.
+ * running (a collection started by hand), what the AI costs (by service, by
+ * tender, call by call) and the duplicates to decide.
  */
 export default function SupervisionPage() {
   const { user } = useAuth();
@@ -57,6 +55,7 @@ export default function SupervisionPage() {
       <h1>Supervision</h1>
       <div className="supervision-status">
         <CollectStatus />
+        <CollectButton />
         <AiHealth overview={usage.data} onShowErrors={showErrors} />
       </div>
       {error && <p className="banner error">{error}</p>}
@@ -103,15 +102,6 @@ export default function SupervisionPage() {
           <DuplicatesPanel />
         </Fold>
       </div>
-      <Fold className="card settings-fold" title="Journal de collecte">
-        <CollectJournal />
-      </Fold>
-      <Fold className="card settings-fold" title="Récupération des DCE">
-        <DcePanel />
-      </Fold>
-      <Fold className="card settings-fold" title="Analyses par IA : journal et qualité">
-        <AnalysisJournal />
-      </Fold>
     </div>
   );
 }

@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -93,9 +94,13 @@ public class ResponseService {
 
 	private final PieceWriter writer;
 
+	private final FormService forms;
+
 	public ResponseService(ResponsePieceRepository pieces, TenderRepository tenders, AnalysisRepository analyses,
 			CompanyDirectory company, EstimateService estimates, FileStorage storage, JdbcTemplate jdbc, Clock clock,
-			EquipmentService equipment, MemoirService memoirs, DpgfFillService schedules, PieceWriter writer) {
+			EquipmentService equipment, MemoirService memoirs, DpgfFillService schedules, PieceWriter writer,
+			FormService forms) {
+		this.forms = forms;
 		this.memoirs = memoirs;
 		this.schedules = schedules;
 		this.writer = writer;
@@ -210,8 +215,14 @@ public class ResponseService {
 		if (pieces.existsByTenderIdAndLabelKey(tenderId, ResponsePiece.keyOf(clean))) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Cette pièce est déjà dans la liste.");
 		}
-		pieces.saveAndFlush(new ResponsePiece(tenderId, category, clean, false, suggested(clean, company.documentFiles()),
-				user, clock.instant()));
+		try {
+			pieces.saveAndFlush(new ResponsePiece(tenderId, category, clean, false,
+					suggested(clean, company.documentFiles()), user, clock.instant()));
+		}
+		catch (DataIntegrityViolationException ex) {
+			// The same piece added twice at once (a double click): the second finds the first.
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Cette pièce est déjà dans la liste.");
+		}
 		return view(tenderId);
 	}
 
@@ -343,9 +354,11 @@ public class ResponseService {
 	@Transactional
 	public ResponseView draft(Long pieceId, String user) {
 		ResponsePiece piece = find(pieceId);
-		if (fillOf(piece.getLabel()) != Fill.WRITE) {
+		Fill fill = fillOf(piece.getLabel());
+		// A form the consultation file does not give in Word is written like any other piece.
+		if (fill != Fill.WRITE && !(fill == Fill.FORM && !forms.hasTemplate(pieceId))) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-					"Cette pièce ne se rédige pas : c'est un formulaire, un document officiel ou le fichier d'une autre étape.");
+					"Cette pièce ne se rédige pas : c'est un formulaire fourni par le DCE, un document officiel ou le fichier d'une autre étape.");
 		}
 		Tender tender = tenders.findById(piece.getTenderId()).orElseThrow(() -> new TenderNotFoundException(piece.getTenderId()));
 		PieceWriter.Written written = writer.write(piece, tender, user);
