@@ -122,8 +122,12 @@ class MemoirWordTests {
 			String xml = word.getDocument().xmlText();
 			assertThat(xml).contains("LOT N°16 ", "Mémoire / toiture", "Toiture", "Mairie d'Eyragues", "Lieu : ", "Eyragues (13)")
 				.doesNotContain("{{");
-			assertThat(word.getFooterList()).allSatisfy((footer) -> assertThat(footer.getText()).doesNotContain("{{", "Mionnay"));
-			assertThat(word.getFooterList().getFirst().getText()).contains("Toiture");
+			// The footer shows the author of the document: the object of the tender.
+			assertThat(word.getFooterList()).allSatisfy((footer) -> assertThat(footer._getHdrFtr().xmlText())
+				.doesNotContain("{{", "Robespierre"));
+			assertThat(word.getFooterList().getFirst()._getHdrFtr().xmlText()).contains("Toiture");
+			assertThat(word.getProperties().getCoreProperties().getCreator()).isEqualTo("Toiture");
+			assertThat(word.getProperties().getCoreProperties().getLastModifiedByUser()).isEqualTo("GPE");
 		}
 	}
 

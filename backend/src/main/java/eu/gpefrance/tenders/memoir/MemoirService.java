@@ -42,25 +42,45 @@ public class MemoirService {
 	 * the user.
 	 */
 	private static final List<Map.Entry<String[], List<String[]>>> TEMPLATE = List.of(
-			Map.entry(new String[] { "Moyens humains et matériels", "Équipe et matériel affectés à ce marché." }, List.of(
+			Map.entry(new String[] { "Présentation et compréhension du projet",
+					"Ce que GPE a compris du projet, et où chaque sous-critère du RC est traité." }, List.of(
+					new String[] { "Compréhension générale du projet", "Contexte, objectifs du maître d'ouvrage, solution retenue." },
+					new String[] { "Contraintes techniques et organisationnelles du chantier", "Site, accès, exploitation, sécurité." },
+					new String[] { "Interfaces et coordinations inter-lots", "Lots concernés, maîtrise d'œuvre, ENEDIS." },
+					new String[] { "Expérience et retour d'expérience sur des opérations similaires", "Références comparables de GPE." })),
+			Map.entry(new String[] { "Caractéristiques et performances techniques des matériaux proposés",
+					"Le matériel retenu, ses performances et ses garanties." }, List.of(
+					new String[] { "Modules photovoltaïques", "Module retenu, puissance, rendement, certifications." },
+					new String[] { "Système de supportage et fixation", "Système retenu, avis technique, adaptation à la toiture." },
+					new String[] { "Onduleurs et supervision", "Onduleurs retenus, dimensionnement, monitoring." },
+					new String[] { "Protections électriques et câblage", "Coffrets, protections, câbles, arrêt d'urgence." },
+					new String[] { "Garanties et durabilité des équipements", "Garanties produit et de performance." },
+					new String[] { "Présentation synthétique de l'offre photovoltaïque", "Tableau de synthèse de la solution." })),
+			Map.entry(new String[] { "Moyens humains et matériels mobilisés", "Équipe et matériel affectés à ce marché." }, List.of(
 					new String[] { "Personnel encadrant", "Interlocuteur principal, encadrement du projet, chef de chantier." },
 					new String[] { "Effectif du chantier", "Effectif affecté, qualifications et habilitations." },
 					new String[] { "Services supports", "Bureau d'études, achats, administratif." },
 					new String[] { "Approvisionnement", "Fournisseurs, délais et stockage du matériel." },
 					new String[] { "Matériel mis à disposition sur le chantier", "Matériel dédié, de sécurité et de transport." },
 					new String[] { "Matériels retenus dans le cadre de l'offre", "Tableau des références et garanties des matériels." })),
-			Map.entry(new String[] { "Organisation pour l'exécution des travaux", "Sécurité, méthode, coordination et délais." }, List.of(
+			Map.entry(new String[] { "Organisation pour l'exécution des travaux", "Hygiène, sécurité et préparation." }, List.of(
 					new String[] { "Hygiène et sécurité sur le chantier et vis-à-vis des riverains",
-							"Organisation de la sécurité, riverains, reconnaissance du site, analyse des risques." },
-					new String[] { "Méthodologie d'exécution envisagée",
+							"Organisation de la sécurité, tranquillité des riverains." },
+					new String[] { "Préparation et reconnaissance du site", "Visite, relevés, plan d'installation de chantier." },
+					new String[] { "Analyse des risques et prévention", "Travail en hauteur, électrique, coactivité." },
+					new String[] { "Démarche d'amélioration continue", "Retours d'expérience, contrôles." })),
+			Map.entry(new String[] { "Méthodologie d'exécution envisagée", "Organisation, coordination et délais." }, List.of(
+					new String[] { "Organisation du projet",
 							"Préparation, validation du matériel, études d'exécution, réalisation, essais et mise en service, formation." },
+					new String[] { "Organisation de la sécurité sur chantier", "Consignations, protections collectives." },
 					new String[] { "Coordination inter-lots", "Avec les autres lots, la maîtrise d'œuvre, le dossier ENEDIS." },
 					new String[] { "Calendrier d'exécution", "Durée des phases, présence des spécialistes, planning prévisionnel." })),
-			Map.entry(new String[] { "Approche environnementale", "Déchets, nuisances et empreinte carbone." }, List.of(
+			Map.entry(new String[] { "Approche environnementale", "Déchets, nuisances, empreinte carbone et qualité." }, List.of(
 					new String[] { "Réduction des déchets et gestion des tris", "Tri, traçabilité, sensibilisation sur le chantier." },
 					new String[] { "Maîtrise des nuisances et protection des existants", "Bruit, poussières, protection des ouvrages." },
 					new String[] { "Empreinte carbone et garantie de performance des matériels",
-							"Bilan carbone des modules, garanties de performance des modules et des onduleurs." })));
+							"Bilan carbone des modules, garanties de performance des modules et des onduleurs." },
+					new String[] { "Contrôle qualité des installations", "Autocontrôles, essais, réception." })));
 
 	private final MemoirStore store;
 

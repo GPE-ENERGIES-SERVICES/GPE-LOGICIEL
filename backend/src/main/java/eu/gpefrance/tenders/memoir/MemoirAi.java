@@ -474,26 +474,32 @@ class MemoirAi {
 
 	/** The outline of the memoirs of GPE, as its template memoir has it. */
 	static final String GPE_OUTLINE = """
-			1. Moyens humains et matériels
-			  1.1 Personnel encadrant (interlocuteur principal, encadrement du projet, chef de chantier)
-			  1.2 Effectif du chantier
-			  1.3 Services supports
-			  1.4 Approvisionnement
-			  1.5 Matériel mis à disposition sur le chantier (matériel dédié, de sécurité, de transport)
-			  1.6 Matériels retenus dans le cadre de l'offre (tableau des références, garanties des matériels)
-			2. Organisation pour l'exécution des travaux
-			  2.1 Hygiène et sécurité sur le chantier et vis-à-vis des riverains (organisation de la sécurité, \
-			riverains, préparation et reconnaissance du site, analyse des risques, amélioration continue)
-			  2.2 Méthodologie d'exécution envisagée (phase préparatoire, validation technique du matériel, études \
-			d'exécution, planification, réalisation, accompagnement du maître d'ouvrage, essais et mise en \
-			service, formation du personnel exploitant)
-			  2.3 Coordination inter-lots (avec les autres lots, la maîtrise d'œuvre, le dossier ENEDIS)
-			  2.4 Calendrier d'exécution (optimisation des délais, durée des phases, présence des spécialistes, \
-			planning prévisionnel)
-			3. Approche environnementale
-			  3.1 Réduction des déchets et gestion des tris
-			  3.2 Maîtrise des nuisances et protection des existants
-			  3.3 Empreinte carbone et garantie de performance des matériels
+			1. Présentation et compréhension du projet
+			  1.1 Compréhension générale du projet (contexte, objectifs, solution retenue ; où chaque sous-critère \
+			du RC est traité)
+			  1.2 Contraintes techniques et organisationnelles du chantier
+			  1.3 Interfaces et coordinations inter-lots
+			  1.4 Expérience et retour d'expérience sur des opérations similaires
+			2. Caractéristiques et performances techniques des matériaux proposés
+			  2.1 Modules photovoltaïques
+			  2.2 Système de supportage et fixation
+			  2.3 Onduleurs et supervision
+			  2.4 Protections électriques et câblage
+			  2.5 Garanties et durabilité des équipements
+			  2.6 Présentation synthétique de l'offre photovoltaïque
+			3. Moyens humains et matériels mobilisés
+			  3.1 Personnel encadrant ; 3.2 Effectif du chantier ; 3.3 Services supports ; 3.4 Approvisionnement ; \
+			3.5 Matériel mis à disposition sur le chantier ; 3.6 Matériels retenus dans le cadre de l'offre
+			4. Organisation pour l'exécution des travaux
+			  4.1 Hygiène et sécurité sur le chantier et vis-à-vis des riverains ; 4.2 Préparation et reconnaissance \
+			du site ; 4.3 Analyse des risques et prévention ; 4.4 Démarche d'amélioration continue
+			5. Méthodologie d'exécution envisagée
+			  5.1 Organisation du projet (préparation, validation du matériel, études d'exécution, réalisation, \
+			essais et mise en service, formation) ; 5.2 Organisation de la sécurité sur chantier ; 5.3 Coordination \
+			inter-lots ; 5.4 Calendrier d'exécution
+			6. Approche environnementale
+			  6.1 Réduction des déchets et gestion des tris ; 6.2 Maîtrise des nuisances et protection des existants ; \
+			6.3 Empreinte carbone et garantie de performance des matériels ; 6.4 Contrôle qualité des installations
 			""";
 
 	/** @param known how many requirements the summary sheet already holds */

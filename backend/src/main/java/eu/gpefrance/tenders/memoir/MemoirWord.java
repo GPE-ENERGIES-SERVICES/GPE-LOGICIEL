@@ -6,7 +6,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -58,15 +57,14 @@ public final class MemoirWord {
 	/** The memoir of GPE without its text: cover page, logo in the header, fonts, styles, table of contents. */
 	private static final String TEMPLATE = "/memoir/modele-gpe.docx";
 
-	/** The headings of GPE: a part, a sub-part (both numbered by Word), then a point. */
+	/** The headings of the memoirs of GPE, numbered by Word (1, 1.1, 1.1.1), then an unnumbered point. */
 	static final String PART = "Titre1";
 
-	static final String SUB_PART = "SST";
+	static final String SUB_PART = "Titre2";
+
+	static final String SECTION = "Titre3";
 
 	static final String POINT = "POINT";
-
-	/** The numbering of the sub-parts in the template, whose third level is 1.1.1. */
-	private static final BigInteger SUB_PART_NUMBERING = BigInteger.valueOf(43);
 
 	private static final String TO_WRITE = "[Partie à rédiger]";
 
@@ -86,7 +84,7 @@ public final class MemoirWord {
 				XWPFDocument word = new XWPFDocument(template);
 				ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			word.getProperties().getCoreProperties().setTitle(clean(memoir.title()));
-			cover(word, memoir, cover, MEMOIR_FOOTER);
+			cover(word, memoir, cover, Objects.requireNonNullElse(memoir.tenderTitle(), memoir.title()));
 			for (SectionRow section : sections) {
 				if (section.proposed()) {
 					continue;
@@ -114,7 +112,6 @@ public final class MemoirWord {
 		return (name.length() <= 120 ? name : name.substring(0, 120).strip()) + ".docx";
 	}
 
-	/** The cover of the template holds markers, in its text boxes: each becomes what is known of the tender. */
 	/**
 	 * A piece of the answer written in the application (a list of works, a
 	 * guarantee, a note...), in the style of GPE: its header, footer, fonts and
@@ -128,7 +125,7 @@ public final class MemoirWord {
 				XWPFDocument word = bare(template);
 				ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			word.getProperties().getCoreProperties().setTitle(clean(title));
-			cover(word, row, new Cover(buyer, place), clean(title) + " – ");
+			cover(word, row, new Cover(buyer, place), tenderTitle == null ? title : title + " – " + tenderTitle);
 			XWPFRun heading = word.createParagraph().createRun();
 			heading.setBold(true);
 			heading.setFontSize(16);
@@ -163,16 +160,22 @@ public final class MemoirWord {
 		}
 	}
 
-	/** The first words of the footer of the template, followed by the object of the tender. */
-	private static final String MEMOIR_FOOTER = "Mémoire technique – ";
-
+	/**
+	 * The cover of the template holds markers, in its text boxes: each becomes
+	 * what is known of the tender. The footer shows the author of the document
+	 * (a field of Word): it is given the footer.
+	 */
 	private static void cover(XWPFDocument word, MemoirRow memoir, Cover cover, String footer) {
+		// The title of the memoir under the lot, unless it only repeats the object of the tender.
+		String named = memoir.title().replaceFirst("(?i)^m[ée]moire technique\\s*[–:-]?\\s*", "").strip();
+		String lotTitle = named.isEmpty() || named.equals(memoir.tenderTitle()) ? "" : named;
 		String lot = memoir.lotNumber() == null || memoir.lotNumber().isBlank() ? ""
-				: "LOT N°" + memoir.lotNumber().strip() + " ";
-		Map<String, String> values = Map.of("{{LOT}}", lot, "{{LOT_TITLE}}", memoir.title(), "{{OBJECT}}",
+				: "LOT N°" + memoir.lotNumber().strip() + (lotTitle.isEmpty() ? "" : " : ");
+		Map<String, String> values = Map.of("{{LOT}}", lot, "{{LOT_TITLE}}", lotTitle, "{{OBJECT}}",
 				Objects.requireNonNullElse(memoir.tenderTitle(), ""), "{{BUYER}}",
-				Objects.requireNonNullElse(cover.buyer(), ""), "{{PLACE_LABEL}}", cover.place() == null ? "" : "Lieu : ",
-				"{{PLACE}}", Objects.requireNonNullElse(cover.place(), ""), MEMOIR_FOOTER, footer);
+				Objects.requireNonNullElse(cover.buyer(), ""), "{{PLACE}}",
+				cover.place() == null ? "" : "Lieu : " + cover.place(), "{{DESIGNER}}", "", "{{FOOTER}}", footer);
+		word.getProperties().getCoreProperties().setCreator(clean(footer));
 		List<XmlObject> parts = new ArrayList<>(List.of(word.getDocument()));
 		word.getFooterList().forEach((part) -> parts.add(part._getHdrFtr()));
 		for (XmlObject part : parts) {
@@ -190,11 +193,12 @@ public final class MemoirWord {
 
 	private static void heading(XWPFDocument word, int level, String text) {
 		XWPFParagraph paragraph = word.createParagraph();
-		paragraph.setStyle(level <= 1 ? PART : level <= 3 ? SUB_PART : POINT);
-		if (level == 3) {
-			paragraph.setNumID(SUB_PART_NUMBERING);
-			paragraph.setNumILvl(BigInteger.TWO);
-		}
+		paragraph.setStyle(switch (level) {
+			case 0, 1 -> PART;
+			case 2 -> SUB_PART;
+			case 3 -> SECTION;
+			default -> POINT;
+		});
 		paragraph.setKeepNext(true);
 		paragraph.createRun().setText(clean(text));
 	}

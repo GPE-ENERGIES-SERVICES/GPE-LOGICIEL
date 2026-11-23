@@ -119,60 +119,73 @@ class MemoirApiTests {
 		assertThat(post("/api/memoirs/1/outline/template", "")).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("""
-					{"memoir": {"status": "OUTLINE_TO_VALIDATE", "sections": 16}}""");
-		// The outline of GPE: 3 parts and their sub-parts.
+					{"memoir": {"status": "OUTLINE_TO_VALIDATE", "sections": 34}}""");
+		// The outline of GPE: 6 parts and their sub-parts.
 		assertThat(mvc.get().uri("/api/memoirs/1").with(TestUsers.user())).bodyJson()
 			.extractingPath("$.sections[0].title")
-			.isEqualTo("Moyens humains et matériels");
+			.isEqualTo("Présentation et compréhension du projet");
 		assertThat(mvc.get().uri("/api/memoirs/1").with(TestUsers.user())).bodyJson()
 			.extractingPath("$.sections[1]")
 			.asMap()
 			.containsEntry("number", "1.1")
 			.containsEntry("parentId", 1)
-			.containsEntry("title", "Personnel encadrant");
+			.containsEntry("title", "Compréhension générale du projet");
 		assertThat(post("/api/memoirs/1/outline/template", "")).hasStatus(HttpStatus.CONFLICT);
 
-		// A sub-part, renamed, then moved under part 2 (section 8).
+		// How many sub-parts each part of the outline of GPE has.
+		int[] subParts = { 4, 6, 6, 4, 4, 4 };
+		int added = 1 + java.util.Arrays.stream(subParts).map((count) -> count + 1).sum();
+		int secondPart = 1 + subParts[0] + 1;
+		// A sub-part, renamed, then moved under part 2.
 		post("/api/memoirs/1/sections", "{\"parentId\": 1, \"title\": \"Certifications\"}").exchange();
-		assertThat(put("/api/memoir-sections/17", "{\"title\": \"Certifications et qualifications\", "
+		assertThat(put("/api/memoir-sections/" + added, "{\"title\": \"Certifications et qualifications\", "
 				+ "\"description\": \"Qualifelec, RGE\"}")).hasStatusOk()
 			.bodyJson()
-			.extractingPath("$.sections[7]")
+			.extractingPath("$.sections[" + (subParts[0] + 1) + "]")
 			.asMap()
-			.containsEntry("id", 17)
-			.containsEntry("number", "1.7")
+			.containsEntry("id", added)
+			.containsEntry("number", "1." + (subParts[0] + 1))
 			.containsEntry("level", 2)
 			.containsEntry("title", "Certifications et qualifications");
-		// The parent of each of the 16 sections of the outline, 0 for a part.
-		int[] parents = { 0, 1, 1, 1, 1, 1, 1, 0, 8, 8, 8, 8, 0, 13, 13, 13 };
-		java.util.Map<Integer, Integer> positions = new java.util.HashMap<>();
 		StringBuilder sections = new StringBuilder();
-		for (int id = 1; id <= parents.length; id++) {
-			int parent = parents[id - 1];
-			sections.append("{\"id\": ").append(id).append(", \"parentId\": ").append(parent == 0 ? "null" : parent)
-				.append(", \"position\": ").append(positions.merge(parent, 1, Integer::sum)).append("}, ");
+		java.util.List<String> numbers = new java.util.ArrayList<>();
+		int id = 1;
+		for (int part = 0; part < subParts.length; part++) {
+			int partId = id++;
+			sections.append("{\"id\": ").append(partId).append(", \"parentId\": null, \"position\": ").append(part + 1)
+				.append("}, ");
+			numbers.add(String.valueOf(part + 1));
+			int count = subParts[part] + (part == 1 ? 1 : 0);
+			for (int sub = 1; sub <= subParts[part]; sub++) {
+				sections.append("{\"id\": ").append(id++).append(", \"parentId\": ").append(partId)
+					.append(", \"position\": ").append(sub).append("}, ");
+			}
+			for (int sub = 1; sub <= count; sub++) {
+				numbers.add((part + 1) + "." + sub);
+			}
 		}
-		String order = "{\"sections\": [" + sections + "{\"id\": 17, \"parentId\": 8, \"position\": 5}]}";
+		String order = "{\"sections\": [" + sections + "{\"id\": " + added + ", \"parentId\": " + secondPart
+				+ ", \"position\": " + (subParts[1] + 1) + "}]}";
 		assertThat(put("/api/memoirs/1/outline", order)).hasStatusOk()
 			.bodyJson()
 			.extractingPath("$.sections[*].number")
 			.asArray()
-			.containsExactly("1", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "2", "2.1", "2.2", "2.3", "2.4", "2.5", "3",
-					"3.1", "3.2", "3.3");
-		assertThat(put("/api/memoirs/1/outline", order.replace("\"id\": 17, \"parentId\": 8", "\"id\": 17, \"parentId\": 17")))
+			.containsExactlyElementsOf(numbers);
+		assertThat(put("/api/memoirs/1/outline", order.replace("\"id\": " + added + ", \"parentId\": " + secondPart,
+				"\"id\": " + added + ", \"parentId\": " + added)))
 			.hasStatus(HttpStatus.BAD_REQUEST);
 
 		assertThat(post("/api/memoirs/1/outline/validation", "")).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("{\"memoir\": {\"status\": \"READY_TO_WRITE\", \"outlineValidatedBy\": \"Marie Durand\"}}");
 		// Changed after its validation: to be validated again.
-		assertThat(mvc.delete().uri("/api/memoir-sections/17").with(csrf()).with(TestUsers.user())).hasStatusOk()
+		assertThat(mvc.delete().uri("/api/memoir-sections/" + added).with(csrf()).with(TestUsers.user())).hasStatusOk()
 			.bodyJson()
 			.isLenientlyEqualTo("{\"memoir\": {\"status\": \"OUTLINE_TO_VALIDATE\", \"outlineValidatedAt\": null}}");
 
 		assertThat(mvc.get().uri("/api/memoirs").with(TestUsers.admin())).hasStatusOk()
 			.bodyJson()
-			.isLenientlyEqualTo("[{\"id\": 1, \"sections\": 16, \"written\": 0}]");
+			.isLenientlyEqualTo("[{\"id\": 1, \"sections\": 34, \"written\": 0}]");
 	}
 
 	@Test
@@ -267,7 +280,7 @@ class MemoirApiTests {
 		try (var word = new org.apache.poi.xwpf.usermodel.XWPFDocument(
 				new java.io.ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
 			assertThat(word.getParagraphs()).extracting(org.apache.poi.xwpf.usermodel.XWPFParagraph::getText)
-				.contains("Moyens humains et matériels", "Notre société", "[Partie à rédiger]");
+				.contains("Présentation et compréhension du projet", "Notre société", "[Partie à rédiger]");
 		}
 		assertThat(mvc.get().uri("/api/memoirs/99/export").with(TestUsers.user())).hasStatus(HttpStatus.NOT_FOUND);
 	}
