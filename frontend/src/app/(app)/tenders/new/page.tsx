@@ -34,8 +34,7 @@ export default function NewTenderPage() {
     <div>
       <h1>Ajouter un appel d&apos;offres</h1>
       <p className="muted">
-        Pour un appel d&apos;offres absent de la veille : vous déposez son DCE, puis analyse, chiffrage et mémoire se font
-        comme pour les autres.
+        Pour un appel d&apos;offres absent de la veille : déposez son DCE, la suite est la même que pour les autres.
       </p>
       <section className="card">
         <form onSubmit={create}>

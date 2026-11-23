@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePaged } from "@/components/Pager";
 
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
@@ -106,6 +107,7 @@ export function CollectJournal() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const running = starting || Boolean(data?.running);
+  const paged = usePaged(data?.runs ?? [], "Pages du journal des collectes", "", 10);
 
   // A collection runs in the background: refresh the journal until it is over.
   useEffect(() => {
@@ -168,7 +170,7 @@ export function CollectJournal() {
             </tr>
           </thead>
           <tbody>
-            {data.runs.map((run) => (
+            {paged.rows.map((run) => (
               <tr key={run.id} className={run.status === "FAILED" ? "row-error" : ""}>
                 <td>{formatDateTime(run.startedAt)}</td>
                 <td>{run.source}</td>
@@ -193,6 +195,7 @@ export function CollectJournal() {
           </tbody>
         </table>
       )}
+      {paged.pager}
     </div>
   );
 }

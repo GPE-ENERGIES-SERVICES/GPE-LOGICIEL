@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePaged } from "@/components/Pager";
 
 import { ANALYSIS_STATUS_LABELS } from "@/lib/analysis";
 import { formatDateTime } from "@/lib/format";
@@ -111,6 +112,7 @@ export function AnalysisConfigurationPanel() {
 export function AnalysisJournal() {
   const journal = useLoader(() => getAnalysisJournal(30), "analyses");
   const quality = useLoader(() => getAnalysisQuality(), "quality");
+  const paged = usePaged(journal.data ?? [], "Pages du journal des analyses", "", 10);
 
   return (
     <div>
@@ -171,7 +173,7 @@ export function AnalysisJournal() {
             </tr>
           </thead>
           <tbody>
-            {journal.data.map((entry) => (
+            {paged.rows.map((entry) => (
               <tr key={entry.id} className={entry.status === "FAILED" ? "row-error" : ""}>
                 <td>{formatDateTime(entry.createdAt)}</td>
                 <td>
@@ -200,6 +202,7 @@ export function AnalysisJournal() {
           </tbody>
         </table>
       )}
+      {paged.pager}
     </div>
   );
 }

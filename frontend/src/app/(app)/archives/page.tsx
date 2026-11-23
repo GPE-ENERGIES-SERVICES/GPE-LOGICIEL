@@ -87,8 +87,7 @@ function ArchiveList() {
     <>
       <h1>Archives</h1>
       <p className="muted">
-        Les consultations passées : closes, attribuées, sans suite ou annulées, avec leur résultat et
-        l&apos;attributaire lorsqu&apos;ils sont connus.
+        Consultations closes, attribuées, sans suite ou annulées, avec résultat et attributaire quand ils sont connus.
       </p>
 
       <SearchForm

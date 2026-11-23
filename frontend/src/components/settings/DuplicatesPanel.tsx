@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { FOLLOW_UP_LABELS, formatDate, formatDateTime, NOTICE_KIND_LABELS, STATUS_LABELS } from "@/lib/format";
+import { usePaged } from "@/components/Pager";
 import { useLoader } from "@/lib/useLoader";
 import {
   confirmDuplicateBatch,
@@ -260,6 +261,8 @@ export function DuplicatesPanel() {
   };
 
   const certain = groups.data?.filter((group) => group.certain).length ?? 0;
+  const pagedGroups = usePaged(groups.data ?? [], "Pages des groupes de doublons", "", 10);
+  const pagedDecisions = usePaged(decisions.data ?? [], "Pages des décisions", "", 10);
 
   return (
     <div>
@@ -271,9 +274,10 @@ export function DuplicatesPanel() {
         </p>
       )}
       <BatchMerge onDone={reload} />
-      {groups.data?.map((group) => (
+      {pagedGroups.rows.map((group) => (
         <GroupView key={group.procedureId} group={group} onDecided={reload} />
       ))}
+      {pagedGroups.pager}
       <h3>Décisions</h3>
       {error && <p className="error">{error}</p>}
       {decisions.data && decisions.data.length === 0 && <p className="muted">Aucune décision pour l&apos;instant.</p>}
@@ -290,7 +294,7 @@ export function DuplicatesPanel() {
             </tr>
           </thead>
           <tbody>
-            {decisions.data.map((decision) => (
+            {pagedDecisions.rows.map((decision) => (
               <tr key={decision.id} className={decision.undoneAt ? "row-muted" : ""}>
                 <td>{formatDateTime(decision.decidedAt)}</td>
                 <td>{decision.kind === "MERGE" ? "Fusion" : "Pas des doublons"}</td>
@@ -317,6 +321,7 @@ export function DuplicatesPanel() {
           </tbody>
         </table>
       )}
+      {pagedDecisions.pager}
     </div>
   );
 }

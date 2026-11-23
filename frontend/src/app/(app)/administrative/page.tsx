@@ -20,9 +20,7 @@ export default function AdministrativePage() {
     <div>
       <h1>Administratif</h1>
       <p className="muted">
-        Les formulaires demandés par les DCE (DC1, DC2, acte d&apos;engagement, déclarations, attestations, cadres de réponse…) de tous les appels d&apos;offres en réponse. Chacun se
-        remplit dans l&apos;onglet « Administratif » de son appel d&apos;offres : à la main, ou par l&apos;IA puis validé ou refusé par
-        vous.
+        Formulaires des DCE (DC1, DC2, acte d&apos;engagement, attestations…) des appels d&apos;offres en réponse. Chacun se remplit dans l&apos;onglet « Administratif » de son appel d&apos;offres, à la main ou par l&apos;IA avec votre validation.
       </p>
       <section className="card">
         {forms.error && <p className="banner error">{forms.error}</p>}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { usePaged } from "@/components/Pager";
 import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
 import { getResponses } from "@/services/responseApi";
@@ -9,13 +10,13 @@ import { getResponses } from "@/services/responseApi";
 /** The answers in progress: each one is prepared on the page of its tender. */
 export default function ResponsesPage() {
   const responses = useLoader(() => getResponses(), "responses");
+  const paged = usePaged(responses.data ?? [], "Pages des dossiers");
 
   return (
     <div>
       <h1>Dossiers de réponse</h1>
       <p className="muted">
-        Un dossier se prépare sur la page de son appel d&apos;offres, onglet « Dossier de réponse », une fois la fiche IA, le
-        chiffrage et le mémoire avancés.
+        Se prépare depuis la fiche de l&apos;appel d&apos;offres, onglet « Dossier de réponse ».
       </p>
       <section className="card">
         {responses.error && <p className="banner error">{responses.error}</p>}
@@ -30,7 +31,7 @@ export default function ResponsesPage() {
               </tr>
             </thead>
             <tbody>
-              {responses.data.map((response) => (
+              {paged.rows.map((response) => (
                 <tr key={response.tenderId}>
                   <td>
                     <Link href={`/tenders/${response.tenderId}?from=/responses#reponse`}>{response.title}</Link>
@@ -38,7 +39,7 @@ export default function ResponsesPage() {
                   </td>
                   <td>{response.deadline ? formatDateTime(response.deadline) : <span className="muted">Non indiquée</span>}</td>
                   <td>
-                    <span className={response.total > 0 && response.ready === response.total ? "badge verified" : "badge"}>
+                    <span className={response.total > 0 && response.ready === response.total ? "badge verified" : "badge warning"}>
                       {response.ready} / {response.total}
                     </span>
                   </td>
@@ -47,6 +48,7 @@ export default function ResponsesPage() {
             </tbody>
           </table>
         )}
+        {paged.pager}
       </section>
     </div>
   );

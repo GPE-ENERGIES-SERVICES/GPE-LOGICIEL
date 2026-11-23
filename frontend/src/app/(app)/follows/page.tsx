@@ -52,8 +52,7 @@ function FollowList() {
     <>
       <h1>Mes suivis</h1>
       <p className="muted">
-        Les consultations que vous suivez avec l&apos;étoile, en cours ou passées. Le suivi vous est propre ; le statut
-        est partagé par l&apos;équipe.
+        Consultations suivies avec l&apos;étoile. Le suivi vous est propre, le statut est partagé par l&apos;équipe.
       </p>
 
       <SearchForm

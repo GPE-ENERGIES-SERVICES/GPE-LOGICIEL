@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { usePaged } from "@/components/Pager";
 
 import {
   DOCUMENT_STATE_LABELS,
@@ -139,6 +140,7 @@ function DocumentRow({ document, onChanged }: { document: DocumentInfo; onChange
 
 function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () => void }) {
   const [retrying, setRetrying] = useState(false);
+  const paged = usePaged(dossier.documents, "Pages des fichiers");
   const failed = dossier.documents.filter((document) => document.state === "FAILED").length;
   const notAnalysed = dossier.documents.filter(
     (document) => document.state === "FAILED" || document.state === "NOT_ANALYZED",
@@ -206,11 +208,12 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
             </tr>
           </thead>
           <tbody>
-            {dossier.documents.map((document) => (
+            {paged.rows.map((document) => (
               <DocumentRow key={document.id} document={document} onChanged={onChanged} />
             ))}
           </tbody>
         </table>
+        {paged.pager}
       </Fold>
     </div>
   );

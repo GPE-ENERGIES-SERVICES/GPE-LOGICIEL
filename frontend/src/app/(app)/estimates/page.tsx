@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { usePaged } from "@/components/Pager";
 import { ESTIMATE_STATUS_LABELS, formatMoney } from "@/lib/estimate";
 import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
@@ -10,22 +11,16 @@ import { getRecentEstimates } from "@/services/estimateApi";
 /** Every estimate, the last changed first. An estimate is created from the page of its tender. */
 export default function EstimatesPage() {
   const estimates = useLoader(() => getRecentEstimates(), "estimates");
+  const paged = usePaged(estimates.data ?? [], "Pages des chiffrages");
 
   return (
     <div>
       <h1>Chiffrages</h1>
-      <section className="card">
-        <p>
-          Un chiffrage se crée depuis la fiche d&apos;un appel d&apos;offres :
-          ouvrez-la depuis <Link href="/tenders">Appels d&apos;offres</Link> ou{" "}
-          <Link href="/follows">Mes suivis</Link>, onglet{" "}
-          <strong>« Chiffrage »</strong>, bouton{" "}
-          <strong>« Nouveau chiffrage »</strong>. Les tarifs fournisseurs sont
-          dans <Link href="/suppliers">Tarifs fournisseurs</Link>, la TVA, les
-          coefficients et les coûts horaires dans{" "}
-          <Link href="/estimate-settings">Paramètres du chiffrage</Link>.
-        </p>
-      </section>
+      <p className="muted">
+        Nouveau chiffrage : depuis la fiche de l&apos;appel d&apos;offres, onglet « Chiffrage ». Voir aussi{" "}
+        <Link href="/suppliers">Tarifs fournisseurs</Link> et{" "}
+        <Link href="/estimate-settings">Paramètres du chiffrage</Link>.
+      </p>
       <section className="card">
         {estimates.error && <p className="banner error">{estimates.error}</p>}
         {!estimates.data && !estimates.error && (
@@ -46,7 +41,7 @@ export default function EstimatesPage() {
               </tr>
             </thead>
             <tbody>
-              {estimates.data.map(({ tenderId, tenderTitle, estimate }) => (
+              {paged.rows.map(({ tenderId, tenderTitle, estimate }) => (
                 <tr key={estimate.id}>
                   <td>
                     <Link href={`/tenders/${tenderId}#chiffrage`}>
@@ -65,7 +60,9 @@ export default function EstimatesPage() {
                       className={
                         estimate.status === "VALIDATED"
                           ? "badge verified"
-                          : "badge"
+                          : estimate.status === "DRAFT"
+                            ? "badge info"
+                            : "badge"
                       }
                     >
                       {ESTIMATE_STATUS_LABELS[estimate.status]}
@@ -88,6 +85,7 @@ export default function EstimatesPage() {
             </tbody>
           </table>
         )}
+        {paged.pager}
       </section>
     </div>
   );

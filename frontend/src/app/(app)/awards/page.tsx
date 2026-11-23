@@ -76,8 +76,7 @@ function AwardList() {
     <>
       <h1>Marchés attribués</h1>
       <p className="muted">
-        Les résultats des avis d&apos;attribution, un par lot : quelle entreprise a remporté quel marché, pour quel
-        montant. Un clic sur un attributaire affiche ses marchés.
+        Avis d&apos;attribution, un par lot : attributaire et montant. Cliquez sur un attributaire pour voir ses marchés.
       </p>
 
       <SearchForm

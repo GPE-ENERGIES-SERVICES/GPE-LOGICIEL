@@ -2,7 +2,7 @@ import { deadlineLevel, formatDaysLeft, type DeadlineLevel } from "@/lib/format"
 
 const LEVEL_CLASSES: Record<DeadlineLevel, string> = {
   unknown: "badge",
-  passed: "badge",
+  passed: "badge muted-badge",
   critical: "badge critical",
   close: "badge urgent",
   normal: "badge",

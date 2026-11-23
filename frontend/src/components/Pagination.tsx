@@ -1,5 +1,7 @@
 "use client";
 
+import { PageNav } from "./Pager";
+
 type Props = {
   /** Current page, from 0. */
   page: number;
@@ -7,21 +9,17 @@ type Props = {
   onNavigate: (changes: Record<string, string | null>) => void;
 };
 
+/** The pages of a list paged by the server, kept in the address. */
 export function Pagination({ page, totalPages, onNavigate }: Props) {
   if (totalPages <= 1) {
     return null;
   }
   return (
-    <nav className="pagination">
-      <button type="button" disabled={page <= 0} onClick={() => onNavigate({ page: String(page - 1) })}>
-        Précédent
-      </button>
-      <span>
-        Page {page + 1} sur {totalPages}
-      </span>
-      <button type="button" disabled={page + 1 >= totalPages} onClick={() => onNavigate({ page: String(page + 1) })}>
-        Suivant
-      </button>
-    </nav>
+    <PageNav
+      page={Math.min(page, totalPages - 1)}
+      pages={totalPages}
+      label="Pages des résultats"
+      onChange={(next) => onNavigate({ page: next === 0 ? null : String(next) })}
+    />
   );
 }

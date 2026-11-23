@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { usePaged } from "@/components/Pager";
 
 import { formatDateTime } from "@/lib/format";
 import { useLoader } from "@/lib/useLoader";
@@ -28,6 +29,7 @@ import { OfferCatalogue } from "./OfferCatalogue";
  */
 export function SuppliersPanel() {
   const suppliers = useLoader(() => getSuppliers(), "suppliers");
+  const paged = usePaged(suppliers.data ?? [], "Pages des fournisseurs");
   const connectors = useLoader(
     () => getSupplierConnectors(),
     "supplier-connectors",
@@ -167,7 +169,7 @@ export function SuppliersPanel() {
             </tr>
           </thead>
           <tbody>
-            {suppliers.data.map((supplier) => (
+            {paged.rows.map((supplier) => (
               <tr key={supplier.id}>
                 <td>{supplier.code}</td>
                 <td>{supplier.name}</td>
@@ -212,6 +214,7 @@ export function SuppliersPanel() {
           </tbody>
         </table>
       )}
+      {paged.pager}
 
       <div className="inline-form">
         <button

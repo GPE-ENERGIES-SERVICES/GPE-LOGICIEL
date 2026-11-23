@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { DCE_STATUS_LABELS } from "@/components/DceLinks";
 import { formatDateTime } from "@/lib/format";
+import { usePaged } from "@/components/Pager";
 import { useLoader } from "@/lib/useLoader";
 import { getDceEvents, getDceSummary, retryDceLink } from "@/services/documentApi";
 import type { DceLinkStatus, DceSummary } from "@/types/document";
@@ -103,6 +104,7 @@ export function DcePanel() {
   const events = useLoader(() => getDceEvents(50), "dce-events");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
+  const paged = usePaged(events.data ?? [], "Pages des changements d'état", "", 10);
 
   const retry = async (linkId: number) => {
     setBusy(linkId);
@@ -140,7 +142,7 @@ export function DcePanel() {
             </tr>
           </thead>
           <tbody>
-            {events.data.map((event) => (
+            {paged.rows.map((event) => (
               <tr key={event.id}>
                 <td>{formatDateTime(event.occurredAt)}</td>
                 <td>{event.tenderId ? <a href={`/tenders/${event.tenderId}`}>N° {event.tenderId}</a> : "–"}</td>
@@ -159,6 +161,7 @@ export function DcePanel() {
           </tbody>
         </table>
       )}
+      {paged.pager}
     </div>
   );
 }

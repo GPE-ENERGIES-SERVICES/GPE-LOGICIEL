@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState, type FormEvent, type ReactNode } from "react";
+import { usePaged } from "@/components/Pager";
 
 import { useAuth } from "@/components/AuthProvider";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -114,6 +115,7 @@ export function RecordTable({ list, columns, fields, noun, empty, filter, fixed,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const shown = (rows.data ?? []).filter((row) => !filter || filter(row));
+  const paged = usePaged(shown, `Pages : ${noun}`);
   const withFiles = shown.some((row) => row.files !== null) || (rows.data?.[0]?.files ?? null) !== null;
   const withValidity = shown.some((row) => row.validity !== null);
   const opens = withFiles || Boolean(detail);
@@ -193,7 +195,7 @@ export function RecordTable({ list, columns, fields, noun, empty, filter, fixed,
             </tr>
           </thead>
           <tbody>
-            {shown.map((row) => (
+            {paged.rows.map((row) => (
               <Fragment key={row.id}>
                 {editing === row.id ? (
                   <tr>
@@ -260,6 +262,7 @@ export function RecordTable({ list, columns, fields, noun, empty, filter, fixed,
           </tbody>
         </table>
       )}
+      {paged.pager}
     </div>
   );
 }

@@ -43,17 +43,17 @@ function progress(
       ? { label: "Chiffrage à faire", className: "badge urgent" }
       : estimate.estimate.status === "VALIDATED"
         ? { label: "Chiffrage validé", className: "badge verified" }
-        : { label: "Chiffrage en brouillon", className: "badge" },
+        : { label: "Chiffrage en brouillon", className: "badge info" },
     !memoir
       ? { label: "Mémoire à faire", className: "badge urgent" }
       : memoir.status === "DONE"
         ? { label: "Mémoire terminé", className: "badge verified" }
-        : { label: "Mémoire en cours", className: "badge" },
+        : { label: "Mémoire en cours", className: "badge info" },
     !response || response.total === 0
       ? { label: "Pièces à préparer", className: "badge urgent" }
       : {
           label: `Pièces ${response.ready}/${response.total}`,
-          className: response.ready === response.total ? "badge verified" : "badge",
+          className: response.ready === response.total ? "badge verified" : "badge info",
         },
   ];
 }
@@ -103,16 +103,23 @@ export default function DashboardPage() {
       label: "à rendre sous 7 jours",
       href: `/tenders?${DEADLINES_QUERY}`,
       icon: "clock" as const,
-      tone: deadlines.data?.totalElements ? "warning" : "muted",
+      tone: deadlines.data?.totalElements ? "danger" : "muted",
     },
     {
       value: counts.data?.NEW,
       label: "à trancher",
       href: `/tenders?${TO_DECIDE_QUERY}`,
       icon: "clipboard" as const,
-      tone: counts.data?.NEW ? "accent" : "muted",
+      tone: counts.data?.NEW ? "warning" : "muted",
     },
-    { value: counts.data?.FOLLOWED, label: "suivies", href: "/follows", icon: "star" as const, tone: "accent" },
+    { value: counts.data?.FOLLOWED, label: "suivies", href: "/follows", icon: "star" as const, tone: "violet" },
+    {
+      value: estimates.data?.filter((listed) => listed.estimate.status === "DRAFT").length,
+      label: "chiffrages en brouillon",
+      href: "/estimates",
+      icon: "calculator" as const,
+      tone: "info",
+    },
   ];
 
   return (
@@ -133,7 +140,10 @@ export default function DashboardPage() {
       </div>
 
       <section className="card">
-        <h2>À rendre bientôt</h2>
+        <h2>
+          À rendre bientôt{" "}
+          {(deadlines.data?.totalElements ?? 0) > 0 && <span className="badge critical">{deadlines.data?.totalElements}</span>}
+        </h2>
         {deadlines.data?.content.length === 0 && <p className="muted">Rien à rendre dans les 7 jours.</p>}
         {deadlines.data && deadlines.data.content.length > 0 && (
           <table>
@@ -162,14 +172,17 @@ export default function DashboardPage() {
         )}
         {(deadlines.data?.totalElements ?? 0) > LIST_SIZE && (
           <p>
-            <Link href={`/tenders?${DEADLINES_QUERY}`}>Tout voir</Link>
+            <Link href={`/tenders?${DEADLINES_QUERY}`}>Tout voir →</Link>
           </p>
         )}
       </section>
 
       <div className="dashboard-grid">
         <section className="card">
-          <h2>À trancher</h2>
+          <h2>
+            À trancher{" "}
+            {(toDecide.data?.totalElements ?? 0) > 0 && <span className="badge warning">{toDecide.data?.totalElements}</span>}
+          </h2>
           {toDecide.data?.content.length === 0 && <p className="muted">Rien à trancher.</p>}
           {toDecide.data && toDecide.data.content.length > 0 && (
             <table>
@@ -190,7 +203,7 @@ export default function DashboardPage() {
           )}
           {(toDecide.data?.totalElements ?? 0) > LIST_SIZE && (
             <p>
-              <Link href={`/tenders?${TO_DECIDE_QUERY}`}>Tout voir</Link>
+              <Link href={`/tenders?${TO_DECIDE_QUERY}`}>Tout voir →</Link>
             </p>
           )}
         </section>

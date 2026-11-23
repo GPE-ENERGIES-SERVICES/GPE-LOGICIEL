@@ -211,8 +211,7 @@ function AlertList() {
     <>
       <h1>Mes veilles</h1>
       <p className="muted">
-        Une veille est une recherche enregistrée : elle signale les consultations en cours qui correspondent à ses
-        critères, et celles publiées depuis votre dernière visite.
+        Recherches enregistrées : les consultations en cours qui correspondent, et les nouvelles depuis votre dernière visite.
       </p>
       {!creating && (
         <p>

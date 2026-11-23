@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { usePaged } from "@/components/Pager";
 
 import { formatDateTime, lotTitle } from "@/lib/format";
 import { MEMOIR_STATUS_LABELS } from "@/lib/memoir";
@@ -15,6 +16,7 @@ import type { TenderDetail, TenderSummary } from "@/types/tender";
 export default function MemoirsPage() {
   const router = useRouter();
   const memoirs = useLoader(() => getMemoirs(), "memoirs");
+  const paged = usePaged(memoirs.data ?? [], "Pages des mémoires");
   const [query, setQuery] = useState("");
   const [found, setFound] = useState<TenderSummary[] | null>(null);
   const [tender, setTender] = useState<TenderDetail | null>(null);
@@ -151,7 +153,7 @@ export default function MemoirsPage() {
               </tr>
             </thead>
             <tbody>
-              {memoirs.data.map((memoir) => (
+              {paged.rows.map((memoir) => (
                 <tr key={memoir.id}>
                   <td>
                     <Link href={`/memoirs/${memoir.id}`}>{memoir.title}</Link>
@@ -185,6 +187,7 @@ export default function MemoirsPage() {
             </tbody>
           </table>
         )}
+        {paged.pager}
       </section>
     </div>
   );
