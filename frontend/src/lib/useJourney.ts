@@ -16,6 +16,7 @@ export type Journey = {
   technical: JourneyStep;
   estimate: JourneyStep;
   memoir: JourneyStep;
+  administrative: JourneyStep;
   response: JourneyStep;
 };
 
@@ -56,6 +57,12 @@ export function useJourney(tenderId: number): Journey {
         ? "current"
         : "todo",
     memoir: mine.some((memoir) => memoir.status === "DONE") ? "done" : mine.length ? "current" : "todo",
+    // The forms of the DCE, filled in Administratif.
+    administrative: !needed.some((piece) => piece.fill === "FORM")
+      ? "todo"
+      : needed.filter((piece) => piece.fill === "FORM").every((piece) => piece.state === "READY")
+        ? "done"
+        : "current",
     response:
       needed.length === 0 ? "todo" : needed.every((piece) => piece.state === "READY") ? "done" : "current",
   };

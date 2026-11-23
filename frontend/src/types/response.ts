@@ -13,6 +13,8 @@ export type ResponsePiece = {
   /** What to do next, or what is joined. */
   detail: string;
   companyDocumentId: number | null;
+  /** The model is the one a user dropped, not the one of the DCE. */
+  templateDropped: boolean;
   /** The file uploaded by a user. */
   fileName: string | null;
   sizeBytes: number | null;
@@ -66,6 +68,8 @@ export type ResponseForm = {
   reviewComment: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
+  /** The model is the one a user dropped, not the one of the DCE. */
+  templateDropped: boolean;
 };
 
 /** TODO: nothing filled yet; TO_VALIDATE: filled by the AI, waiting for a user. */

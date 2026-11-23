@@ -64,6 +64,13 @@ export function uploadPieceFile(id: number, file: File): Promise<ResponseView> {
   return upload(`/api/response-pieces/${id}/file`, form);
 }
 
+/** The model of a form, when the DCE gives none in Word: the AI fills it as it does the one of the DCE. */
+export function uploadFormTemplate(pieceId: number, file: File): Promise<ResponseForm> {
+  const form = new FormData();
+  form.append("file", file);
+  return upload(`/api/response-pieces/${pieceId}/form/template`, form);
+}
+
 /** The forms to fill of every answer begun, or of one tender. */
 export function getAdministrativeForms(
   tenderId?: number,

@@ -321,6 +321,13 @@ export function ProcessingPanel({ tenderId, retained }: { tenderId: number; reta
   const current = steps.find((step) => step.state === "running");
   const expanded = working || open;
 
+  // Shown while the DCE is processed, or when a step failed; otherwise the tabs say where the tender stands.
+  const failed =
+    dossier?.status === "FAILED" || summary.data.latest?.status === "FAILED" || financial.data?.latest?.status === "FAILED";
+  if (!working && !failed && !error) {
+    return null;
+  }
+
   return (
     <section className={working ? "card processing working" : "card processing"} aria-live="polite">
       <div className="processing-head">

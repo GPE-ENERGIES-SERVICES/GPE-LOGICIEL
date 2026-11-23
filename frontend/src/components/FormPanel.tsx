@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 
 import { useAiRun } from "@/components/AiProgress";
 import { formatDateTime } from "@/lib/format";
 import { refreshData, useLoader } from "@/lib/useLoader";
-import { changeFormField, generateForm, getForm, reviewForm, startForm } from "@/services/responseApi";
+import { changeFormField, generateForm, getForm, reviewForm, startForm, uploadFormTemplate } from "@/services/responseApi";
 import type { FormDecision, FormField, FormFieldSource, FormStatus, ResponseForm, ResponseView } from "@/types/response";
 
 export const FORM_STATUS_LABELS: Record<FormStatus, string> = {
@@ -108,20 +108,85 @@ function FieldRow({
  * value shows where it comes from, a user corrects it here; the Word document is
  * written on request. Declarations and signature stay on the document.
  */
+/** Where the official models of the candidate forms are published (DC1, DC2, DC4). */
+const OFFICIAL_MODELS = "https://www.economie.gouv.fr/daj/formulaires-declaration-du-candidat";
+
+/**
+ * Step 1 of a form, its model: the one found in the DCE, or one dropped here (an
+ * official DC1, the form of the buyer received apart); the AI fills it in step 2.
+ */
+function TemplateStep({
+  label,
+  form,
+  busy,
+  onDrop,
+}: {
+  label: string;
+  form: ResponseForm;
+  busy: boolean;
+  onDrop: (file: File) => void;
+}) {
+  const official = /\bdc ?[124]\b/i.test(label);
+  const input = (text: string, primary: boolean) => (
+    <label className={primary ? "button primary" : "link-button"} aria-disabled={busy}>
+      {text}
+      <input
+        type="file"
+        className="file-input"
+        accept=".doc,.docx"
+        disabled={busy}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) {
+            onDrop(file);
+          }
+        }}
+      />
+    </label>
+  );
+  return (
+    <div className="form-step">
+      <span className="form-step-number">1</span>
+      <div>
+        <strong>Modèle</strong>
+        {form.documentName ? (
+          <p className="hint">
+            <span className="badge success">{form.templateDropped ? "Déposé" : "Trouvé dans le DCE"}</span>{" "}
+            {form.documentName} · {input("Remplacer", false)}
+          </p>
+        ) : (
+          <>
+            <p className="hint">{form.problem}</p>
+            <div className="inline-form">
+              {official && (
+                <a className="button" href={OFFICIAL_MODELS} target="_blank" rel="noreferrer">
+                  Récupérer le modèle officiel ↗
+                </a>
+              )}
+              {input("Déposer le modèle (.docx)", true)}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function FormPanel({
   pieceId,
   lots,
   onGenerated,
   onChange,
-  withoutTemplate,
+  label,
 }: {
   pieceId: number;
   lots: { number: string; title: string | null }[];
   onGenerated: (action: () => Promise<ResponseView>) => void;
   /** After a filling or a decision: where the form stands has changed. */
   onChange?: () => void;
-  /** Shown when the consultation file gives no Word form to fill: a way to write it all the same. */
-  withoutTemplate?: ReactNode;
+  /** The name of the form, to offer its official model. */
+  label: string;
 }) {
   const loaded = useLoader(() => getForm(pieceId), `form-${pieceId}`);
   const [saved, setSaved] = useState<ResponseForm | null>(null);
@@ -174,11 +239,14 @@ export function FormPanel({
 
   return (
     <div className="form-panel" aria-busy={busy}>
-      {form.problem ? (
-        withoutTemplate ?? <p className="muted">{form.problem}</p>
-      ) : (
+      <TemplateStep
+        label={label}
+        form={form}
+        busy={busy}
+        onDrop={(file) => act(() => uploadFormTemplate(pieceId, file), "Dépôt du modèle impossible.")}
+      />
+      {form.problem ? null : (
         <>
-          <p className="hint">Formulaire du DCE : {form.documentName}</p>
           <div className="inline-form">
             {lots.length > 0 ? (
               <label>

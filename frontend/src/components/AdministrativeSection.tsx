@@ -3,11 +3,13 @@
 import { useState } from "react";
 
 import { useLoader } from "@/lib/useLoader";
-import { addPiece, getAdministrativeForms, getResponse } from "@/services/responseApi";
-import type { AdministrativeForm, PieceCategory, ResponsePiece, ResponseView } from "@/types/response";
+import Link from "next/link";
+
+import { addPiece, changePiece, getAdministrativeForms, getResponse, prepareResponse } from "@/services/responseApi";
+import type { AdministrativeForm, PieceCategory } from "@/types/response";
 
 import { FORM_STATUS_CLASSES, FORM_STATUS_LABELS, FormPanel } from "./FormPanel";
-import { PieceWriter } from "./ResponseSection";
+import { documentLabel } from "./ResponseSection";
 
 /** The forms the software fills today; others are added as pieces of the answer. */
 const STANDARD_FORMS: { label: string; category: PieceCategory; present: RegExp }[] = [
@@ -18,15 +20,10 @@ const STANDARD_FORMS: { label: string; category: PieceCategory; present: RegExp 
 
 function FormItem({
   form,
-  piece,
-  run,
   lots,
   onChange,
 }: {
   form: AdministrativeForm;
-  /** The piece of the answer this form is, to write it when the DCE gives no Word form. */
-  piece: ResponsePiece | undefined;
-  run: (action: () => Promise<ResponseView>) => void;
   lots: { number: string; title: string | null }[];
   onChange: () => void;
 }) {
@@ -53,17 +50,7 @@ function FormItem({
           pieceId={form.pieceId}
           lots={lots}
           onChange={onChange}
-          withoutTemplate={
-            piece && (
-              <>
-                <p className="hint">
-                  Le DCE ne fournit pas ce formulaire en Word : rédigez-le ici, à la main ou avec l&apos;IA. Il est joint au
-                  dossier de réponse en Word ; vous pouvez aussi y déposer votre propre fichier.
-                </p>
-                <PieceWriter piece={piece} run={run} />
-              </>
-            )
-          }
+          label={form.label}
           onGenerated={(action) => {
             setError(null);
             action().then(onChange, (err) => setError(err instanceof Error ? err.message : "Génération impossible."));
@@ -81,7 +68,6 @@ function FormItem({
  */
 export function AdministrativeSection({ tenderId, lots }: { tenderId: number; lots: { number: string; title: string | null }[] }) {
   const forms = useLoader(() => getAdministrativeForms(tenderId), `administrative-${tenderId}`);
-  const response = useLoader(() => getResponse(tenderId), `administrative-response-${tenderId}`);
   const [error, setError] = useState<string | null>(null);
   const list = forms.data ?? [];
   const absent = STANDARD_FORMS.filter((standard) => !list.some((form) => standard.present.test(form.label)));
@@ -100,8 +86,9 @@ export function AdministrativeSection({ tenderId, lots }: { tenderId: number; lo
   return (
     <div>
       <p className="muted">
-        Les formulaires du DCE, remplis ici à la main ou par l&apos;IA, puis joints au dossier de réponse. Signature et déclarations
-        sur l&apos;honneur restent à faire vous-même.
+        Les documents administratifs demandés par le DCE, d&apos;après l&apos;analyse. Pour chacun : 1. le modèle (trouvé dans le DCE,
+        officiel ou déposé ici), 2. le remplissage par l&apos;IA, que vous vérifiez et validez. Signature et déclarations sur
+        l&apos;honneur restent à faire vous-même.
       </p>
       {forms.error && <p className="banner error">{forms.error}</p>}
       {error && <p className="banner error">{error}</p>}
@@ -113,27 +100,30 @@ export function AdministrativeSection({ tenderId, lots }: { tenderId: number; lo
         </p>
       )}
       {forms.data && list.length === 0 && (
-        <p className="muted">
-          Aucun formulaire pour l&apos;instant : ils sont repris de la fiche IA dans l&apos;onglet « Dossier de réponse », ou ajoutez-les
-          ci-dessous.
-        </p>
+        <div className="inline-form">
+          <button
+            type="button"
+            className="primary"
+            onClick={async () => {
+              setError(null);
+              try {
+                await prepareResponse(tenderId);
+                forms.reload();
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Lecture de l'analyse impossible.");
+              }
+            }}
+          >
+            Reprendre les documents demandés par l&apos;analyse
+          </button>
+          <span className="muted">ou ajoutez-les ci-dessous.</span>
+        </div>
       )}
       <ul className="admin-forms">
         {list.map((form) => (
           <FormItem
             key={form.pieceId}
             form={form}
-            piece={response.data?.pieces.find((piece) => piece.id === form.pieceId)}
-            run={async (action) => {
-              setError(null);
-              try {
-                await action();
-              } catch (err) {
-                setError(err instanceof Error ? err.message : "Action impossible.");
-              }
-              response.reload();
-              forms.reload();
-            }}
             lots={lots}
             onChange={forms.reload}
           />
@@ -149,6 +139,87 @@ export function AdministrativeSection({ tenderId, lots }: { tenderId: number; lo
           ))}
         </div>
       )}
+      <CompanyDocuments tenderId={tenderId} />
     </div>
+  );
+}
+
+/**
+ * The standard documents the DCE asks (Kbis, URSSAF, tax and social certificates,
+ * insurance, qualifications): taken from the company page, the latest still valid,
+ * as soon as the pieces come from the analysis; another one can be chosen here.
+ */
+function CompanyDocuments({ tenderId }: { tenderId: number }) {
+  const response = useLoader(() => getResponse(tenderId), `administrative-company-${tenderId}`);
+  const [error, setError] = useState<string | null>(null);
+  const view = response.data;
+  const pieces = (view?.pieces ?? []).filter((piece) => piece.fill === null && piece.state !== "NOT_NEEDED");
+  if (!view || pieces.length === 0) {
+    return null;
+  }
+  const choose = async (piece: (typeof pieces)[number], companyDocumentId: number | null) => {
+    setError(null);
+    try {
+      await changePiece(piece.id, { label: piece.label, notNeeded: false, companyDocumentId });
+      response.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Choix impossible.");
+    }
+  };
+  return (
+    <>
+      <h3>Documents de l&apos;entreprise demandés</h3>
+      {error && <p className="banner error">{error}</p>}
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Document demandé</th>
+              <th>Pris dans la fiche Entreprise</th>
+              <th>État</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pieces.map((piece) => {
+              const document = view.documents.find((item) => item.id === piece.companyDocumentId);
+              const [badge, text] = !document
+                ? ["badge danger", "Absent de l'Entreprise"]
+                : !document.hasFile || document.validity === "EXPIRED"
+                  ? ["badge danger", document.hasFile ? "Expiré" : "Sans fichier"]
+                  : document.validity === "EXPIRING"
+                    ? ["badge warning", "Expire bientôt"]
+                    : ["badge success", "Joint automatiquement"];
+              return (
+                <tr key={piece.id}>
+                  <td>{piece.label}</td>
+                  <td>
+                    <select
+                      value={piece.companyDocumentId ?? ""}
+                      aria-label={`Document pour ${piece.label}`}
+                      onChange={(event) => choose(piece, event.target.value ? Number(event.target.value) : null)}
+                    >
+                      <option value="">Aucun</option>
+                      {view.documents.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {documentLabel(item)}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <span className={badge}>{text}</span>
+                    {(!document || !document.hasFile || document.validity === "EXPIRED") && (
+                      <div className="small">
+                        <Link href="/company">Ajouter dans Entreprise</Link>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

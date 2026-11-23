@@ -674,6 +674,7 @@ function TenderDetails() {
           {
             id: "administratif",
             label: "Administratif",
+            step: journey.administrative,
             content: (
               <section className="card">
                 <h2>Administratif</h2>

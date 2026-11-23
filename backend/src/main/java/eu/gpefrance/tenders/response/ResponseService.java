@@ -94,13 +94,9 @@ public class ResponseService {
 
 	private final PieceWriter writer;
 
-	private final FormService forms;
-
 	public ResponseService(ResponsePieceRepository pieces, TenderRepository tenders, AnalysisRepository analyses,
 			CompanyDirectory company, EstimateService estimates, FileStorage storage, JdbcTemplate jdbc, Clock clock,
-			EquipmentService equipment, MemoirService memoirs, DpgfFillService schedules, PieceWriter writer,
-			FormService forms) {
-		this.forms = forms;
+			EquipmentService equipment, MemoirService memoirs, DpgfFillService schedules, PieceWriter writer) {
 		this.memoirs = memoirs;
 		this.schedules = schedules;
 		this.writer = writer;
@@ -354,11 +350,9 @@ public class ResponseService {
 	@Transactional
 	public ResponseView draft(Long pieceId, String user) {
 		ResponsePiece piece = find(pieceId);
-		Fill fill = fillOf(piece.getLabel());
-		// A form the consultation file does not give in Word is written like any other piece.
-		if (fill != Fill.WRITE && !(fill == Fill.FORM && !forms.hasTemplate(pieceId))) {
+		if (fillOf(piece.getLabel()) != Fill.WRITE) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-					"Cette pièce ne se rédige pas : c'est un formulaire fourni par le DCE, un document officiel ou le fichier d'une autre étape.");
+					"Cette pièce ne se rédige pas : c'est un formulaire, un document officiel ou le fichier d'une autre étape.");
 		}
 		Tender tender = tenders.findById(piece.getTenderId()).orElseThrow(() -> new TenderNotFoundException(piece.getTenderId()));
 		PieceWriter.Written written = writer.write(piece, tender, user);

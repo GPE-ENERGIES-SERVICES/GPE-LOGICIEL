@@ -43,7 +43,7 @@ const STATE_CLASSES: Record<PieceState, string> = {
   NOT_NEEDED: "badge muted-badge",
 };
 
-function documentLabel(document: DocumentChoice): string {
+export function documentLabel(document: DocumentChoice): string {
   const end = document.expiresOn
     ? ` (jusqu'au ${formatDate(document.expiresOn)})`
     : "";
@@ -67,7 +67,7 @@ const FROM_STEP_LABELS: Partial<
  * A piece written here, by hand or drafted by the AI from what the application
  * knows; saved, it is joined as a Word file in the style of GPE.
  */
-export function PieceWriter({
+function PieceWriter({
   piece,
   run,
 }: {

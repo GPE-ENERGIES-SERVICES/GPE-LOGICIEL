@@ -196,9 +196,11 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
         <span className="verdict-label">
           {VERDICT_LABELS[decision.verdict]}
         </span>
-        {decision.conclusion && (
-          <p className="verdict-conclusion">{decision.conclusion}</p>
-        )}
+        <p className="verdict-conclusion">
+          {decision.strengths.length} raison{decision.strengths.length > 1 ? "s" : ""} d&apos;y aller ·{" "}
+          {decision.obstacles.length} obstacle{decision.obstacles.length > 1 ? "s" : ""} ·{" "}
+          {decision.checks.length} point{decision.checks.length > 1 ? "s" : ""} à lever
+        </p>
       </div>
       <p className="decision-scope">
         {analysed} pièce{analysed > 1 ? "s" : ""} analysée

@@ -110,10 +110,11 @@ public class FormService {
 	/**
 	 * @param status TODO before any filling, then IN_PROGRESS, TO_VALIDATE (filled by the AI), VALIDATED or REJECTED
 	 * @param reviewComment why it was rejected, given to the AI when it fills the form again
+	 * @param templateDropped the model is the one a user dropped, not the one of the DCE
 	 */
 	public record FormResponse(Long pieceId, String documentName, String problem, boolean aiAvailable, String aiMessage,
 			String lotNumber, boolean started, List<FieldResponse> fields, int lockedCount, String status,
-			boolean filledByAi, String reviewComment, String reviewedBy, Instant reviewedAt) {
+			boolean filledByAi, String reviewComment, String reviewedBy, Instant reviewedAt, boolean templateDropped) {
 	}
 
 	/** What a user decides on a filled form. */
@@ -169,9 +170,9 @@ public class FormService {
 			Source source = source(piece);
 			AiAssistant.Availability availability = ai.availability();
 			if (formId.isEmpty()) {
-				return new FormResponse(pieceId, source.document() == null ? null : source.document().getFileName(),
+				return new FormResponse(pieceId, source.fileName(),
 						source.problem(), availability.available(), availability.message(), null, false, List.of(), 0,
-						"TODO", false, null, null, null);
+						"TODO", false, null, null, null, source.uploaded());
 			}
 			List<FieldResponse> fields = jdbc.query("""
 					SELECT * FROM response_form_field WHERE form_id = ? AND NOT locked ORDER BY position""",
@@ -183,11 +184,11 @@ public class FormService {
 					Integer.class, formId.get());
 			return jdbc.queryForObject("SELECT * FROM response_form WHERE id = ?",
 					(row, n) -> new FormResponse(pieceId,
-							source.document() == null ? null : source.document().getFileName(), source.problem(),
+							source.fileName(), source.problem(),
 							availability.available(), availability.message(), row.getString("lot_number"), true, fields,
 							locked == null ? 0 : locked, row.getString("status"), row.getBoolean("filled_by_ai"),
 							row.getString("review_comment"), row.getString("reviewed_by"),
-							row.getTimestamp("reviewed_at") == null ? null : row.getTimestamp("reviewed_at").toInstant()),
+							row.getTimestamp("reviewed_at") == null ? null : row.getTimestamp("reviewed_at").toInstant(), source.uploaded()),
 					formId.get());
 		});
 	}
@@ -351,7 +352,7 @@ public class FormService {
 			Long formId = formId(pieceId).orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
 					"Commencez par remplir ce formulaire."));
 			Source source = source(piece);
-			if (source.document() == null) {
+			if (!source.found()) {
 				throw new ResponseStatusException(HttpStatus.CONFLICT, source.problem());
 			}
 			String lot = jdbc.queryForObject("SELECT lot_number FROM response_form WHERE id = ?", String.class, formId);
@@ -372,7 +373,7 @@ public class FormService {
 		if (generated == null) {
 			throw new IllegalStateException("Form not read");
 		}
-		String name = outputName(generated.source().document().getFileName(), generated.lot());
+		String name = outputName(generated.source().fileName(), generated.lot());
 		Path directory = storage.resolve("responses/" + generated.tenderId() + "/" + pieceId);
 		try {
 			Files.createDirectories(directory);
@@ -424,23 +425,45 @@ public class FormService {
 	/**
 	 * @param problem why there is no form, when there is none
 	 */
-	private record Source(Document document, String problem) {
+	private record Source(Long documentId, String fileName, String storagePath, boolean uploaded, String problem) {
+
+		static Source of(Document document) {
+			return new Source(document.getId(), document.getFileName(), document.getStoragePath(), false, null);
+		}
+
+		static Source none(String problem) {
+			return new Source(null, null, null, false, problem);
+		}
+
+		boolean found() {
+			return storagePath != null;
+		}
+
 	}
 
-	/** The form in the latest consultation file: by its name, and its type for the acte d'engagement. */
+	/**
+	 * The model dropped by a user first; otherwise the form in the latest consultation
+	 * file: by its name, and its type for the acte d'engagement.
+	 */
 	private Source source(ResponsePiece piece) {
+		List<Map<String, Object>> dropped = jdbc.queryForList(
+				"SELECT template_name, template_path FROM response_piece WHERE id = ? AND template_path IS NOT NULL",
+				piece.getId());
+		if (!dropped.isEmpty()) {
+			return new Source(null, (String) dropped.getFirst().get("template_name"),
+					(String) dropped.getFirst().get("template_path"), true, null);
+		}
 		List<Dossier> versions = dossiers.findByTenderIdOrderByVersionDesc(piece.getTenderId());
 		if (versions.isEmpty()) {
-			return new Source(null, "Aucun DCE déposé : déposez-le, ou déposez directement votre formulaire rempli.");
+			return Source.none("Aucun DCE déposé : déposez le modèle du formulaire ci-dessous.");
 		}
 		String wanted = wanted(piece.getLabel());
 		List<Document> words = versions.getFirst().getDocuments().stream().filter(FormService::isWord).toList();
 		Optional<Document> found = wanted != null
 				? words.stream().filter((document) -> matches(document, wanted)).min(Comparator.comparing(Document::getFileName))
 				: closest(piece.getLabel(), words);
-		return found.map((document) -> new Source(document, null))
-			.orElseGet(() -> new Source(null,
-					"Aucun formulaire Word de ce type dans le DCE : déposez directement votre formulaire rempli."));
+		return found.map(Source::of)
+			.orElseGet(() -> Source.none("Le DCE ne fournit pas ce formulaire en Word : déposez son modèle ci-dessous."));
 	}
 
 	/** dc1, dc2 or ae; null for another form, found by the words of its label. */
@@ -508,7 +531,7 @@ public class FormService {
 
 	/** The form as .docx; the old Word format is converted, without touching the original. */
 	private byte[] docx(Source source) {
-		Path original = storage.resolve(source.document().getStoragePath());
+		Path original = storage.resolve(source.storagePath());
 		try {
 			if (original.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".docx")) {
 				return Files.readAllBytes(original);
@@ -542,7 +565,7 @@ public class FormService {
 	private Prepared prepare(Long pieceId, String lot) {
 		ResponsePiece piece = piece(pieceId);
 		Source source = source(piece);
-		if (source.document() == null) {
+		if (!source.found()) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, source.problem());
 		}
 		Tender tender = tenders.findById(piece.getTenderId()).orElseThrow();
@@ -663,12 +686,12 @@ public class FormService {
 		if (formId == null) {
 			formId = jdbc.queryForObject("""
 					INSERT INTO response_form (piece_id, document_id, lot_number, updated_by, updated_at)
-					VALUES (?, ?, ?, ?, ?) RETURNING id""", Long.class, pieceId, prepared.source().document().getId(),
+					VALUES (?, ?, ?, ?, ?) RETURNING id""", Long.class, pieceId, prepared.source().documentId(),
 					prepared.lot(), user, java.sql.Timestamp.from(now));
 		}
 		else {
 			jdbc.update("UPDATE response_form SET document_id = ?, lot_number = ?, updated_by = ?, updated_at = ? WHERE id = ?",
-					prepared.source().document().getId(), prepared.lot(), user, java.sql.Timestamp.from(now), formId);
+					prepared.source().documentId(), prepared.lot(), user, java.sql.Timestamp.from(now), formId);
 		}
 		int position = 0;
 		for (FormDocument.Slot slot : slots) {
@@ -696,11 +719,30 @@ public class FormService {
 	}
 
 	/**
-	 * Whether the latest consultation file holds this form as a Word document whose fields
-	 * can be filled; without one, the form is written like any other piece.
+	 * The model of the form, dropped by a user (an official DC1, the form of the buyer
+	 * sent apart): it replaces the one of the DCE; the AI then fills it as it does that one.
 	 */
-	public boolean hasTemplate(Long pieceId) {
-		return source(piece(pieceId)).document() != null;
+	public FormResponse dropTemplate(Long pieceId, org.springframework.web.multipart.MultipartFile file, String user) {
+		String name = file.getOriginalFilename() == null ? "" : Path.of(file.getOriginalFilename()).getFileName().toString();
+		String lower = name.toLowerCase(Locale.ROOT);
+		if (file.isEmpty() || !(lower.endsWith(".docx") || lower.endsWith(".doc"))) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Modèle attendu au format Word (.docx ou .doc).");
+		}
+		ResponsePiece piece = piece(pieceId);
+		Path stored;
+		try (var in = file.getInputStream()) {
+			stored = storage.store(in, storage.resolve("responses/" + piece.getTenderId() + "/" + pieceId + "/model"), name);
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+		String previous = jdbc.queryForObject("SELECT template_path FROM response_piece WHERE id = ?", String.class, pieceId);
+		String path = storage.relativize(stored);
+		jdbc.update("UPDATE response_piece SET template_name = ?, template_path = ? WHERE id = ?", name, path, pieceId);
+		if (previous != null && !previous.equals(path)) {
+			storage.resolve(previous).toFile().delete();
+		}
+		return view(pieceId);
 	}
 
 	private ResponsePiece piece(Long pieceId) {

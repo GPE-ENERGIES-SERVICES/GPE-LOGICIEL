@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import eu.gpefrance.tenders.response.FormService.Decision;
 import eu.gpefrance.tenders.response.FormService.FieldResponse;
@@ -59,6 +60,13 @@ public class FormController {
 	public FormResponse review(@PathVariable Long pieceId, @Valid @RequestBody ReviewRequest request,
 			@AuthenticationPrincipal AppUserPrincipal user) {
 		return forms.review(pieceId, request.decision(), request.comment(), user.displayName());
+	}
+
+	/** The model of the form, when the DCE gives none in Word. */
+	@PostMapping("/api/response-pieces/{pieceId}/form/template")
+	public FormResponse dropTemplate(@PathVariable Long pieceId, @RequestParam("file") MultipartFile file,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return forms.dropTemplate(pieceId, file, user.displayName());
 	}
 
 	@GetMapping("/api/response-pieces/{pieceId}/form")

@@ -5425,3 +5425,23 @@ th.number {
   align-self: start;
   margin-top: 0.15rem;
 }
+
+/* The steps of a form: a numbered model, then its filling. */
+.form-step {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.form-step-number {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
