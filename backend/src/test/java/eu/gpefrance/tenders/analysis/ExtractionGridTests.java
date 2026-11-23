@@ -87,10 +87,10 @@ class ExtractionGridTests {
 						new BigDecimal("180000"), java.time.LocalDate.of(2025, 6, 1), null, null)));
 
 		assertThat(ExtractionPrompt.company(null, declared)).startsWith("<entreprise>")
-			.contains("Aucun critère de veille", "a déclaré posséder", "Départements d'intervention : 13, 84",
-					"QualiPV Elec (Qualit'EnR), 36 à 250 kWc, valable jusqu'au 2027-03-31",
+			.contains("Aucun critère de veille", "Ce que fait l'entreprise", "Départements d'intervention : 13, 84",
+					"Qualification : QualiPV Elec, 36 à 250 kWc",
 					"1 personne(s) ; habilitations : BR, H0V", "Centrale PV de Salon – Photovoltaïque – Salon (13) – 2025")
-			.doesNotContain("Aucune information n'est enregistrée")
+			.doesNotContain("Aucune information n'est enregistrée", "2027-03-31")
 			.endsWith("</entreprise>\n");
 		assertThat(ExtractionPrompt.company(null, null)).contains("Aucune information n'est enregistrée");
 	}

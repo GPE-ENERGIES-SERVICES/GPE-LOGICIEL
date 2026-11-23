@@ -275,10 +275,10 @@ function DecisionSheet({ analysis }: { analysis: Analysis }) {
           </ul>
         )}
         <p>
-          Comparé à ce que GPE a déclaré dans l&apos;onglet Entreprise
-          (certifications, personnel, matériel, références, zone) : ce qui
-          n&apos;y figure pas reste à vérifier. Seuls les points marqués ✓ sont
-          appuyés par un extrait retrouvé dans le document.
+          Avis sur l&apos;intérêt du projet (métier, taille, risques,
+          chances de gagner, délais), jamais sur les formalités. Seuls les
+          points marqués ✓ sont appuyés par un extrait retrouvé dans le
+          document.
         </p>
       </Fold>
     </div>

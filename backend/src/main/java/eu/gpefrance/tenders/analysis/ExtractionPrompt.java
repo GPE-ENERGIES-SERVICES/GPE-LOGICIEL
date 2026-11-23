@@ -154,28 +154,35 @@ final class ExtractionPrompt {
 				%s
 
 				Go / No-Go (« decision ») :
-				Une fois la grille remplie, dis si l'entreprise doit répondre à ce marché : est-ce que ça vaut le \
-				coup ? Ce n'est pas un résumé : la grille décrit déjà le marché. Ne répète ni l'objet, ni \
-				l'acheteur, ni les dates, ni les montants, sauf quand l'un d'eux justifie une conclusion.
-				- Ce que le logiciel sait de l'entreprise est dans la balise <entreprise> : ses critères de veille \
-				(ce qu'elle recherche) et, s'ils sont renseignés, ce qu'elle a déclaré posséder (certifications et \
-				leur date de fin, habilitations du personnel, matériel, références, zone d'intervention). Compare \
-				chaque exigence du DCE à ces déclarations. Une exigence couverte par une déclaration est un \
-				argument ; une certification expirée avant la date limite est un obstacle. Une capacité absente des \
-				listes n'est pas une absence prouvée : c'est un obstacle TO_CHECK, jamais CONFIRMED.
+				Une fois la grille remplie, juge comme un chargé d'affaires expérimenté si ce projet vaut le coup \
+				pour l'entreprise : est-ce une affaire à prendre ? Ce n'est pas un résumé : la grille décrit déjà le \
+				marché. Ne répète ni l'objet, ni l'acheteur, ni les dates, ni les montants, sauf quand l'un d'eux \
+				justifie une conclusion.
+				- Juge l'intérêt du projet, à partir du DCE : est-ce dans le métier de l'entreprise (ses activités et \
+				le genre de chantiers de ses références, dans <entreprise>) ; taille de l'affaire et potentiel \
+				économique (montant, durée, reconductions, suites possibles) ; difficulté et risques techniques \
+				(site, contraintes, incohérences du DCE, études à reprendre) ; risques contractuels et financiers \
+				(pénalités non plafonnées, garanties, paiement, prix ferme sur longue durée) ; poids du prix et de la \
+				technique dans les critères, et donc la chance de gagner sur la valeur technique ; temps restant pour \
+				répondre et visite obligatoire ; éloignement du chantier par rapport à la zone d'intervention.
+				- Ne fonde jamais l'avis sur des formalités : pièces administratives, attestations, dates de \
+				validité, formulaires à remplir. Elles se règlent et ne décident pas d'une affaire. Une \
+				qualification exigée ne compte que si elle est hors du métier de l'entreprise.
+				- Ce que le logiciel sait de l'entreprise (ses critères de veille, ses activités, ses références, sa \
+				zone) sert à juger si le projet lui ressemble, jamais à vérifier une conformité. Ce qui n'y figure pas \
+				n'est pas une absence prouvée.
 				- Aucun score, pourcentage, note ni probabilité.
-				- verdict : GO si le marché correspond à ce que l'entreprise fait et qu'aucun obstacle sérieux n'est \
-				connu ; GO_CONDITIONS s'il vaut le coup mais qu'au moins un obstacle ou point est à lever avant de \
-				s'engager ; NO_GO s'il est hors de ce qu'elle fait ou qu'un obstacle confirmé ne peut pas être levé \
-				(qualification exigée non détenue, délai impossible, visite obligatoire passée…) ; INSUFFICIENT si \
-				les documents ou les informations ne permettent pas de conclure.
-				- conclusion : une à deux phrases qui disent pourquoi, et pour GO_CONDITIONS ce qu'il faut lever.
-				- strengths : au plus 3 arguments pour répondre (travaux dans le métier de l'entreprise, exigence \
-				couverte par ce qu'elle a déclaré, lot pertinent, opportunité technique ou commerciale). Aucun s'il \
-				n'y en a pas.
-				- obstacles : au plus 6, les plus importants d'abord (qualifications ou habilitations exigées, chiffre \
-				d'affaires, références, moyens exigés, délais, visite obligatoire, pénalités ou responsabilités \
-				lourdes, contradictions entre pièces, pièce importante absente). kind : CONFIRMED pour une exigence \
+				- verdict : GO si c'est une bonne affaire pour l'entreprise sans risque sérieux ; GO_CONDITIONS si \
+				elle vaut le coup à condition de lever un risque ou un point précis ; NO_GO si elle n'en vaut pas la \
+				peine (hors métier, trop petite ou trop grosse, risques contractuels ou techniques trop lourds, \
+				chances trop faibles, délai impossible) ; INSUFFICIENT si le DCE ne permet pas de juger.
+				- conclusion : une à deux phrases qui disent pourquoi, comme à un dirigeant ; pour GO_CONDITIONS, la \
+				condition.
+				- strengths : au plus 3 raisons d'y aller (métier, taille, rentabilité possible, chance de gagner, \
+				suites, opportunité commerciale). Aucune s'il n'y en a pas.
+				- obstacles : au plus 6 risques ou freins du projet, les plus lourds d'abord (hors métier, taille, \
+				difficultés techniques, incohérences du DCE, délais serrés, visite obligatoire, pénalités ou \
+				responsabilités lourdes, conditions de paiement, critères défavorables), jamais une formalité. kind : CONFIRMED pour une exigence \
 				écrite dans un document, avec son extrait ; TO_CHECK pour un risque plausible à vérifier ; MISSING \
 				pour une information absente qui empêche de conclure, sans extrait. Une exigence n'est bloquante que \
 				si le document le dit. Pas d'inventaire de toutes les clauses.
@@ -228,8 +235,8 @@ final class ExtractionPrompt {
 			return searched;
 		}
 		StringBuilder text = new StringBuilder(searched.substring(0, searched.indexOf("Aucune information n'est")));
-		text.append("Ce que l'entreprise a déclaré posséder (à comparer aux exigences ; ce qui n'y figure pas reste à "
-				+ "vérifier) :\n");
+		text.append("Ce que fait l'entreprise (pour juger si le projet lui ressemble ; ce qui n'y figure pas n'est pas "
+				+ "une absence prouvée) :\n");
 		CompanyDirectory.Identity identity = declared.identity();
 		if (identity.city() != null) {
 			text.append("- Siège : ").append(identity.city()).append('\n');
@@ -239,11 +246,9 @@ final class ExtractionPrompt {
 				.append('\n');
 		}
 		declared.activities().forEach(activity -> text.append("- Activité : ").append(activity.label()).append('\n'));
-		declared.certifications().forEach(certification -> text.append("- Certification : ")
+		declared.certifications().forEach(certification -> text.append("- Qualification : ")
 			.append(certification.name())
-			.append(certification.organism() == null ? "" : " (" + certification.organism() + ")")
 			.append(certification.scope() == null ? "" : ", " + certification.scope())
-			.append(certification.expiresOn() == null ? "" : ", valable jusqu'au " + certification.expiresOn())
 			.append('\n'));
 		if (!declared.staff().isEmpty()) {
 			text.append("- Personnel : ").append(declared.staff().size()).append(" personne(s)");
