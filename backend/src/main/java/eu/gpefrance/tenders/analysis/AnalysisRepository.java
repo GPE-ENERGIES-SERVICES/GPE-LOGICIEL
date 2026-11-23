@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.analysis;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -47,27 +48,30 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 	 * Tokens of the analyses created since the given time, failed ones
 	 * included.
 	 */
-	// The calls of the assistance to the estimates count too (ai_call).
+	// The ledger of every call (ai_call), analyses included: each call counted once.
 	@Query(nativeQuery = true, value = """
-			select coalesce(sum(t.input_tokens), 0) as input, coalesce(sum(t.output_tokens), 0) as output from (
-			    select input_tokens, output_tokens from analysis where created_at >= :since
-			    union all
-			    select input_tokens, output_tokens from ai_call where created_at >= :since) t""")
+			select coalesce(sum(input_tokens), 0) as input, coalesce(sum(output_tokens), 0) as output
+			from ai_call where created_at >= :since""")
 	TokenTotals sumTokensSince(Instant since);
+
+	/** What the calls made since the given time cost, in euros, as priced when they were made. */
+	@Query(nativeQuery = true, value = "select coalesce(sum(cost), 0) from ai_call where created_at >= :since")
+	BigDecimal sumCostSince(Instant since);
 
 	/** The same tokens by what they were spent on: kind of analysis or of assistance. */
 	@Query(nativeQuery = true, value = """
-			select t.kind as kind, coalesce(sum(t.input_tokens), 0) as input, coalesce(sum(t.output_tokens), 0) as output
-			from (
-			    select kind, input_tokens, output_tokens from analysis where created_at >= :since
-			    union all
-			    select kind, input_tokens, output_tokens from ai_call where created_at >= :since) t
-			group by t.kind order by t.kind""")
+			select kind as kind, coalesce(sum(input_tokens), 0) as input, coalesce(sum(output_tokens), 0) as output,
+			       sum(cost) as cost
+			from ai_call where created_at >= :since
+			group by kind order by kind""")
 	List<KindTokens> sumTokensByKindSince(Instant since);
 
 	interface KindTokens extends TokenTotals {
 
 		String getKind();
+
+		/** Null when no call of the kind was priced. */
+		BigDecimal getCost();
 
 	}
 

@@ -110,6 +110,11 @@ public class AnalysisGate {
 		return analyses.sumTokensSince(monthStart());
 	}
 
+	/** What the calls of the month cost so far, in euros, as priced when made (0 without prices). */
+	public BigDecimal monthCost() {
+		return analyses.sumCostSince(monthStart());
+	}
+
 	/** The same tokens, by what they were spent on. */
 	public List<AnalysisRepository.KindTokens> monthToDateByKind() {
 		return analyses.sumTokensByKindSince(monthStart());
@@ -130,9 +135,7 @@ public class AnalysisGate {
 		if (properties.monthlyBudget() == null) {
 			return Optional.empty();
 		}
-		TokenTotals spent = monthToDate();
-		BigDecimal cost = properties.cost(spent.getInput(), spent.getOutput());
-		return Optional.of(properties.monthlyBudget().subtract(cost == null ? BigDecimal.ZERO : cost));
+		return Optional.of(properties.monthlyBudget().subtract(monthCost()));
 	}
 
 	private Status configurationStatus() {

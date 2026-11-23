@@ -5267,3 +5267,145 @@ select.status-dismissed {
   background: var(--danger-fill);
   color: #ffffff;
 }
+
+/*
+ * Room and line breaks, the same on every page: the content takes the width
+ * there is, a figure, an amount, a badge or a column title never breaks, a
+ * long title is cut with its full text on hover, a wide table scrolls.
+ */
+.app-main {
+  max-width: 1600px;
+}
+
+.stats > *,
+.dashboard-grid > *,
+.form-grid > *,
+.filter-fields > * {
+  min-width: 0;
+}
+
+th,
+td.number,
+th.number,
+.number,
+.badge,
+.stat strong,
+.result-count,
+.pager > span {
+  white-space: nowrap;
+}
+
+td.number,
+th.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-scroll > table {
+  min-width: 100%;
+}
+
+/* A long title: two lines at most, its full text in its title attribute. */
+.title-cell {
+  min-width: 14rem;
+  max-width: 30rem;
+}
+
+.title-cell > a {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Supervision: the collect and the processing of the AI side by side. */
+.supervision-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.supervision-status > .banner {
+  flex: 1 1 22rem;
+  margin: 0;
+}
+
+.ai-health {
+  display: flex;
+  flex: 1 1 22rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.1rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.ai-health strong {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-health .badge {
+  margin: 0;
+}
+
+/* A gauge: the part spent, its colour from the tone of its card. */
+.gauge {
+  display: block;
+  grid-column: 2;
+  height: 0.5rem;
+  margin-top: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.gauge > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tone-fill, var(--primary));
+}
+
+.gauge.small {
+  width: 5rem;
+  height: 0.4rem;
+  margin: 0;
+}
+
+.share {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-costs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.step-costs strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.history-filters {
+  margin-bottom: 0.9rem;
+}
+
+#consommation-ia .tabs {
+  margin-top: -0.25rem;
+}

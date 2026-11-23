@@ -46,6 +46,7 @@ public class SecurityConfiguration {
 			.requestMatchers(HttpMethod.GET, "/api/company/**").authenticated()
 			.requestMatchers("/api/company/**").hasRole("ADMIN")
 			.requestMatchers("/api/duplicates", "/api/duplicates/**").hasRole("ADMIN")
+			.requestMatchers("/api/ai-usage", "/api/ai-usage/**").hasRole("ADMIN")
 			.requestMatchers("/api/dce/**").hasRole("ADMIN")
 			.requestMatchers(HttpMethod.POST, "/api/dce-links/*/retry").hasRole("ADMIN")
 			.requestMatchers(HttpMethod.GET, "/api/analyses", "/api/analyses/quality", "/api/analyses/configuration")

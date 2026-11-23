@@ -141,7 +141,7 @@ public class LibraryPriceService {
 				ObjectNode content = JSON.createObjectNode();
 				postes.subList(start, Math.min(start + MAX_ITEMS, postes.size())).forEach(content.withArray("postes")::add);
 				AiAssistant.Answer answer = ai.ask("ESTIMATE_PRICE", VERSION, instructions(), content.toString(),
-						schema(), 6000, user);
+						schema(), 6000, user, estimate.getTenderId());
 				save(answer, candidates, estimateId, rate, year, saved);
 			}
 		}

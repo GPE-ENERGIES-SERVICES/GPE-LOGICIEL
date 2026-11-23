@@ -536,7 +536,7 @@ public class FormService {
 	 * @param values what the software writes itself, by the name the AI knows
 	 */
 	private record Prepared(Source source, String lot, Map<String, String> values, String tenderTitle, String buyer,
-			String reviewComment) {
+			String reviewComment, Long tenderId) {
 	}
 
 	private Prepared prepare(Long pieceId, String lot) {
@@ -553,7 +553,7 @@ public class FormService {
 		prices(piece.getTenderId(), lot).forEach(values::put);
 		String reviewComment = jdbc.queryForList("SELECT review_comment FROM response_form WHERE piece_id = ?",
 				String.class, pieceId).stream().filter(java.util.Objects::nonNull).findFirst().orElse(null);
-		return new Prepared(source, lot, values, tender.getTitle(), tender.getBuyer(), reviewComment);
+		return new Prepared(source, lot, values, tender.getTitle(), tender.getBuyer(), reviewComment, tender.getId());
 	}
 
 	/** The amounts of the validated estimate of the lot: a draft is not an offer. */
@@ -608,7 +608,7 @@ public class FormService {
 			}
 		}
 		JsonNode root = root(ai.ask("RESPONSE_FORM", VERSION, INSTRUCTIONS, content.toString(), schema(), MAX_OUTPUT_TOKENS,
-				user).text());
+				user, prepared.tenderId()).text());
 		Map<String, Proposal> proposals = new HashMap<>();
 		for (JsonNode entry : root.path("emplacements")) {
 			proposals.put(entry.path("id").asString(""), proposal(entry, prepared));

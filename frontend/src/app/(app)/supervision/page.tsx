@@ -1,46 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
 import { CollectStatus } from "@/components/CollectStatus";
 import { Fold } from "@/components/Fold";
-import { Icon, type IconName } from "@/components/Icon";
+import { Icon } from "@/components/Icon";
 import { AnalysisJournal } from "@/components/settings/AnalysisJournal";
 import { CollectJournal } from "@/components/settings/CollectJournal";
 import { DcePanel } from "@/components/settings/DcePanel";
 import { DuplicatesPanel } from "@/components/settings/DuplicatesPanel";
+import { AiBudgetCard, AiHealth, AiUsagePanel } from "@/components/supervision/AiUsage";
+import { formatCost } from "@/lib/aiServices";
 import { useLoader } from "@/lib/useLoader";
-import { formatMoney } from "@/lib/estimate";
-import { getAnalysisConfiguration, getAnalysisQuality } from "@/services/analysisApi";
+import { getAiUsage } from "@/services/aiUsageApi";
 import { getDuplicateGroups } from "@/services/duplicateApi";
 import { getTenderCounts } from "@/services/tenderApi";
 
 /** Consultations published since yesterday. */
 const RECENT_QUERY = "publishedWithinDays=1";
 
-type Figure = {
-  value: number | string | null | undefined;
-  label: string;
-  detail?: string;
-  href?: string;
-  icon: IconName;
-  tone?: string;
-};
-
-/** What an AI call was for, by its kind (analysis or assistance). */
-function labelOfUse(kind: string): string {
-  if (kind.startsWith("ESTIMATE")) return "Chiffrage";
-  if (kind.startsWith("MEMOIR")) return "Mémoire";
-  if (kind.startsWith("RESPONSE")) return "Formulaires";
-  return "Analyse DCE";
-}
-
 /**
- * What an administrator checks: the state of the collect and the volume it
- * brings, the duplicates to decide first, the only
- * work to do here, then the journals. Each part is folded; the duplicates open
- * by themselves when some wait.
+ * What an administrator checks: the collect and the processing of the AI are
+ * running, what the AI costs (by service, by tender, call by call), the
+ * duplicates to decide, then the journals, folded.
  */
 export default function SupervisionPage() {
   const { user } = useAuth();
@@ -48,9 +32,9 @@ export default function SupervisionPage() {
   // shortcut: the count reads again what the panel reads; one more small request.
   const duplicates = useLoader(() => (admin ? getDuplicateGroups() : Promise.resolve([])), "supervision-duplicates");
   const recent = useLoader(() => (admin ? getTenderCounts(RECENT_QUERY) : Promise.resolve(null)), "supervision-recent");
-  const counts = useLoader(() => (admin ? getTenderCounts() : Promise.resolve(null)), "supervision-counts");
-  const ai = useLoader(() => (admin ? getAnalysisConfiguration() : Promise.resolve(null)), "supervision-ai");
-  const quality = useLoader(() => (admin ? getAnalysisQuality() : Promise.resolve(null)), "supervision-quality");
+  const usage = useLoader(() => (admin ? getAiUsage() : Promise.resolve(null)), "supervision-ai-usage");
+  const [view, setView] = useState<"services" | "tenders" | "history">("services");
+  const [historyStatus, setHistoryStatus] = useState("");
 
   if (!admin) {
     return <p className="banner error">Cette page est réservée aux administrateurs.</p>;
@@ -58,81 +42,67 @@ export default function SupervisionPage() {
 
   const duplicateCount = duplicates.data?.length ?? 0;
   const newCount = recent.data ? recent.data.ALL + recent.data.FILTERED_OUT : undefined;
-  // Health of the collect and of the criteria: none new says a collect stopped, many out of criteria too strict criteria.
-  const month = ai.data?.monthToDate;
-  const budget = ai.data?.limits.monthlyBudget ?? null;
-  const spent = month?.estimatedCost ?? null;
-  const nearBudget = budget !== null && spent !== null && spent >= budget * 0.8;
-  const byUse = new Map<string, number>();
-  for (const use of month?.byUse ?? []) {
-    const label = labelOfUse(use.kind);
-    byUse.set(label, (byUse.get(label) ?? 0) + (use.estimatedCost ?? 0));
-  }
-  const figures: Figure[] = [
-    { value: newCount, label: "nouvelles depuis hier", href: `/tenders?tab=ALL&${RECENT_QUERY}`, icon: "tenders" },
-    {
-      value: recent.data?.FILTERED_OUT,
-      label: "dont hors critères",
-      href: `/tenders?tab=FILTERED_OUT&${RECENT_QUERY}`,
-      icon: "eye",
-    },
-    { value: counts.data?.FILTERED_OUT, label: "hors critères à vérifier", href: "/tenders?tab=FILTERED_OUT", icon: "eye" },
-    {
-      value: month && (spent === null ? "–" : formatMoney(spent)),
-      label: budget === null ? "dépensés en IA ce mois" : `dépensés en IA sur ${formatMoney(budget)}`,
-      detail:
-        spent === null
-          ? "Prix des tokens non configurés"
-          : [...byUse].map(([label, cost]) => `${label} ${formatMoney(cost)}`).join(" · ") || undefined,
-      icon: "calculator",
-      tone: nearBudget ? "warning" : spent ? "accent" : "muted",
-    },
-    {
-      value: quality.data && (quality.data.averageCost === null ? "–" : formatMoney(quality.data.averageCost)),
-      label: "par analyse de DCE en moyenne",
-      detail: quality.data ? `${quality.data.done} analyses terminées` : undefined,
-      icon: "file",
-    },
-  ];
-  const error = [recent, counts, ai, quality].find((loader) => loader.error)?.error;
+  const finished = usage.data?.perTender.finished;
+  const ongoing = usage.data?.perTender.ongoing;
+  const error = [recent, usage, duplicates].find((loader) => loader.error)?.error;
+
+  const showErrors = () => {
+    setHistoryStatus("FAILED");
+    setView("history");
+    document.getElementById("consommation-ia")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <div className="settings">
       <h1>Supervision</h1>
-      <CollectStatus />
+      <div className="supervision-status">
+        <CollectStatus />
+        <AiHealth overview={usage.data} onShowErrors={showErrors} />
+      </div>
       {error && <p className="banner error">{error}</p>}
       <div className="stats">
-        {figures.map((figure) => {
-          const content = (
-            <>
-              <span className="stat-head">
-                <Icon name={figure.icon} size={18} />
-                <strong>{figure.value ?? "–"}</strong>
-              </span>
-              <span>{figure.label}</span>
-              {figure.detail && <span className="small muted">{figure.detail}</span>}
-            </>
-          );
-          const className = `card stat tone-${figure.tone ?? (figure.value ? "accent" : "muted")}`;
-          return figure.href ? (
-            <Link key={figure.label} href={figure.href} className={className}>
-              {content}
-            </Link>
-          ) : (
-            <div key={figure.label} className={className}>
-              {content}
-            </div>
-          );
-        })}
+        <AiBudgetCard overview={usage.data} />
+        <div className="card stat tone-violet">
+          <span className="stat-head">
+            <Icon name="file" size={18} />
+            <strong>{finished ? formatCost(finished.average) : "–"}</strong>
+          </span>
+          <span>coût IA moyen complet par AO terminé</span>
+          {finished && ongoing && (
+            <span className="small muted">
+              {finished.tenders} AO terminé{finished.tenders > 1 ? "s" : ""} · {ongoing.tenders} en cours (
+              {formatCost(ongoing.average)}, provisoire)
+            </span>
+          )}
+        </div>
+        <Link href={`/tenders?tab=ALL&${RECENT_QUERY}`} className={`card stat tone-${newCount ? "info" : "warning"}`}>
+          <span className="stat-head">
+            <Icon name="tenders" size={18} />
+            <strong>{newCount ?? "–"}</strong>
+          </span>
+          <span>nouvelles consultations depuis hier</span>
+        </Link>
+        <a href="#doublons" className={`card stat tone-${duplicateCount ? "warning" : "success"}`}>
+          <span className="stat-head">
+            <Icon name="warning" size={18} />
+            <strong>{duplicates.data ? duplicateCount : "–"}</strong>
+          </span>
+          <span>groupes de doublons à vérifier</span>
+        </a>
       </div>
-      <Fold
-        className="card settings-fold"
-        title="Doublons à vérifier"
-        count={duplicates.data ? (duplicateCount === 0 ? "aucun" : duplicateCount) : undefined}
-        open={duplicateCount > 0}
-      >
-        <DuplicatesPanel />
-      </Fold>
+      {usage.data && (
+        <AiUsagePanel overview={usage.data} view={view} historyStatus={historyStatus} onView={setView} />
+      )}
+      <div id="doublons">
+        <Fold
+          className="card settings-fold"
+          title="Doublons à vérifier"
+          count={duplicates.data ? (duplicateCount === 0 ? "aucun" : duplicateCount) : undefined}
+          open={duplicateCount > 0}
+        >
+          <DuplicatesPanel />
+        </Fold>
+      </div>
       <Fold className="card settings-fold" title="Journal de collecte">
         <CollectJournal />
       </Fold>

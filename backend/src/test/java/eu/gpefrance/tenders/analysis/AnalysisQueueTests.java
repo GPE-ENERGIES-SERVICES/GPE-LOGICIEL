@@ -338,11 +338,12 @@ class AnalysisQueueTests {
 	@Test
 	void splitsTheSpendingOfTheMonthByUse() {
 		jdbc.update("""
-				INSERT INTO ai_call (kind, model, input_tokens, output_tokens, created_by, created_at) VALUES
-				('MEMOIR_SECTION', 'm', 1000000, 0, 'Marie', now()),
-				('MEMOIR_SECTION', 'm', 0, 100000, 'Marie', now()),
-				('ESTIMATE_SUPPLY', 'm', 0, 200000, 'Marie', now()),
-				('ESTIMATE_SUPPLY', 'm', 0, 999999, 'Marie', now() - interval '40 days')""");
+				-- Each line priced when made, as the ledger does.
+				INSERT INTO ai_call (kind, model, input_tokens, output_tokens, created_by, created_at, cost) VALUES
+				('MEMOIR_SECTION', 'm', 1000000, 0, 'Marie', now(), 3),
+				('MEMOIR_SECTION', 'm', 0, 100000, 'Marie', now(), 1.5),
+				('ESTIMATE_SUPPLY', 'm', 0, 200000, 'Marie', now(), 3),
+				('ESTIMATE_SUPPLY', 'm', 0, 999999, 'Marie', now() - interval '40 days', 15)""");
 
 		assertThat(mvc.get().uri("/api/analyses/configuration").with(TestUsers.admin())).bodyJson()
 			.isLenientlyEqualTo("""

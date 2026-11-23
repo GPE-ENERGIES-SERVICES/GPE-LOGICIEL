@@ -94,7 +94,7 @@ class PieceWriter {
 						+ (chosen.quantity() == null ? "" : " (quantité " + chosen.quantity().stripTrailingZeros()
 							.toPlainString() + ")")));
 		content.set("entreprise", JSON.valueToTree(company.snapshot(LocalDate.now(clock))));
-		JsonNode root = root(ai.ask(KIND, VERSION, INSTRUCTIONS, content.toString(), schema(), 8000, user).text());
+		JsonNode root = root(ai.ask(KIND, VERSION, INSTRUCTIONS, content.toString(), schema(), 8000, user, tender.getId()).text());
 		String html = root.path("html").isString() ? root.path("html").asString() : null;
 		List<String> missing = new ArrayList<>();
 		root.path("missing").forEach((item) -> {

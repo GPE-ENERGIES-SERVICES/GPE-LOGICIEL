@@ -82,6 +82,8 @@ public class AnalysisWorker {
 
 	private final ApplicationEventPublisher events;
 
+	private final AiLedger ledger;
+
 	/** Threads of the calls to the provider only. */
 	private final ThreadPoolTaskExecutor executor;
 
@@ -92,7 +94,8 @@ public class AnalysisWorker {
 	public AnalysisWorker(AnalysisRepository analyses, DossierRepository dossiers, DocumentPageRepository pages,
 			TenderRepository tenders, FilterCriteriaRepository criteria, PriceSchedules priceSchedules,
 			AnalysisGate gate, AnalysisProperties properties, JdbcTemplate jdbc, TransactionTemplate transaction,
-			Clock clock, ApplicationEventPublisher events, CompanyDirectory company) {
+			Clock clock, ApplicationEventPublisher events, CompanyDirectory company, AiLedger ledger) {
+		this.ledger = ledger;
 		this.company = company;
 		this.events = events;
 		this.analyses = analyses;
@@ -229,8 +232,21 @@ public class AnalysisWorker {
 		}
 		ExtractionClient client = status.client();
 		ModelAnswer answer = null;
+		// One line of the ledger per attempt: a retried analysis has paid each of them.
+		long call = ledger.startAnalysis(analysisId, client.model());
 		try {
-			answer = client.complete(request(prepared));
+			try {
+				answer = client.complete(request(prepared));
+			}
+			catch (ProviderException ex) {
+				ledger.failed(call, ex.kind().name(), ex.usage());
+				throw ex;
+			}
+			catch (RuntimeException ex) {
+				ledger.failed(call, FailureKind.UNEXPECTED.name(), null);
+				throw ex;
+			}
+			ledger.done(call, answer);
 			Map<Long, Map<Integer, String>> texts = prepared.sources()
 				.stream()
 				.collect(Collectors.toMap(SourceDocument::id, SourceDocument::pages));
@@ -277,6 +293,7 @@ public class AnalysisWorker {
 			failed(analysisId, ex.kind(), SecretRedactor.redact(ex.getMessage()), answer != null ? answer : ex.usage());
 		}
 		catch (UnreadableAnswerException ex) {
+			ledger.failed(call, FailureKind.INVALID_RESPONSE.name(), null);
 			fail(analysisId, FailureKind.INVALID_RESPONSE, ex.getMessage(), answer);
 		}
 		catch (RuntimeException ex) {

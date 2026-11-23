@@ -113,7 +113,7 @@ class AnalysisGateTests {
 	@Test
 	void waitsLongerAfterEachTemporaryErrorWithJitter() {
 		AnalysisWorker worker = new AnalysisWorker(null, null, null, null, null, null, null,
-				properties(true, "test", true, null, 0), null, null, CLOCK, null, null);
+				properties(true, "test", true, null, 0), null, null, CLOCK, null, null, null);
 		try {
 			assertThat(worker.delayAfter(1, 0)).isEqualTo(Duration.ofSeconds(90));
 			assertThat(worker.delayAfter(1, 1)).isEqualTo(Duration.ofSeconds(150));
@@ -137,6 +137,8 @@ class AnalysisGateTests {
 		ObjectProvider<ExtractionClient> provider = mock(ObjectProvider.class);
 		given(provider.orderedStream()).willAnswer(invocation -> clients.stream());
 		AnalysisRepository analyses = mock(AnalysisRepository.class);
+		BigDecimal spent = properties.cost(inputTokens, 0);
+		given(analyses.sumCostSince(any())).willReturn(spent == null ? BigDecimal.ZERO : spent);
 		given(analyses.sumTokensSince(any())).willReturn(new TokenTotals() {
 
 			@Override

@@ -112,7 +112,7 @@ public class TechnicalProposals {
 		List<String> notSent = new ArrayList<>();
 		String documents = documents(estimate.getTenderId(), texts, names, notSent);
 		JsonNode root = root(ai.ask(KIND, VERSION, INSTRUCTIONS, "<donnees>\n" + content + "\n</donnees>\n" + documents,
-				schema(), 16000, user, java.time.Duration.ofMinutes(5)).text());
+				schema(), 16000, user, estimate.getTenderId(), java.time.Duration.ofMinutes(5)).text());
 		Map<Long, TechnicalSolution> proposals = new LinkedHashMap<>();
 		Set<Long> sent = new java.util.HashSet<>(items.stream().map(EstimateItem::getId).toList());
 		for (JsonNode entry : root.path("prestations")) {

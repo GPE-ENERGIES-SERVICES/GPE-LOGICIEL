@@ -435,7 +435,7 @@ class FormServiceTests {
 			.with(TestUsers.user())).hasStatusOk()
 			.bodyJson()
 			// 100 tokens in at 3 € and 50 out at 15 € a million.
-			.isLenientlyEqualTo("{\"calls\": 1, \"inputTokens\": 100, \"outputTokens\": 50, \"cost\": 0.0011}");
+			.isLenientlyEqualTo("{\"calls\": 1, \"inputTokens\": 100, \"outputTokens\": 50, \"cost\": 0.00105}");
 		assertThat(mvc.get().uri("/api/ai-calls/summary?kind=RESPONSE_FORM").with(TestUsers.user())).bodyJson()
 			.extractingPath("$.typicalSeconds")
 			.isEqualTo(0);

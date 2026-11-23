@@ -164,7 +164,7 @@ class MemoirAi {
 		technical.describe(memoir.tenderId()).forEach((line) -> known.withArray("choix_techniques").add(line));
 		String content = context(memoir) + "<fiche>\n" + known + "\n</fiche>\n" + pages;
 		JsonNode root = root(ai.ask("MEMOIR_ANALYSIS", VERSION, outlineInstructions(given.size()), content,
-				analysisSchema(), 8000, user).text());
+				analysisSchema(), 8000, user, memoir.tenderId()).text());
 		return parse(root, texts, given, notSent);
 	}
 
@@ -179,7 +179,7 @@ class MemoirAi {
 		}
 		String content = context(memoir) + documents;
 		JsonNode root = root(ai.ask("MEMOIR_ANALYSIS", VERSION, analysisInstructions(), content, analysisSchema(), 8000,
-				user).text());
+				user, memoir.tenderId()).text());
 		return parse(root, texts, List.of(), notSent);
 	}
 
@@ -350,7 +350,7 @@ class MemoirAi {
 				.forEach(excerpt -> content.withArray("anciens_memoires_de_reference").add(excerpt));
 		}
 		JsonNode root = root(ai.ask("MEMOIR_SECTION", VERSION, writingInstructions(), context(memoir) + content,
-				writingSchema(), 6000, user).text());
+				writingSchema(), 6000, user, memoir.tenderId()).text());
 		return new Written(MemoirHtml.clean(text(root.path("html"), 60_000)), strings(root.path("missing")));
 	}
 
@@ -394,7 +394,7 @@ class MemoirAi {
 			content.set("entreprise", JSON.valueToTree(company.snapshot(LocalDate.now(clock))));
 		}
 		JsonNode root = root(ai.ask("MEMOIR_EDIT", VERSION, editInstructions(), context(memoir) + content,
-				writingSchema(), 6000, user).text());
+				writingSchema(), 6000, user, memoir.tenderId()).text());
 		return new Written(MemoirHtml.clean(text(root.path("html"), 60_000)), strings(root.path("missing")));
 	}
 

@@ -35,7 +35,11 @@ public class AiAssistant {
 
 	private final Clock clock;
 
-	public AiAssistant(AnalysisGate gate, AnalysisProperties properties, JdbcTemplate jdbc, Clock clock) {
+	private final AiLedger ledger;
+
+	public AiAssistant(AnalysisGate gate, AnalysisProperties properties, JdbcTemplate jdbc, Clock clock,
+			AiLedger ledger) {
+		this.ledger = ledger;
 		this.gate = gate;
 		this.properties = properties;
 		this.jdbc = jdbc;
@@ -62,18 +66,19 @@ public class AiAssistant {
 
 	/**
 	 * @param kind what the call is for, recorded with its tokens
+	 * @param tenderId the tender the call works for, null when it works for none
 	 * @throws ErrorResponseException 409 when the AI may not be called, 502 when
 	 * the provider failed
 	 */
 	public Answer ask(String kind, String promptVersion, String instructions, String content, String outputSchema,
-			int maxOutputTokens, String user) {
-		return ask(kind, promptVersion, instructions, content, outputSchema, maxOutputTokens, user,
+			int maxOutputTokens, String user, Long tenderId) {
+		return ask(kind, promptVersion, instructions, content, outputSchema, maxOutputTokens, user, tenderId,
 				Duration.ofMinutes(2));
 	}
 
 	/** @param timeout how long to wait for a long answer, at most the analysis timeout */
 	public Answer ask(String kind, String promptVersion, String instructions, String content, String outputSchema,
-			int maxOutputTokens, String user, Duration timeout) {
+			int maxOutputTokens, String user, Long tenderId, Duration timeout) {
 		ExtractionClient client = gate.readyClient()
 			.orElseThrow(() -> problem(HttpStatus.CONFLICT, gate.status().message()));
 		if (!gate.fitsBudget(instructions.length() + content.length())) {
@@ -81,29 +86,21 @@ public class AiAssistant {
 		}
 		ExtractionRequest request = new ExtractionRequest(kind, promptVersion, instructions, content, outputSchema,
 				maxOutputTokens, 0, min(properties.requestTimeout(), timeout));
-		Instant start = clock.instant();
+		long call = ledger.start(kind, client.model(), tenderId, user);
 		try {
 			ExtractionClient.ModelAnswer answer = client.complete(request);
-			record(kind, client.model(), answer, user, start);
+			ledger.done(call, answer);
 			return new Answer(answer.text(), client.model());
 		}
 		catch (ProviderException ex) {
-			if (ex.usage() != null) {
-				record(kind, client.model(), ex.usage(), user, start);
-			}
+			ledger.failed(call, ex.kind().name(), ex.usage());
 			log.warn("AI call {} failed: {} {}", kind, ex.kind(), SecretRedactor.redact(ex.getMessage()));
 			throw problem(HttpStatus.BAD_GATEWAY, "L'IA n'a pas répondu (" + ex.kind() + ") : réessayez plus tard.");
 		}
-	}
-
-	/** The tokens of a call, counted in the monthly ceiling with the analyses. */
-	private void record(String kind, String model, ExtractionClient.ModelAnswer usage, String user,
-			Instant start) {
-		Instant now = clock.instant();
-		jdbc.update("""
-				INSERT INTO ai_call (kind, model, input_tokens, output_tokens, created_by, created_at, duration_ms)
-				VALUES (?, ?, ?, ?, ?, ?, ?)""", kind, model, usage.inputTokens(), usage.outputTokens(), user,
-				java.sql.Timestamp.from(now), (int) Math.min(Integer.MAX_VALUE, Duration.between(start, now).toMillis()));
+		catch (RuntimeException ex) {
+			ledger.failed(call, "UNEXPECTED", null);
+			throw ex;
+		}
 	}
 
 	/**
@@ -126,7 +123,7 @@ public class AiAssistant {
 		}
 		return jdbc.queryForObject("""
 				SELECT count(*) AS calls, coalesce(sum(input_tokens), 0) AS input, coalesce(sum(output_tokens), 0) AS output,
-				       sum(duration_ms) AS duration
+				       sum(duration_ms) AS duration, sum(cost) AS cost
 				FROM ai_call WHERE kind = ? AND created_by = ? AND created_at >= ?""",
 				(row, n) -> {
 					long input = row.getLong("input");
@@ -134,7 +131,8 @@ public class AiAssistant {
 					long duration = row.getLong("duration");
 					boolean measured = !row.wasNull();
 					int calls = row.getInt("calls");
-					return new CallSummary(typical, calls, input, output, calls == 0 ? null : properties.cost(input, output),
+					BigDecimal cost = row.getBigDecimal("cost");
+					return new CallSummary(typical, calls, input, output, calls == 0 ? null : cost,
 							measured ? Math.round(duration / 1000.0) : null);
 				}, kind, user, java.sql.Timestamp.from(since));
 	}

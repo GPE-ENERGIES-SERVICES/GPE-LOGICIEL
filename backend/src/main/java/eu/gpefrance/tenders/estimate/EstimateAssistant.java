@@ -130,7 +130,7 @@ public class EstimateAssistant {
 			.put("unite_achat", offer.purchaseUnit())
 			.put("conditionnement", offer.packQuantity()));
 		AiAssistant.Answer answer = ai.ask("ESTIMATE_SUPPLY", VERSION, supplyInstructions(), content.toString(),
-				supplySchema(), 2000, user);
+				supplySchema(), 2000, user, estimate.getTenderId());
 		Map<Long, Offer> known = candidates.stream().collect(Collectors.toMap(Offer::id, offer -> offer));
 		suggestions.deletePending(estimate.getId(), Kind.SUPPLY, itemId);
 		List<EstimateSuggestion> saved = new ArrayList<>();
@@ -223,7 +223,7 @@ public class EstimateAssistant {
 			allowed.put(item.getId(), ids);
 		}
 		AiAssistant.Answer answer = ai.ask("ESTIMATE_DRAFT", VERSION, draftInstructions(), content.toString(), draftSchema(),
-				16_000, user);
+				16_000, user, estimate.getTenderId());
 		Set<String> codes = labour.stream().map(PricingRate::getCode).collect(Collectors.toSet());
 		List<EstimateSuggestion> saved = new ArrayList<>();
 		for (JsonNode post : root(answer.text()).path("postes")) {
@@ -370,7 +370,7 @@ public class EstimateAssistant {
 					.put("cout_unitaire", component.getUnitCost()));
 		});
 		AiAssistant.Answer answer = ai.ask("ESTIMATE_REVIEW", VERSION, reviewInstructions(), content.toString(),
-				reviewSchema(), 4000, user);
+				reviewSchema(), 4000, user, estimate.getTenderId());
 		Set<Long> ids = items.stream().map(EstimateItem::getId).collect(Collectors.toSet());
 		suggestions.deletePending(estimateId, Kind.CHECK, null);
 		List<EstimateSuggestion> saved = new ArrayList<>();
