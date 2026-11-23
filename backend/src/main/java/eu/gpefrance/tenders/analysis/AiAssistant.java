@@ -67,13 +67,20 @@ public class AiAssistant {
 	 */
 	public Answer ask(String kind, String promptVersion, String instructions, String content, String outputSchema,
 			int maxOutputTokens, String user) {
+		return ask(kind, promptVersion, instructions, content, outputSchema, maxOutputTokens, user,
+				Duration.ofMinutes(2));
+	}
+
+	/** @param timeout how long to wait for a long answer, at most the analysis timeout */
+	public Answer ask(String kind, String promptVersion, String instructions, String content, String outputSchema,
+			int maxOutputTokens, String user, Duration timeout) {
 		ExtractionClient client = gate.readyClient()
 			.orElseThrow(() -> problem(HttpStatus.CONFLICT, gate.status().message()));
 		if (!gate.fitsBudget(instructions.length() + content.length())) {
 			throw problem(HttpStatus.CONFLICT, "Le plafond mensuel de dépense de l'IA ne permet pas cette demande.");
 		}
 		ExtractionRequest request = new ExtractionRequest(kind, promptVersion, instructions, content, outputSchema,
-				maxOutputTokens, 0, min(properties.requestTimeout(), Duration.ofMinutes(2)));
+				maxOutputTokens, 0, min(properties.requestTimeout(), timeout));
 		Instant start = clock.instant();
 		try {
 			ExtractionClient.ModelAnswer answer = client.complete(request);
