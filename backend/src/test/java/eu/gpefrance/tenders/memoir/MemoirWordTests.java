@@ -69,7 +69,7 @@ class MemoirWordTests {
 				<ol><li>Étape</li></ol>
 				<table><thead><tr><th>Poste</th><th>Durée</th></tr></thead><tbody><tr><td>Pose</td><td>3 j</td></tr></tbody></table>""";
 		try (XWPFDocument word = word(List.of(section(1, "1", "Méthode", false, html)))) {
-			assertThat(texts(word)).contains("Un mot et un autre", "• Premier", "• Second", "1. Étape");
+			assertThat(texts(word)).contains("Un mot et un autre", "▪ Premier", "▪ Second", "1. Étape");
 			XWPFParagraph first = word.getParagraphs().stream()
 				.filter((paragraph) -> paragraph.getText().startsWith("Un mot"))
 				.findFirst()
@@ -77,6 +77,7 @@ class MemoirWordTests {
 			assertThat(first.getRuns().stream().filter(XWPFRun::isBold).map(XWPFRun::text)).containsExactly("mot");
 			assertThat(first.getRuns().stream().filter(XWPFRun::isItalic).map(XWPFRun::text)).containsExactly("un autre");
 			assertThat(word.getTables()).last().satisfies((table) -> {
+				assertThat(table.getRow(0).getCell(0).getColor()).isEqualTo("1F4E79");
 				assertThat(table.getRow(0).getCell(1).getText()).isEqualTo("Durée");
 				assertThat(table.getRow(1).getCell(0).getText()).isEqualTo("Pose");
 			});
@@ -126,7 +127,7 @@ class MemoirWordTests {
 			assertThat(word.getFooterList()).allSatisfy((footer) -> assertThat(footer._getHdrFtr().xmlText())
 				.doesNotContain("{{", "Robespierre"));
 			assertThat(word.getFooterList().getFirst()._getHdrFtr().xmlText()).contains("Toiture");
-			assertThat(word.getProperties().getCoreProperties().getCreator()).isEqualTo("Toiture");
+			assertThat(word.getProperties().getCoreProperties().getCreator()).isEqualTo("MT GPE – Toiture");
 			assertThat(word.getProperties().getCoreProperties().getLastModifiedByUser()).isEqualTo("GPE");
 		}
 	}

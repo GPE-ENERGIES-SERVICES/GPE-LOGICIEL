@@ -21,6 +21,7 @@ import javax.imageio.ImageIO;
 
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.UnderlinePatterns;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
@@ -84,7 +85,7 @@ public final class MemoirWord {
 				XWPFDocument word = new XWPFDocument(template);
 				ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			word.getProperties().getCoreProperties().setTitle(clean(memoir.title()));
-			cover(word, memoir, cover, Objects.requireNonNullElse(memoir.tenderTitle(), memoir.title()));
+			cover(word, memoir, cover, "MT GPE – " + Objects.requireNonNullElse(memoir.tenderTitle(), memoir.title()));
 			for (SectionRow section : sections) {
 				if (section.proposed()) {
 					continue;
@@ -208,7 +209,7 @@ public final class MemoirWord {
 		for (Node node : parent.childNodes()) {
 			if (node instanceof TextNode text) {
 				if (!text.isBlank()) {
-					inline(word.createParagraph(), node, false, false, false);
+					inline(paragraph(word), node, false, false, false);
 				}
 				continue;
 			}
@@ -216,8 +217,8 @@ public final class MemoirWord {
 				continue;
 			}
 			switch (element.normalName()) {
-				case "h3", "h4", "h5" -> heading(word, level + Integer.parseInt(element.normalName().substring(1)) - 2,
-						element.text());
+				// An intertitle within a section: bold blue, not numbered, as in the memoirs of GPE.
+				case "h3", "h4", "h5" -> intertitle(word, element.text());
 				case "ul" -> list(word, element, false);
 				case "ol" -> list(word, element, true);
 				case "blockquote" -> {
@@ -228,9 +229,29 @@ public final class MemoirWord {
 				case "table" -> table(word, element);
 				case "figure" -> figure(word, element, images);
 				case "img" -> image(word, element, images);
-				default -> inlineChildren(word.createParagraph(), element, false, false, false);
+				default -> inlineChildren(paragraph(word), element, false, false, false);
 			}
 		}
+	}
+
+	/** The blue of the intertitles and of the head of the tables of the memoirs of GPE. */
+	private static final String BLUE = "1F4E79";
+
+	/** A paragraph of text, justified. */
+	private static XWPFParagraph paragraph(XWPFDocument word) {
+		XWPFParagraph paragraph = word.createParagraph();
+		paragraph.setAlignment(ParagraphAlignment.BOTH);
+		return paragraph;
+	}
+
+	private static void intertitle(XWPFDocument word, String text) {
+		XWPFParagraph paragraph = word.createParagraph();
+		paragraph.setKeepNext(true);
+		paragraph.setSpacingBefore(160);
+		XWPFRun run = paragraph.createRun();
+		run.setBold(true);
+		run.setColor(BLUE);
+		run.setText(clean(text));
 	}
 
 	// shortcut: bullets and numbers written in the text, not a Word list; a real numbering if users ask to restyle them.
@@ -241,7 +262,7 @@ public final class MemoirWord {
 			paragraph.setStyle("Paragraphedeliste");
 			paragraph.setIndentationLeft(400);
 			paragraph.setIndentationHanging(250);
-			paragraph.createRun().setText(numbered ? number++ + ". " : "• ");
+			paragraph.createRun().setText(numbered ? number++ + ". " : "▪ ");
 			inlineChildren(paragraph, item, false, false, false);
 		}
 	}
@@ -252,16 +273,30 @@ public final class MemoirWord {
 			return;
 		}
 		XWPFTable table = word.createTable();
-		boolean first = true;
-		for (Element row : rows) {
-			XWPFTableRow target = first ? table.getRow(0) : table.createRow();
+		table.setWidth("100%");
+		// As in the memoirs of GPE: a dark blue head in white bold, then rows of a light blue one in two.
+		for (int number = 0; number < rows.size(); number++) {
+			XWPFTableRow target = number == 0 ? table.getRow(0) : table.createRow();
+			boolean head = number == 0;
 			int index = 0;
-			for (Element cell : row.select("> th, > td")) {
+			for (Element cell : rows.get(number).select("> th, > td")) {
 				XWPFTableCell out = target.getCell(index) != null ? target.getCell(index) : target.addNewTableCell();
-				inlineChildren(out.getParagraphs().getFirst(), cell, cell.normalName().equals("th"), false, false);
+				XWPFParagraph text = out.getParagraphs().getFirst();
+				inlineChildren(text, cell, head || cell.normalName().equals("th"), false, false);
+				if (head) {
+					out.setColor(BLUE);
+				}
+				else if (number % 2 == 0) {
+					out.setColor("EEF3FA");
+				}
+				for (XWPFRun run : text.getRuns()) {
+					run.setFontSize(9);
+					if (head) {
+						run.setColor("FFFFFF");
+					}
+				}
 				index++;
 			}
-			first = false;
 		}
 		word.createParagraph();
 	}

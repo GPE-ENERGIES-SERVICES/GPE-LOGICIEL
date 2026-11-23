@@ -3435,13 +3435,14 @@ th.number {
   }
 }
 
-/* A sheet of paper, the same in the light and dark themes. */
+/* A sheet of paper laid out as the memoir of GPE in Word, the same in the light and dark themes. */
 .memoir-page {
   max-width: 52rem;
   margin: 1rem auto 3rem;
-  padding: 3.5rem 4rem;
+  padding: 1.5rem 4rem 2rem;
   background: #ffffff;
   color: #1f2430;
+  font-family: Aptos, Calibri, "Segoe UI", Arial, sans-serif;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12), 0 8px 24px rgba(15, 23, 42, 0.08);
   border-radius: 2px;
   font-size: 0.98rem;
@@ -3452,17 +3453,6 @@ th.number {
   .memoir-page {
     padding: 1.5rem 1.25rem;
   }
-}
-
-.memoir-page-title {
-  margin: 0;
-  font-size: 1.7rem;
-  color: #17469c;
-}
-
-.memoir-page-subtitle {
-  margin: 0.3rem 0 2rem;
-  color: #5b6474;
 }
 
 .memoir-section {
@@ -3476,16 +3466,18 @@ th.number {
 
 .memoir-heading {
   margin: 0 0 0.5rem;
-  color: #17469c;
+  color: #1f4e79;
+  font-weight: 600;
 }
 
-h2.memoir-heading { font-size: 1.35rem; border-bottom: 1px solid #dfe3ea; padding-bottom: 0.3rem; }
-h3.memoir-heading { font-size: 1.15rem; }
+h2.memoir-heading { font-size: 1.45rem; }
+h3.memoir-heading { font-size: 1.12rem; padding-left: 1.6rem; }
+h4.memoir-heading { padding-left: 2.4rem; }
 h4.memoir-heading, h5.memoir-heading { font-size: 1.02rem; }
 
 .memoir-heading .memoir-number {
-  color: #8a93a3;
-  margin-right: 0.3rem;
+  color: inherit;
+  margin-right: 1.2rem;
 }
 
 .memoir-body {
@@ -4388,4 +4380,107 @@ select.status-dismissed {
 
 .response-writer .memoir-body {
   min-height: 10rem;
+}
+
+/* The header of the template memoir: GPE logo on the left, solar panel on the right. */
+.memoir-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 -2.5rem 1.5rem;
+}
+
+.memoir-sheet-logo {
+  height: 2.4rem;
+  width: auto;
+}
+
+.memoir-sheet-panel {
+  height: 3rem;
+  width: auto;
+}
+
+/* The cover: kind of document, lot, and the object of the tender in the blue banner. */
+.memoir-cover {
+  margin-bottom: 2.5rem;
+}
+
+.memoir-cover-kind {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #1f2430;
+}
+
+.memoir-cover-lot {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.memoir-cover-banner {
+  margin: 1.2rem -4rem 0 4rem;
+  padding: 1.4rem 2rem;
+  border-radius: 0 0 0 1.6rem;
+  background: linear-gradient(120deg, #4a8fd6 0%, #1f5fae 55%, #2b4f8a 100%);
+  color: #ffffff;
+  font-size: 1.45rem;
+  line-height: 1.3;
+}
+
+/* The footer: object of the tender in capitals above a blue rule. */
+.memoir-sheet-footer {
+  margin: 3rem -2.5rem 0;
+  padding-top: 0.4rem;
+  border-top: 3px solid #1f5f8b;
+  color: #6b7280;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .memoir-sheet-header,
+  .memoir-sheet-footer {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .memoir-cover-banner {
+    margin: 1rem 0 0;
+  }
+}
+
+/* The text of the memoir as in the memoirs of GPE: justified, square bullets, bold blue intertitles,
+   tables with a dark blue head and light blue rows one in two. */
+.memoir-page .memoir-body p,
+.memoir-page .memoir-body li {
+  text-align: justify;
+}
+
+.memoir-page .memoir-body ul {
+  list-style: square;
+}
+
+.memoir-page .memoir-body h3,
+.memoir-page .memoir-body h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f4e79;
+}
+
+.memoir-page .memoir-body th {
+  background: #1f4e79;
+  color: #ffffff;
+}
+
+.memoir-page .memoir-body tbody tr:nth-child(even) td {
+  background: #eef3fa;
+}
+
+.memoir-page .memoir-sheet-footer {
+  border-top: 6px solid #1b5e8a;
+  color: #1f2430;
+  font-weight: 700;
 }
