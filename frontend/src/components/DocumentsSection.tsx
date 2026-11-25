@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { usePaged } from "@/components/Pager";
 
 import {
   DOCUMENT_STATE_LABELS,
@@ -19,7 +18,6 @@ import type { AiChoice, AiUse, DocumentInfo, Dossier, PieceType } from "@/types/
 
 import { Fold } from "./Fold";
 import { ProgressBar } from "./ProgressBar";
-import { DceLinks } from "./DceLinks";
 import { DocumentSearch } from "./DocumentSearch";
 
 const ACCEPTED = ".zip,.pdf,.doc,.docx,.odt,.rtf,.xls,.xlsx,.xlsm,.ods,.csv,.dwg,.dxf,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.gif,.heic,.heif";
@@ -138,9 +136,17 @@ function DocumentRow({ document, onChanged }: { document: DocumentInfo; onChange
   );
 }
 
+/** The files grouped by nature, as a costing reader looks for them. */
+const NATURES: { title: string; types: PieceType[] }[] = [
+  { title: "Pièces administratives", types: ["RC", "CCAP", "AE", "NOTICE"] },
+  { title: "Pièces techniques", types: ["CCTP"] },
+  { title: "Pièces financières", types: ["DPGF", "BPU", "DQE"] },
+  { title: "Plans", types: ["PLAN"] },
+  { title: "Autres pièces", types: ["OTHER"] },
+];
+
 function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () => void }) {
   const [retrying, setRetrying] = useState(false);
-  const paged = usePaged(dossier.documents, "Pages des fichiers");
   const failed = dossier.documents.filter((document) => document.state === "FAILED").length;
   const notAnalysed = dossier.documents.filter(
     (document) => document.state === "FAILED" || document.state === "NOT_ANALYZED",
@@ -189,32 +195,45 @@ function DossierView({ dossier, onChanged }: { dossier: Dossier; onChanged: () =
           Relancer la lecture des documents en échec
         </button>
       )}
-      <Fold
-        title="Fichiers du dossier"
-        count={`${read} lu${read > 1 ? "s" : ""} sur ${dossier.documents.length}`}
-        className="dossier-files"
-      >
-        <table>
-          <thead>
-            <tr>
-              <th>Fichier</th>
-              <th>Format</th>
-              <th>Type de pièce</th>
-              <th>État</th>
-              <th>Envoi à l&apos;IA</th>
-              <th>Pages</th>
-              <th>Taille</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {paged.rows.map((document) => (
-              <DocumentRow key={document.id} document={document} onChanged={onChanged} />
-            ))}
-          </tbody>
-        </table>
-        {paged.pager}
-      </Fold>
+      <p className="hint">
+        {read} fichier{read > 1 ? "s" : ""} lu{read > 1 ? "s" : ""} sur {dossier.documents.length}
+      </p>
+      <div className="dossier-natures">
+        {NATURES.map((nature) => {
+          const documents = dossier.documents.filter((document) => nature.types.includes(document.pieceType));
+          if (documents.length === 0) {
+            return null;
+          }
+          return (
+            <Fold
+              key={nature.title}
+              title={nature.title}
+              count={`${documents.length} fichier${documents.length > 1 ? "s" : ""}`}
+              className="dossier-files"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fichier</th>
+                    <th>Format</th>
+                    <th>Type de pièce</th>
+                    <th>État</th>
+                    <th>Envoi à l&apos;IA</th>
+                    <th>Pages</th>
+                    <th>Taille</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map((document) => (
+                    <DocumentRow key={document.id} document={document} onChanged={onChanged} />
+                  ))}
+                </tbody>
+              </table>
+            </Fold>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -269,13 +288,7 @@ export function DocumentsSection({ tenderId, manual = false }: { tenderId: numbe
 
   return (
     <div>
-      {!manual && (
-        <>
-          <h3>1. Récupérer le DCE sur la plateforme de l&apos;acheteur</h3>
-          <DceLinks tenderId={tenderId} />
-        </>
-      )}
-      <h3>{manual ? "Déposer le DCE" : "2. Le déposer ici"}</h3>
+      <h3>Déposer le DCE</h3>
       <form
         className={dragging ? "upload dropping" : "upload"}
         onSubmit={submit}
@@ -323,7 +336,7 @@ export function DocumentsSection({ tenderId, manual = false }: { tenderId: numbe
         </div>
         {uploadError && <p className="error">{uploadError}</p>}
       </form>
-      <h3>{manual ? "Dossier déposé et ses fichiers" : "3. Dossier déposé et ses fichiers"}</h3>
+      <h3>Dossier déposé et ses fichiers</h3>
       {error && <p className="error">{error}</p>}
       {data && data.length === 0 && <p className="muted">Aucun dossier déposé.</p>}
       {data?.[0]?.status === "DONE" && available("documentSearch") && <DocumentSearch tenderId={tenderId} />}

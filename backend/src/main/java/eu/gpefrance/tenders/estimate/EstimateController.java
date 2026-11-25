@@ -211,6 +211,18 @@ public class EstimateController {
 			.body(export.content());
 	}
 
+	/** @param margin 0.223 for 22.3 % */
+	public record MarginRevision(@NotNull EstimateService.MarginTarget target,
+			@NotNull @jakarta.validation.constraints.DecimalMin("0") @jakarta.validation.constraints.DecimalMax(value = "1", inclusive = false) java.math.BigDecimal margin,
+			boolean net) {
+	}
+
+	@PostMapping("/api/estimates/{id}/margin-revision")
+	public EstimateResponse reviseMargin(@PathVariable Long id, @Valid @RequestBody MarginRevision request,
+			@AuthenticationPrincipal AppUserPrincipal user) {
+		return service.reviseMargin(id, request.target(), request.margin(), request.net(), user.displayName());
+	}
+
 	public record ImportRequest(@NotNull Long documentId) {
 	}
 

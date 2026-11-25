@@ -9,7 +9,6 @@ import type { ReactNode } from "react";
 
 import { THEME_SCRIPT } from "@/lib/theme";
 
-import "@fontsource/aref-ruqaa/arabic-700.css";
 import { PRODUCT_NAME } from "@/lib/brand";
 
 import "./globals.css";

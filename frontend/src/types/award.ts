@@ -23,6 +23,21 @@ export type AwardedContract = {
   amount: number | null;
   awardedAt: string;
   offersReceived: number | null;
+  /** NOTICE: read in the award notice; MANUAL: confirmed by a user. */
+  source?: "NOTICE" | "MANUAL";
+  /** Won by GPE; otherwise by another company. */
+  won?: boolean;
+};
+
+/** The result of a tender recorded by a user, for the whole contract or one lot. */
+export type AwardRequest = {
+  won: boolean;
+  winner: string;
+  amount: number | null;
+  awardedAt: string;
+  source: "NOTICE" | "MANUAL";
+  lotNumber: string | null;
+  reason: string | null;
 };
 
 /** A page of awarded contracts, with figures on all the contracts found. */

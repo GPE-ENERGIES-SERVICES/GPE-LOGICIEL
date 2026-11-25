@@ -383,7 +383,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Icon name="menu" />
           </button>
           <Link href="/" className="app-title" onClick={closeMenu}>
-            <span className="product-name" lang="ar" dir="rtl">
+            <span className="product-name">
               {PRODUCT_NAME}
             </span>
           </Link>

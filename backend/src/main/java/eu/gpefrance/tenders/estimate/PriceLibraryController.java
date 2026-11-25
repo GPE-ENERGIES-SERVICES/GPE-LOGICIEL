@@ -51,7 +51,7 @@ public class PriceLibraryController {
 	public Import importFile(@RequestPart("file") MultipartFile file,
 			@RequestParam @NotBlank @Size(max = 200) String label,
 			@RequestParam(required = false) @Min(1990) @Max(2100) Integer priceYear,
-			@RequestParam(required = false) @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC") String domain,
+			@RequestParam(required = false) @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC|IRVE") String domain,
 			@AuthenticationPrincipal AppUserPrincipal user) {
 		return service.importFile(file, label, priceYear, domain, user.displayName());
 	}
@@ -81,7 +81,7 @@ public class PriceLibraryController {
 	@GetMapping("/api/price-library")
 	public List<Item> search(@RequestParam(required = false) @Size(max = 200) String q,
 			@RequestParam(required = false) @Size(max = 30) String unit,
-			@RequestParam(required = false) @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC") String domain) {
+			@RequestParam(required = false) @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC|IRVE") String domain) {
 		return service.search(q, unit, domain);
 	}
 

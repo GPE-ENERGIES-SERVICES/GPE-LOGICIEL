@@ -43,6 +43,7 @@ export const EVENT_LABELS: Record<EstimateEvent["kind"], string> = {
   VALIDATED: "Validation",
   SUPERSEDED: "Remplacé",
   SUGGESTION_ACCEPTED: "Proposition de l'IA acceptée",
+  MARGIN_REVISED: "Révision de la marge",
 };
 
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 2 });

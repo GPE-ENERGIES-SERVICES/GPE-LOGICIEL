@@ -270,7 +270,11 @@ final class TenderFilter {
 
 	private static String domainLabels(List<String> domains) {
 		return domains.stream()
-			.map(domain -> DomainRules.PHOTOVOLTAIC.equals(domain) ? "PV" : "CFO / CFA")
+			.map(domain -> switch (domain) {
+				case DomainRules.PHOTOVOLTAIC -> "PV";
+				case DomainRules.IRVE -> "IRVE";
+				default -> "CFO / CFA";
+			})
 			.collect(Collectors.joining(", "));
 	}
 

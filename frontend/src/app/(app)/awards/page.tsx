@@ -8,7 +8,9 @@ import { ListToolbar } from "@/components/ListToolbar";
 import { Pagination } from "@/components/Pagination";
 import { SearchForm } from "@/components/SearchForm";
 import { AWARD_FILTERS, TenderFilters } from "@/components/TenderFilters";
-import { ACTIVITY_LABELS, formatAmount, formatDate, MARKET_TYPE_LABELS } from "@/lib/format";
+import { Icon } from "@/components/Icon";
+import { DomainChips, TenderCard } from "@/components/TenderCard";
+import { formatAmount, formatDate, MARKET_TYPE_LABELS } from "@/lib/format";
 import { tenderHref } from "@/lib/navigation";
 import { NotConnected } from "@/components/NotConnected";
 import { useLoader } from "@/lib/useLoader";
@@ -31,32 +33,52 @@ type RowProps = {
   onWinner: (winner: string) => void;
 };
 
-function AwardRow({ award, from, onWinner }: RowProps) {
+/** An award in the banner of its tender: who won it, for how much. */
+function AwardItem({ award, from, onWinner }: RowProps) {
+  const place = [award.location, award.postalCode && `(${award.postalCode})`].filter(Boolean).join(" ") || null;
   return (
-    <tr>
-      <td className="tender-title">
+    <TenderCard
+      banner={{
+        kicker: (
+          <>
+            <Icon name="award" size={14} /> Attribué le <strong>{formatDate(award.awardedAt)}</strong>
+          </>
+        ),
+        buyer: award.buyer,
+        place,
+        badges: (
+          <>
+            {award.won && <span className="badge success">Gagné par GPE</span>}
+            {award.source && (
+              <span className="badge muted-badge">{award.source === "NOTICE" ? "Avis publié" : "Confirmé manuellement"}</span>
+            )}
+          </>
+        ),
+      }}
+    >
+      <p className="tender-card-meta">
+        {[MARKET_TYPE_LABELS[award.marketType], award.lot].filter(Boolean).join(" | ")}
+      </p>
+      <h3 className="tender-card-title">
         {award.tenderId ? <Link href={tenderHref(award.tenderId, from)}>{award.title}</Link> : award.title}
-        {award.lot && <div className="small muted">{award.lot}</div>}
-      </td>
-      <td>{award.buyer}</td>
-      <td>
-        {award.location ?? "Non indiqué"}
-        {award.postalCode && <div className="small muted">{award.postalCode}</div>}
-      </td>
-      <td>
-        {award.activities.map((code) => ACTIVITY_LABELS[code] ?? code).join(", ")}
-        <div className="small muted">{MARKET_TYPE_LABELS[award.marketType]}</div>
-      </td>
-      <td>
+      </h3>
+      <div className="tender-card-award">
+        <span className="tender-card-label">Attributaire :</span>
         <button type="button" className="link-button" title="Voir ses marchés" onClick={() => onWinner(award.winner)}>
           {award.winner}
         </button>
-        {award.winnerCity && <div className="small muted">{award.winnerCity}</div>}
-      </td>
-      <td className="nowrap">{formatAmount(award.amount)}</td>
-      <td className="nowrap">{formatDate(award.awardedAt)}</td>
-      <td className="number">{award.offersReceived ?? "–"}</td>
-    </tr>
+        {award.winnerCity && <span className="muted">({award.winnerCity})</span>}
+        <span>
+          pour un montant de <strong>{formatAmount(award.amount)}</strong>
+        </span>
+        {award.offersReceived != null && <span className="muted">· {award.offersReceived} offres reçues</span>}
+      </div>
+      <div className="tender-card-foot">
+        <span className="chips">
+          <DomainChips activities={award.activities} />
+        </span>
+      </div>
+    </TenderCard>
   );
 }
 
@@ -76,7 +98,8 @@ function AwardList() {
     <>
       <h1>Marchés attribués</h1>
       <p className="muted">
-        Avis d&apos;attribution, un par lot : attributaire et montant. Cliquez sur un attributaire pour voir ses marchés.
+        Résultats d&apos;attribution, un par lot : attributaire et montant, dont les marchés gagnés par GPE. Cliquez sur
+        un attributaire pour voir ses marchés.
       </p>
 
       <SearchForm
@@ -109,31 +132,15 @@ function AwardList() {
               {filtered ? "Aucune attribution ne correspond à la recherche et aux filtres." : "Aucune attribution."}
             </p>
           ) : (
-            <div className="card table-card">
-              <table className="tender-table">
-                <thead>
-                  <tr>
-                    <th>Marché</th>
-                    <th>Acheteur</th>
-                    <th>Lieu</th>
-                    <th>Travaux</th>
-                    <th>Attributaire</th>
-                    <th>Montant attribué</th>
-                    <th>Attribution</th>
-                    <th>Offres</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.content.map((award) => (
-                    <AwardRow
-                      key={award.id}
-                      award={award}
-                      from={from}
-                      onWinner={(winner) => navigate({ winner, page: null })}
-                    />
-                  ))}
-                </tbody>
-              </table>
+            <div className="tender-list">
+              {data.content.map((award) => (
+                <AwardItem
+                  key={award.id}
+                  award={award}
+                  from={from}
+                  onWinner={(winner) => navigate({ winner, page: null })}
+                />
+              ))}
             </div>
           )}
           <Pagination page={page} totalPages={data.totalPages} onNavigate={navigate} />

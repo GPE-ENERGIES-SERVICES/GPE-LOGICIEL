@@ -177,12 +177,12 @@ public class LibraryPriceService {
 		return apply(itemId, price, source(line, price) + " (choisi à la main)", user);
 	}
 
-	/** The price of an item set to a price of the library; its other values unchanged. */
+	/** The price of an item set to a price of the library, to check: a price of another job is an estimate. */
 	EstimateResponse apply(Long itemId, BigDecimal price, String origin, String user) {
 		EstimateItem item = estimates.item(itemId);
 		draft(item.getEstimate().getId());
 		ItemRequest request = new ItemRequest(item.getChapter(), item.getReference(), item.getDesignation(),
-				item.getUnit(), item.getQuantity(), PriceMode.FIXED, price, null, item.isOption(), item.isToCheck());
+				item.getUnit(), item.getQuantity(), PriceMode.FIXED, price, null, item.isOption(), true);
 		EstimateResponse response = estimates.updateItem(itemId, request, user);
 		estimates.record(estimates.found(item.getEstimate().getId()), EstimateEvent.Kind.SUGGESTION_ACCEPTED,
 				"Poste « " + cut(item.getDesignation(), 80) + " » : " + origin, user);

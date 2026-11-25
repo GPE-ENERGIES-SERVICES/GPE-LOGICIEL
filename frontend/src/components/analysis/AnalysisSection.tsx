@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 import { FieldItem } from "@/components/analysis/FieldItem";
-import { PartTitle } from "@/components/analysis/PartTitle";
+import { KeyValues } from "@/components/analysis/PartTitle";
+import { Block } from "@/components/analysis/SpecialAnalyses";
+import { SubSteps } from "@/components/SubSteps";
 import { ProgressBar } from "@/components/ProgressBar";
-import { Fold } from "@/components/Fold";
 import {
   ANALYSIS_STATUS_LABELS,
   attentionPoints,
@@ -15,11 +16,7 @@ import {
   formatValue,
   NOT_IN_DOCUMENTS,
 } from "@/lib/analysis";
-import {
-  DOCUMENT_STATE_LABELS,
-  formatDateTime,
-  PIECE_TYPE_LABELS,
-} from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { analysisProgress, readingProgress } from "@/lib/progress";
 import { refreshData, useLoader } from "@/lib/useLoader";
 import {
@@ -43,34 +40,6 @@ const costFormat = new Intl.NumberFormat("fr-FR", {
   currency: "EUR",
   maximumFractionDigits: 4,
 });
-
-const SECTION_TITLES: Record<SummarySection, ReactNode> = {
-  AT_A_GLANCE: (
-    <PartTitle icon="eye" tone="accent">
-      En un coup d&apos;œil
-    </PartTitle>
-  ),
-  ATTENTION: (
-    <PartTitle icon="warning" tone="warning">
-      Points d&apos;attention
-    </PartTitle>
-  ),
-  REQUESTED: (
-    <PartTitle icon="file" tone="accent">
-      Ce qui est demandé
-    </PartTitle>
-  ),
-  TO_ANSWER: (
-    <PartTitle icon="clipboard" tone="success">
-      Pour répondre
-    </PartTitle>
-  ),
-  TECHNICAL: (
-    <PartTitle icon="settings" tone="accent">
-      Données techniques
-    </PartTitle>
-  ),
-};
 
 /** A value long enough to need the whole width of the grid. */
 const LONG_VALUE = 60;
@@ -219,7 +188,6 @@ function SummarySheet({
         reason,
       })),
   );
-  const analysed = analysis.documents.filter((document) => document.analysed);
   const notAnalysed = analysis.documents.filter(
     (document) => !document.analysed,
   );
@@ -306,147 +274,103 @@ function SummarySheet({
         confirmer en le lisant.
       </p>
 
-      <Fold
-        title={SECTION_TITLES.AT_A_GLANCE}
-        count={found("AT_A_GLANCE")}
-        open
-      >
-        {section("AT_A_GLANCE")}
-      </Fold>
+      <SubSteps
+        label="Parties de la fiche IA"
+        steps={[
+          {
+            id: "glance",
+            label: "En un coup d'œil",
+            tone: "accent",
+            content: (
+              <Block icon="eye" tone="accent" title="En un coup d'œil" count={found("AT_A_GLANCE")}>
+                {section("AT_A_GLANCE")}
+              </Block>
+            ),
+          },
+          {
+            id: "attention",
+            label: "Points d'attention",
+            tone: "danger",
+            content: (
+              <Block
+                icon="warning"
+                tone="danger"
+                title="Points d'attention"
+                count={points.length > 0 ? plural(points.length, "point") + " à surveiller" : found("ATTENTION")}
+              >
+                {points.length > 0 && (
+                  <ul className="attention">
+                    {points.map((point) => (
+                      <li key={point}>
+                        <KeyValues text={point} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {section("ATTENTION")}
+              </Block>
+            ),
+          },
+          {
+            id: "check",
+            label: "À vérifier",
+            tone: toCheck.length === 0 && notAnalysed.length === 0 ? "muted" : "warning",
+            content: (
+              <Block
+                icon="warning"
+                tone={toCheck.length === 0 && notAnalysed.length === 0 ? "muted" : "warning"}
+                title="À vérifier"
+                count={toCheck.length === 0 && notAnalysed.length === 0 ? "rien à signaler" : plural(toCheck.length, "point")}
+              >
+                {toCheck.length === 0 && notAnalysed.length === 0 ? (
+                  <p className="muted">Rien à signaler.</p>
+                ) : (
+                  <ul className="to-check">
+                    {toCheck.map((item) => (
+                      <li key={item.id}>
+                        <strong>{item.text}</strong> : {item.reason}
+                      </li>
+                    ))}
+                    {notAnalysed.length > 0 && (
+                      <li>
+                        <strong>
+                          {notAnalysed.length} document{notAnalysed.length > 1 ? "s" : ""} non analysé
+                          {notAnalysed.length > 1 ? "s" : ""}
+                        </strong>{" "}
+                        : une information « non indiquée » peut s&apos;y trouver.
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </Block>
+            ),
+          },
+          {
+            id: "requested",
+            label: "Ce qui est demandé",
+            tone: "accent",
+            content: (
+              <Block icon="file" tone="accent" title="Ce qui est demandé" count={found("REQUESTED")}>
+                {section("REQUESTED")}
+              </Block>
+            ),
+          },
+          {
+            id: "answer",
+            label: "Pour répondre",
+            tone: "success",
+            content: (
+              <Block icon="clipboard" tone="success" title="Pour répondre" count={found("TO_ANSWER")}>
+                {section("TO_ANSWER")}
+              </Block>
+            ),
+          },
+        ]}
+      />
 
-      <Fold
-        open
-        title={SECTION_TITLES.ATTENTION}
-        count={
-          points.length > 0
-            ? plural(points.length, "point") + " à surveiller"
-            : found("ATTENTION")
-        }
-      >
-        {points.length > 0 && (
-          <ul className="attention">
-            {points.map((point) => (
-              <li key={point}>{point}</li>
-            ))}
-          </ul>
-        )}
-        {section("ATTENTION")}
-      </Fold>
 
-      <Fold title={SECTION_TITLES.REQUESTED} count={found("REQUESTED")}>
-        {section("REQUESTED")}
-      </Fold>
-
-      <Fold title={SECTION_TITLES.TO_ANSWER} count={found("TO_ANSWER")}>
-        {section("TO_ANSWER")}
-      </Fold>
-
-      {data.grid.some((grid) => grid.section === "TECHNICAL") && (
-        <Fold title={SECTION_TITLES.TECHNICAL} count={found("TECHNICAL")}>
-          <p className="hint">
-            Repris dans l&apos;onglet « Choix techniques », où chaque valeur
-            reste à vérifier et à valider.
-          </p>
-          {section("TECHNICAL")}
-        </Fold>
-      )}
-
-      <Fold
-        title={
-          <PartTitle
-            icon="warning"
-            tone={
-              toCheck.length === 0 && notAnalysed.length === 0
-                ? "muted"
-                : "warning"
-            }
-          >
-            À vérifier
-          </PartTitle>
-        }
-        count={
-          toCheck.length === 0 && notAnalysed.length === 0
-            ? "rien à signaler"
-            : plural(toCheck.length, "point")
-        }
-      >
-        {toCheck.length === 0 && notAnalysed.length === 0 ? (
-          <p className="muted">Rien à signaler.</p>
-        ) : (
-          <ul className="to-check">
-            {toCheck.map((item) => (
-              <li key={item.id}>
-                {item.text} — {item.reason}
-              </li>
-            ))}
-            {notAnalysed.length > 0 && (
-              <li>
-                {notAnalysed.length} document{notAnalysed.length > 1 ? "s" : ""}{" "}
-                non analysé
-                {notAnalysed.length > 1 ? "s" : ""} : une information indiquée «
-                non indiquée » peut s&apos;y trouver.
-              </li>
-            )}
-          </ul>
-        )}
-      </Fold>
-
-      <Fold
-        title={
-          <PartTitle icon="archive" tone="muted">
-            Documents
-          </PartTitle>
-        }
-        count={`${analysed.length} analysé${analysed.length > 1 ? "s" : ""} sur ${analysis.documents.length}`}
-      >
-        {notAnalysed.length === 0 ? (
-          <p className="muted">
-            Tous les documents du dossier ont été analysés.
-          </p>
-        ) : (
-          <>
-            <p className="hint">
-              Non analysés : une information indiquée « non indiquée » peut
-              s&apos;y trouver.
-            </p>
-            <ul className="documents-read muted">
-              {notAnalysed.map((document) => (
-                <li key={document.id}>
-                  {document.fileName} — {notAnalysedReason(document)}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Fold>
     </div>
   );
-}
-
-function notAnalysedReason(document: Analysis["documents"][number]): string {
-  // Why the rules kept it out; a piece meant to be sent but missing was left out for lack of room.
-  if (
-    document.aiReason &&
-    !["DPGF", "BPU", "DQE"].includes(document.pieceType) &&
-    !/^(Pièce essentielle|Document utile|Ajouté à la main)/.test(
-      document.aiReason,
-    )
-  ) {
-    return document.aiReason;
-  }
-  if (document.state !== "READ" && document.state !== "SCANNED") {
-    return document.stateDetail ?? DOCUMENT_STATE_LABELS[document.state];
-  }
-  if (["DPGF", "BPU", "DQE"].includes(document.pieceType)) {
-    return `${PIECE_TYPE_LABELS[document.pieceType]} : lu par l'analyse financière`;
-  }
-  if (document.pieceType === "PLAN") {
-    return "plan non analysé dans cette version";
-  }
-  if (/\.(xlsx?|xlsm|ods|csv)$/i.test(document.fileName)) {
-    return "tableur lu : utilisé par l'analyse financière s'il est classé DPGF, BPU ou DQE";
-  }
-  return "volume ou nombre de documents trop important pour une seule analyse";
 }
 
 /**

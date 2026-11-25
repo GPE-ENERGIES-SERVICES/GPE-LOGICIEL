@@ -29,10 +29,10 @@ import eu.gpefrance.tenders.tender.Regions;
 public class AlertService {
 
 	/**
-	 * The two domains of GPE, as in the interface (ACTIVITY_LABELS):
-	 * ELECTRICITY = CFO / CFA (courants forts et faibles), PHOTOVOLTAIC = PV.
+	 * The domains of GPE, as in the interface (ACTIVITY_LABELS):
+	 * ELECTRICITY = CFO / CFA (courants forts et faibles), PHOTOVOLTAIC = PV, IRVE = bornes de recharge.
 	 */
-	public static final Set<String> ACTIVITIES = Set.of("ELECTRICITY", "PHOTOVOLTAIC");
+	public static final Set<String> ACTIVITIES = Set.of("ELECTRICITY", "PHOTOVOLTAIC", "IRVE");
 
 	private static final Logger log = LoggerFactory.getLogger(AlertService.class);
 

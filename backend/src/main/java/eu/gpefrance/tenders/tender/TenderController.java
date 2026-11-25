@@ -46,7 +46,7 @@ public class TenderController {
 
 	/** @param activities the domains chosen, empty for none of those of GPE */
 	public record ActivitiesRequest(
-			@NotNull List<@NotNull @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC", message = "domaine inconnu") String> activities) {
+			@NotNull List<@NotNull @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC|IRVE", message = "domaine inconnu") String> activities) {
 	}
 
 	/** A user gives the domains of a tender: they win over the rules and the AI, and the tender is filtered again. */

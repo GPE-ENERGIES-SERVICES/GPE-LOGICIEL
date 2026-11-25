@@ -35,11 +35,13 @@ le backend prêt. Avec les données de démonstration, tout reste affiché.
 | `GET /api/tenders` | onglets, 16 filtres, tri (voir plus bas) | filtres et tris restants, synonymes, nouveaux champs |
 | `GET /api/tenders/counts` | mêmes filtres que la liste, tous les onglets | — |
 | `GET /api/tenders/status-counts` | existe | — |
-| `GET /api/tenders/{id}/awards` | absent | **nouveau** : marchés attribués de la consultation, un par lot (`AwardedContract`) |
-| `GET /api/awards` | absent | **nouveau** : recherche dans les marchés attribués (voir plus bas) |
+| `GET /api/tenders/{id}/awards` | **fait** (V62) : attributions enregistrées, une par lot | lecture des titulaires dans les avis d'attribution |
+| `GET /api/awards` | **fait** (V62) : mêmes filtres que plus bas, filtrés en mémoire | — |
+| `PUT /api/tenders/{id}/award` | **fait** (V62) : résultat gagné ou perdu (`won`, `winner`, `amount`, `awardedAt`, `source` `NOTICE`/`MANUAL`, `lotNumber`, `reason`) ; une ligne par lot, réenregistrer met à jour | — |
+| `GET /api/tenders/{id}/history` | **fait** (V62) : changements de statut, du plus récent au plus ancien | — |
 | `GET /api/tenders/{id}/documents/search?q=` | absent | **nouveau** : recherche dans le DCE (voir plus bas) |
 | `GET /api/tenders/{id}` | existe, avec `followed` et `result` | nouveaux champs (voir plus bas) |
-| `PUT /api/tenders/{id}/follow-up` | existe, accepte `SUBMITTED` | — |
+| `PUT /api/tenders/{id}/follow-up` | existe ; refuse (409) une transition interdite, et `AWARDED` sans attribution | — |
 | `PUT /api/tenders/{id}/follow` | existe : suivre (étoile), par utilisateur | — |
 | `DELETE /api/tenders/{id}/follow` | existe : ne plus suivre | — |
 | `/api/alerts` | **fait** (V21) : veilles de l'utilisateur | synonymes métier ; alertes par courriel |
@@ -78,7 +80,7 @@ encore absent.
 
 ## Statuts
 
-`FollowUpStatus` comprend la valeur `SUBMITTED` (« Réponse envoyée ») :
+`FollowUpStatus` (statut de l'équipe) :
 
 | Valeur | Libellé |
 |--------|---------|
@@ -86,7 +88,16 @@ encore absent.
 | `TO_STUDY` | À analyser |
 | `RESPONDING` | En préparation |
 | `SUBMITTED` | Réponse envoyée |
-| `DISMISSED` | Écarté |
+| `DISMISSED` | Écarté (le NO GO de la décision : GPE ne répond pas) |
+| `AWARDED` | Attribué (marché gagné, attribution enregistrée) |
+| `SIGNED` | Signé |
+| `REJECTED` | Refusé (offre ou candidature rejetée) |
+
+Transitions (`FollowUpStatus.canBecome`, reprises par `FOLLOW_UP_NEXT` côté interface) : libres entre
+les cinq premiers statuts ; `AWARDED` et `REJECTED` seulement après `SUBMITTED` ; `SIGNED` seulement
+après `AWARDED` ; un résultat se corrige (`AWARDED` ↔ `REJECTED`, retour à `SUBMITTED`, `SIGNED` →
+`AWARDED`). Chaque changement est tracé dans `tender_status_change` (ancien, nouveau, date, auteur,
+origine `USER` ou `NOTICE`, motif).
 
 La colonne `follow_up_status` est un `VARCHAR(20)` sans contrainte : seule l'énumération Java
 a changé. Le statut reste partagé par toute l'équipe. Il est distinct de l'état de la consultation

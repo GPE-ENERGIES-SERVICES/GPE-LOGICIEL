@@ -23,6 +23,7 @@ import type {
   SupplierOffer,
   SupplierOfferPage,
   SupplierPriceLine,
+  MarginTarget,
 } from "@/types/estimate";
 
 import { api, upload } from "./http";
@@ -423,4 +424,9 @@ export function proposeTechnicalSolutions(
   return api(`/api/estimates/${estimateId}/technical-proposals`, {
     method: "POST",
   });
+}
+
+/** Brings the margin of the detailed items to a target (0.223 for 22.3 %) by the coefficient of the families chosen. */
+export function reviseMargin(estimateId: number, target: MarginTarget, margin: number, net: boolean): Promise<Estimate> {
+  return api(`/api/estimates/${estimateId}/margin-revision`, { method: "POST", body: { target, margin, net } });
 }

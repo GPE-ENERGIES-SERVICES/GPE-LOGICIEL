@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
-import { FOLLOW_UP_LABELS, formatDateTime } from "@/lib/format";
+import { followUpChoices, FOLLOW_UP_LABELS, formatDateTime } from "@/lib/format";
 import { updateFollowUp } from "@/services/tenderApi";
 import type { FollowUpStatus, TenderDetail } from "@/types/tender";
 
@@ -12,7 +12,7 @@ type Props = {
 };
 
 /**
- * Decision of the company on the tender, with a comment.
+ * Decision of the company on the tender, with a comment; only the statuses the rules allow from the current one.
  */
 export function FollowUpForm({ tender, onSaved }: Props) {
   const [status, setStatus] = useState<FollowUpStatus>(tender.followUpStatus);
@@ -38,9 +38,10 @@ export function FollowUpForm({ tender, onSaved }: Props) {
       <label>
         Statut
         <select value={status} onChange={(e) => setStatus(e.target.value as FollowUpStatus)}>
-          {(Object.keys(FOLLOW_UP_LABELS) as FollowUpStatus[]).map((value) => (
-            <option key={value} value={value}>
+          {followUpChoices(tender.followUpStatus).map(({ status: value, blocked }) => (
+            <option key={value} value={value} disabled={blocked !== null}>
               {FOLLOW_UP_LABELS[value]}
+              {blocked && ` (${blocked})`}
             </option>
           ))}
         </select>

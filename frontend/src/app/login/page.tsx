@@ -77,7 +77,7 @@ export default function LoginPage() {
     <main className="login-page">
       <section className="login-side" aria-label={BRAND.name}>
         <Image className="login-logo" src={BRAND.logo} alt={BRAND.name} priority unoptimized />
-        <p className="product-name login-product" lang="ar" dir="rtl">
+        <p className="product-name login-product">
           {PRODUCT_NAME}
         </p>
       </section>

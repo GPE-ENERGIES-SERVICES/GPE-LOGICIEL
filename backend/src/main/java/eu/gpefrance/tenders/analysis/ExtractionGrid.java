@@ -36,7 +36,9 @@ public final class ExtractionGrid {
 
 	/** The answers to {@link #DOMAIN}, with the domains of GPE they give to the tender. */
 	public static final Map<String, List<String>> DOMAIN_CHOICES = Map.of("CFO/CFA", List.of("ELECTRICITY"), "PV",
-			List.of("PHOTOVOLTAIC"), "CFO/CFA et PV", List.of("ELECTRICITY", "PHOTOVOLTAIC"), "aucun", List.of());
+			List.of("PHOTOVOLTAIC"), "IRVE", List.of("IRVE"), "CFO/CFA et PV", List.of("ELECTRICITY", "PHOTOVOLTAIC"),
+			"CFO/CFA et IRVE", List.of("ELECTRICITY", "IRVE"), "PV et IRVE", List.of("PHOTOVOLTAIC", "IRVE"),
+			"CFO/CFA, PV et IRVE", List.of("ELECTRICITY", "PHOTOVOLTAIC", "IRVE"), "aucun", List.of());
 
 	public static final String TECH_REQUIREMENTS = "tech_requirements";
 
@@ -69,15 +71,17 @@ public final class ExtractionGrid {
 	public static final List<GridField> FIELDS = List.of(
 			choice(DOMAIN, "Domaine GPE", AT_A_GLANCE,
 					"Les travaux demandés relèvent-ils des domaines de GPE ? CFO/CFA : électricité courants forts "
-							+ "(distribution, TGBT, éclairage, prises, bornes de recharge) ou courants faibles (SSI, "
+							+ "(distribution, TGBT, éclairage, prises) ou courants faibles (SSI, "
 							+ "alarme, vidéoprotection, contrôle d'accès, VDI, réseaux). PV : installation "
-							+ "photovoltaïque (toiture, ombrières, centrale au sol, autoconsommation). Répondre selon "
+							+ "photovoltaïque (toiture, ombrières, centrale au sol, autoconsommation). IRVE : bornes et "
+							+ "infrastructures de recharge de véhicules électriques. Répondre selon "
 							+ "le CCTP et les pièces techniques, pas selon le seul titre. Un marché en plusieurs lots "
 							+ "relève d'un domaine dès qu'un de ses lots en relève, même si les autres lots portent sur "
 							+ "d'autres corps d'état : citer alors l'intitulé de ce lot. « aucun » seulement si aucun lot "
 							+ "ne porte sur ces travaux, ou s'ils n'y figurent qu'à la marge d'un lot d'un autre corps "
 							+ "d'état. Citer l'extrait qui le montre.",
-					List.of("CFO/CFA", "PV", "CFO/CFA et PV", "aucun")),
+					List.of("CFO/CFA", "PV", "IRVE", "CFO/CFA et PV", "CFO/CFA et IRVE", "PV et IRVE",
+							"CFO/CFA, PV et IRVE", "aucun")),
 			single(DEADLINE, "Date et heure limite de remise des offres", AT_A_GLANCE, FieldKind.DATE_TIME,
 					"Date et heure limite de réception des offres, telles qu'écrites dans le règlement de la consultation "
 							+ "(à défaut l'avis). En procédure restreinte, celle des candidatures. Si une date a été "

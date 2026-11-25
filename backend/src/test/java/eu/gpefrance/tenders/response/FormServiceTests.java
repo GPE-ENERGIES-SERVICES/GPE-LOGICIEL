@@ -324,13 +324,25 @@ class FormServiceTests {
 		FormResponse form = service.view(piece);
 
 		assertThat(form.documentName()).isNull();
-		assertThat(form.problem()).contains("Aucun formulaire Word");
+		assertThat(form.problem()).contains("ne fournit pas ce formulaire en Word");
 		assertThat(mvc.post()
 			.uri("/api/response-pieces/{id}/form", piece)
 			.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
 			.content("{\"useAi\": false}")
 			.with(TestUsers.user())
 			.with(csrf())).hasStatus(HttpStatus.CONFLICT);
+
+		// The model dropped by a user comes first; a file that is not Word is refused.
+		assertThat(mvc.post().uri("/api/response-pieces/{id}/form/template", piece).multipart()
+			.file(new MockMultipartFile("file", "dc1.pdf", "application/pdf", new byte[] { 1 }))
+			.with(TestUsers.user()).with(csrf())).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(mvc.post().uri("/api/response-pieces/{id}/form/template", piece).multipart()
+			.file(new MockMultipartFile("file", "DC1-officiel.docx", "application/octet-stream", new byte[] { 1 }))
+			.with(TestUsers.user()).with(csrf())).hasStatusOk();
+		FormResponse dropped = service.view(piece);
+		assertThat(dropped.documentName()).isEqualTo("DC1-officiel.docx");
+		assertThat(dropped.templateDropped()).isTrue();
+		assertThat(dropped.problem()).isNull();
 	}
 
 	@Test

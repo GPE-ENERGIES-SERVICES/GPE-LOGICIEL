@@ -108,7 +108,7 @@ public class Tender {
 
 	private Boolean retained;
 
-	/** Domains of GPE (ELECTRICITY, PHOTOVOLTAIC), see the filter's DomainRules. */
+	/** Domains of GPE (ELECTRICITY, PHOTOVOLTAIC, IRVE), see the filter's DomainRules. */
 	@JdbcTypeCode(SqlTypes.ARRAY)
 	@Column(nullable = false)
 	private List<String> activities = new ArrayList<>();

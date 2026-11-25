@@ -3,7 +3,7 @@ import type { StaticImageData } from "next/image";
 import logo from "@/assets/logo-gpe.png";
 
 /** The name of the software, the same for everyone. */
-export const PRODUCT_NAME = "الخشخاش";
+export const PRODUCT_NAME = "GPE Logiciel";
 
 /**
  * Who the application is presented for. Only one company for now.

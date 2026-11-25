@@ -155,13 +155,53 @@ export const STATUS_LABELS: Record<TenderStatus, string> = {
   UNSUCCESSFUL: "Sans suite",
 };
 
+/** The statuses in the order of the life of a tender, as listed everywhere; « NO GO » is only said in the decision. */
 export const FOLLOW_UP_LABELS: Record<FollowUpStatus, string> = {
   NEW: "Nouveau",
   TO_STUDY: "À analyser",
   RESPONDING: "En préparation",
   SUBMITTED: "Réponse envoyée",
+  AWARDED: "Attribué",
+  SIGNED: "Signé",
+  REJECTED: "Refusé",
   DISMISSED: "Écarté",
 };
+
+const BEFORE_RESULT: FollowUpStatus[] = ["NEW", "TO_STUDY", "RESPONDING", "SUBMITTED", "DISMISSED"];
+
+/**
+ * Statuses a tender may take next, the same rules as FollowUpStatus.canBecome
+ * on the server: free before the answer, then the result. AWARDED adds the
+ * tender to « Marchés attribués ».
+ */
+export const FOLLOW_UP_NEXT: Record<FollowUpStatus, FollowUpStatus[]> = {
+  NEW: BEFORE_RESULT,
+  TO_STUDY: BEFORE_RESULT,
+  RESPONDING: [...BEFORE_RESULT, "AWARDED", "REJECTED"],
+  DISMISSED: BEFORE_RESULT,
+  SUBMITTED: [...BEFORE_RESULT, "AWARDED", "REJECTED"],
+  AWARDED: ["AWARDED", "SIGNED", "REJECTED", "SUBMITTED"],
+  REJECTED: ["REJECTED", "AWARDED", "SUBMITTED"],
+  SIGNED: ["SIGNED", "AWARDED"],
+};
+
+/**
+ * Every status, in display order, with why it cannot be chosen from the
+ * current one: the choice shows them all, those not allowed greyed.
+ */
+export function followUpChoices(current: FollowUpStatus): { status: FollowUpStatus; blocked: string | null }[] {
+  return (Object.keys(FOLLOW_UP_LABELS) as FollowUpStatus[]).map((status) => {
+    const allowed = status === current || FOLLOW_UP_NEXT[current].includes(status);
+    const blocked =
+      status === "SIGNED" ? "après Attribué" : ["AWARDED", "REJECTED"].includes(status) ? "après la préparation" : "résultat déjà connu";
+    return { status, blocked: allowed ? null : blocked };
+  });
+}
+
+/** Class of the colour of a status, "status-to-study" for TO_STUDY. */
+export function followUpClass(status: FollowUpStatus): string {
+  return `status-${status.toLowerCase().replace("_", "-")}`;
+}
 
 /** Tabs of the tender list, in display order. */
 export const TENDER_TAB_LABELS: Record<TenderTab, string> = {
@@ -174,11 +214,18 @@ export const TENDER_TAB_LABELS: Record<TenderTab, string> = {
   FILTERED_OUT: "Hors critères",
 };
 
-/** Kinds of work the company answers; the list will grow with the business. */
-/** The two domains of GPE; the same codes as AlertService.ACTIVITIES on the server. */
+/** The domains of GPE; the same codes as AlertService.ACTIVITIES on the server. */
 export const ACTIVITY_LABELS: Record<string, string> = {
   ELECTRICITY: "CFO / CFA",
   PHOTOVOLTAIC: "Photovoltaïque (PV)",
+  IRVE: "IRVE (bornes de recharge)",
+};
+
+/** Short name of a domain, for a badge. */
+export const ACTIVITY_SHORT: Record<string, string> = {
+  ELECTRICITY: "CFO / CFA",
+  PHOTOVOLTAIC: "PV",
+  IRVE: "IRVE",
 };
 
 export const NOTICE_KIND_LABELS: Record<NoticeKind, string> = {

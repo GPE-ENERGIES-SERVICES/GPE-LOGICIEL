@@ -5,12 +5,13 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useState, type ReactNode } from "react";
 
 import { AnalysisSection } from "@/components/analysis/AnalysisSection";
-import { DecisionSection } from "@/components/analysis/DecisionSection";
+import { DecisionSection, VerdictBadge } from "@/components/analysis/DecisionSection";
 import { FinancialSection } from "@/components/analysis/FinancialSection";
-import { DeadlineBadge } from "@/components/DeadlineBadge";
+import { CctpSection, RcCcapSection } from "@/components/analysis/SpecialAnalyses";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { EstimatesSection } from "@/components/estimate/EstimatesSection";
 import { MemoirsSection } from "@/components/memoir/MemoirsSection";
+import { Fold } from "@/components/Fold";
 import { NoticeHistory } from "@/components/NoticeHistory";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { AdministrativeSection } from "@/components/AdministrativeSection";
@@ -19,16 +20,20 @@ import { ResponseSection } from "@/components/ResponseSection";
 import { Tabs } from "@/components/Tabs";
 import { FollowButton } from "@/components/FollowButton";
 import { FollowUpForm } from "@/components/FollowUpForm";
-import { Fold } from "@/components/Fold";
+import { StatusHistory } from "@/components/StatusHistory";
+import {
+  DomainChips,
+  TenderBadges,
+  TenderBanner,
+  tenderKicker,
+} from "@/components/TenderCard";
 import {
   formatAmount,
   formatDate,
   formatDateTime,
   lotTitle,
-  FOLLOW_UP_LABELS,
   MARKET_TYPE_LABELS,
   PROCEDURE_LABELS,
-  STATUS_LABELS,
 } from "@/lib/format";
 import { consultationUrl } from "@/lib/dceUrl";
 import { backLink } from "@/lib/navigation";
@@ -65,7 +70,11 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 const DOMAIN_CHOICES = [
   { value: "ELECTRICITY", label: "CFO / CFA" },
   { value: "PHOTOVOLTAIC", label: "PV" },
+  { value: "IRVE", label: "IRVE" },
   { value: "ELECTRICITY,PHOTOVOLTAIC", label: "CFO / CFA et PV" },
+  { value: "ELECTRICITY,IRVE", label: "CFO / CFA et IRVE" },
+  { value: "PHOTOVOLTAIC,IRVE", label: "PV et IRVE" },
+  { value: "ELECTRICITY,PHOTOVOLTAIC,IRVE", label: "CFO / CFA, PV et IRVE" },
   { value: "", label: "Hors domaines GPE" },
 ];
 
@@ -133,14 +142,14 @@ function DomainPicker({
   );
 }
 
-function List({ items }: { items: string[] }) {
-  return items.length ? (
-    <ul className="plain-list">
+function Chips({ items, strong }: { items: string[]; strong?: boolean }) {
+  return (
+    <ul className={strong ? "notice-chips strong" : "notice-chips"}>
       {items.map((item) => (
         <li key={item}>{item}</li>
       ))}
     </ul>
-  ) : null;
+  );
 }
 
 function awardText(award: AwardedContract): string {
@@ -163,14 +172,15 @@ function TenderDetails() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const loaded = useLoader(() => getTender(id), id);
+  // The tender as last saved on this page, or as loaded.
+  const [saved, setSaved] = useState<TenderDetail | null>(null);
   const awards = useLoader(
     () =>
       available("awards") ? getTenderAwards(Number(id)) : Promise.resolve([]),
-    id,
+    // Reloaded when the status changes: « Attribué » adds an award.
+    `${id}/${saved?.followUpStatus ?? ""}`,
   );
   const journey = useJourney(Number(id));
-  // The tender as last saved on this page, or as loaded.
-  const [saved, setSaved] = useState<TenderDetail | null>(null);
   const tender = saved ?? loaded.data;
 
   if (loaded.error) {
@@ -201,12 +211,6 @@ function TenderDetails() {
   const place = [tender.location, area && `(${area})`]
     .filter(Boolean)
     .join(" ");
-  const outcome =
-    tender.result?.kind === "AWARDED"
-      ? "Attribuée"
-      : tender.status !== "ACTIVE"
-        ? STATUS_LABELS[tender.status]
-        : null;
 
   // Rule RM2: when a rectification moved the deadline, the change is highlighted. Only the notices of the source
   // of the consultation count: another source publishing it never changes it.
@@ -249,120 +253,265 @@ function TenderDetails() {
         <Link href={back.href}>← {back.label}</Link>
       </p>
 
-      <header className="card tender-hero">
-        <div className="hero-top">
-          <div className="hero-title">
-            <h1>
-              <FollowButton
-                key={String(tender.followed)}
-                tenderId={tender.id}
-                followed={tender.followed ?? false}
-                onChanged={(followed) => setSaved({ ...tender, followed })}
-              />{" "}
-              {tender.title}
-            </h1>
-            <p className="hero-subtitle">
-              {[
-                tender.buyer ?? "Acheteur non indiqué",
-                place,
-                tender.reference && `Réf. ${tender.reference}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <div className="badges">
-              {tender.source === MANUAL_SOURCE && (
-                <span className="badge">Ajouté manuellement</span>
-              )}
-              <a href="#suivi" className="badge">
-                {FOLLOW_UP_LABELS[tender.followUpStatus]}
+      <header className="tender-card tender-hero">
+        <TenderBanner
+          kicker={tenderKicker(tender)}
+          buyer={tender.buyer}
+          place={place}
+          lead={
+            <FollowButton
+              key={String(tender.followed)}
+              tenderId={tender.id}
+              followed={tender.followed ?? false}
+              onChanged={(followed) => setSaved({ ...tender, followed })}
+            />
+          }
+          badges={
+            <>
+              <a href="#suivi" className="badge-link">
+                <TenderBadges tender={tender} />
               </a>
-              {outcome && <span className="badge">{outcome}</span>}
-              {tender.retained === false && (
-                <span className="badge">Hors critères</span>
-              )}
+              <VerdictBadge tenderId={tender.id} />
               {deadlineChanged && (
                 <span className="badge urgent">
                   Date limite modifiée par un rectificatif
                 </span>
               )}
+            </>
+          }
+        />
+        <div className="tender-card-body">
+          <div className="hero-top">
+            <div className="hero-title">
+              <p className="tender-card-meta">
+                {[
+                  procedure,
+                  marketTypes,
+                  tender.reference && `Réf. ${tender.reference}`,
+                ]
+                  .filter(Boolean)
+                  .join(" | ")}
+              </p>
+              <h1>{tender.title}</h1>
+              <div className="chips">
+                <DomainChips activities={tender.activities} />
+              </div>
+            </div>
+            <div className="hero-actions">
+              {tender.platformUrl && (
+                <a
+                  href={consultationUrl(tender.platformUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="button primary"
+                >
+                  Accéder à la consultation
+                </a>
+              )}
+              <a href="#dce" className="button">
+                Déposer le DCE
+              </a>
+              {tender.noticeUrl && (
+                <a
+                  href={tender.noticeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hero-link"
+                >
+                  Voir l&apos;avis sur le {tender.source}
+                </a>
+              )}
             </div>
           </div>
-          <div className="hero-actions">
-            {tender.platformUrl && (
-              <a
-                href={consultationUrl(tender.platformUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="button primary"
-              >
-                Accéder à la consultation
-              </a>
-            )}
-            <a href="#dce" className="button">
-              Déposer le DCE
+          {/* What the banner and the line above do not say yet, each leading where it is detailed. */}
+          <nav className="key-links" aria-label="Repères">
+            <a href="#infos" className="key-link">
+              Montant estimé{" "}
+              <strong>
+                {tender.estimatedAmount !== null
+                  ? formatAmount(tender.estimatedAmount)
+                  : "Non indiqué"}
+              </strong>
             </a>
-            {tender.noticeUrl && (
-              <a
-                href={tender.noticeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hero-link"
-              >
-                Voir l&apos;avis sur le {tender.source}
+            <a href="#infos" className="key-link">
+              <strong>
+                {tender.lots.length
+                  ? `${tender.lots.length} lots`
+                  : "Lot unique"}
+              </strong>
+              {tender.lots.length > 0 && " voir le détail"}
+            </a>
+            {visit?.required && (
+              <a href="#infos" className="key-link warning">
+                Visite obligatoire{" "}
+                <strong>
+                  {visit.date ? formatDateTime(visit.date) : "date dans le DCE"}
+                </strong>
               </a>
             )}
+            {platform &&
+              (tender.platformUrl ? (
+                <a
+                  href={consultationUrl(tender.platformUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="key-link"
+                >
+                  Dépôt sur <strong>{platform}</strong> ↗
+                </a>
+              ) : (
+                <span className="key-link">
+                  Dépôt sur <strong>{platform}</strong>
+                </span>
+              ))}
+          </nav>
+          <div className="hero-notice" id="infos">
+            <p className="hero-object">
+              {tender.description ?? "Description non disponible dans l'avis."}
+            </p>
+            <div className="notice-grid">
+              <section className="notice-block tone-info">
+                <h2>Le marché</h2>
+                <dl className="notice-facts">
+                  <Fact label="Lieu">
+                    {tender.location && (
+                      <>
+                        <strong>{tender.location}</strong>
+                        {tender.distanceKm != null && ` · ${tender.distanceKm} km du siège`}
+                      </>
+                    )}
+                  </Fact>
+                  <Fact label="Publié le">
+                    {tender.publishedAt && <strong>{formatDate(tender.publishedAt)}</strong>}
+                  </Fact>
+                  {available("noticeDetails") && (
+                    <Fact label="Notation">
+                      {criteria.length === 0 ? (
+                        <span className="muted">Non indiquée dans l&apos;avis</span>
+                      ) : (
+                        <>
+                          {criteria.map((criterion, index) => (
+                            <span key={criterion.label}>
+                              {index > 0 && " · "}
+                              {criterion.label}{" "}
+                              <strong className="score">
+                                {criterion.weight === null ? "non pondéré" : `${criterion.weight} %`}
+                              </strong>
+                            </span>
+                          ))}
+                          {allWeighted && weightTotal !== 100 && (
+                            <span className="badge urgent">Total ≠ 100 %, voir le RC</span>
+                          )}
+                        </>
+                      )}
+                    </Fact>
+                  )}
+                  <Fact label="CPV">
+                    {cpv.length > 0 &&
+                      cpv.map((item) => (
+                        <div key={item.code}>
+                          <strong>{item.code}</strong>
+                          {item.label && ` ${item.label}`}
+                        </div>
+                      ))}
+                  </Fact>
+                  <Fact label="Domaine">
+                    <DomainPicker tender={tender} onSaved={setSaved} />
+                  </Fact>
+                  <Fact label="Pertinence">
+                    {tender.relevanceScore != null && (
+                      <>
+                        <strong className="score">{tender.relevanceScore} %</strong>
+                        {tender.filterReason && <span className="muted small"> {tender.filterReason}</span>}
+                      </>
+                    )}
+                  </Fact>
+                  <Fact label="Attribution">
+                    {singleAward && awardText(singleAward)}
+                  </Fact>
+                </dl>
+              </section>
+
+                <section className="notice-block tone-warning">
+                  <h2>À prévoir</h2>
+                  {!available("noticeDetails") || !info ? (
+                    <p className="muted small">
+                      Non renseigné dans l&apos;avis : relevé dans le DCE.
+                    </p>
+                  ) : (
+                    <dl className="notice-facts">
+                      <Fact label="Visite">
+                        {visit?.required ? (
+                          <>
+                            <span className="badge urgent">Obligatoire</span>{" "}
+                            {visit.date && <strong>{formatDateTime(visit.date)}</strong>}
+                            {visit.date && new Date(visit.date) < new Date() && <span className="muted"> (passée)</span>}
+                          </>
+                        ) : visit ? (
+                          <span className="badge verified">Facultative</span>
+                        ) : (
+                          <span className="muted">Non mentionnée</span>
+                        )}
+                      </Fact>
+                      <Fact label="À fournir">
+                        {info.requiredDocuments.length > 0 && <Chips items={info.requiredDocuments} />}
+                      </Fact>
+                      <Fact label="Qualifications">
+                        {info.qualifications.length > 0 && <Chips items={info.qualifications} strong />}
+                      </Fact>
+                      <Fact label="Certifications">
+                        {info.certifications.length > 0 && <Chips items={info.certifications} strong />}
+                      </Fact>
+                      <Fact label="Conditions">{info.specialConditions}</Fact>
+                    </dl>
+                  )}
+                </section>
+            </div>
+
+            {tender.lots.length > 0 && (
+              <section className="notice-block tone-info notice-lots">
+                <h2>{tender.lots.length} lots</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>N°</th>
+                      <th>Intitulé</th>
+                      <th>Montant estimé</th>
+                      {awardsByLot.size > 0 && <th>Attribution</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tender.lots.map((lot) => {
+                      const award = awardsByLot.get(lot.number);
+                      return (
+                        <tr key={lot.number}>
+                          <td>{lot.number}</td>
+                          <td>{lotTitle(lot.number, lot.title) ?? "Sans intitulé"}</td>
+                          <td className="nowrap">{formatAmount(lot.estimatedAmount)}</td>
+                          {awardsByLot.size > 0 && <td>{award ? awardText(award) : "Non attribué"}</td>}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {lotAmounts.some((amount) => amount !== null) && (
+                    <tfoot>
+                      <tr>
+                        <td />
+                        <td>{lotAmounts.every((amount) => amount !== null) ? "Total" : "Total des montants indiqués"}</td>
+                        <td className="nowrap">{formatAmount(lotTotal)}</td>
+                        {awardsByLot.size > 0 && <td />}
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </section>
+            )}
+
+            <p className="notice-source">
+              {tender.source === MANUAL_SOURCE ? "Ajouté manuellement" : `Avis ${tender.source} n° ${tender.externalId}`}
+            </p>
           </div>
         </div>
-        <dl className="key-facts">
-          <div className="key-fact key-deadline">
-            <dt>Date limite de réponse</dt>
-            <dd>
-              {tender.deadline
-                ? formatDateTime(tender.deadline)
-                : "Non indiquée"}
-              {tender.status === "ACTIVE" && (
-                <DeadlineBadge deadline={tender.deadline} />
-              )}
-            </dd>
-          </div>
-          <div className="key-fact">
-            <dt>Montant estimé</dt>
-            <dd>
-              {tender.estimatedAmount !== null
-                ? formatAmount(tender.estimatedAmount)
-                : "Non indiqué"}
-            </dd>
-          </div>
-          <div className="key-fact">
-            <dt>Procédure</dt>
-            <dd>{procedure ?? "Non indiquée"}</dd>
-          </div>
-          <div className="key-fact">
-            <dt>Lots</dt>
-            <dd>
-              {tender.lots.length ? `${tender.lots.length} lots` : "Lot unique"}
-            </dd>
-          </div>
-          <div className="key-fact">
-            <dt>Visite du site</dt>
-            <dd>
-              {visit?.required ? (
-                <span className="key-warning">
-                  Obligatoire{visit.date && ` le ${formatDateTime(visit.date)}`}
-                </span>
-              ) : visit ? (
-                "Facultative"
-              ) : (
-                "Voir le DCE"
-              )}
-            </dd>
-          </div>
-          <div className="key-fact">
-            <dt>Plateforme de dépôt</dt>
-            <dd>{platform ?? "Non indiquée"}</dd>
-          </div>
-        </dl>
       </header>
 
       <ProcessingPanel
@@ -370,232 +519,15 @@ function TenderDetails() {
         retained={tender.retained ?? null}
       />
 
-      <DecisionSection
-        tenderId={tender.id}
-        followUp={{
-          status: tender.followUpStatus,
-          by: tender.followUpBy,
-          at: tender.followUpAt,
-        }}
-      />
-
       <Tabs
         label="Sections de l'appel d'offres"
         tabs={[
-          {
-            id: "avis",
-            label: "Avis",
-            step: "done",
-            content: (
-              <>
-                <section className="card">
-                  <dl className="facts rows">
-                    <Fact label="Objet">
-                      {tender.description ??
-                        "Description non disponible dans l'avis."}
-                    </Fact>
-                    <Fact label="Lots">
-                      {tender.lots.length === 0 ? (
-                        <>
-                          Sans allotissement : un seul marché.
-                          {singleAward && (
-                            <> Attribution : {awardText(singleAward)}</>
-                          )}
-                        </>
-                      ) : (
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>N°</th>
-                              <th>Intitulé</th>
-                              <th>Montant estimé</th>
-                              {awardsByLot.size > 0 && <th>Attribution</th>}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {tender.lots.map((lot) => {
-                              const award = awardsByLot.get(lot.number);
-                              return (
-                                <tr key={lot.number}>
-                                  <td>{lot.number}</td>
-                                  <td>
-                                    {lotTitle(lot.number, lot.title) ??
-                                      "Sans intitulé"}
-                                  </td>
-                                  <td className="nowrap">
-                                    {formatAmount(lot.estimatedAmount)}
-                                  </td>
-                                  {awardsByLot.size > 0 && (
-                                    <td>
-                                      {award
-                                        ? awardText(award)
-                                        : "Non attribué"}
-                                    </td>
-                                  )}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                          {lotAmounts.some((amount) => amount !== null) && (
-                            <tfoot>
-                              <tr>
-                                <td />
-                                <td>
-                                  {lotAmounts.every((amount) => amount !== null)
-                                    ? "Total"
-                                    : "Total des montants indiqués"}
-                                </td>
-                                <td className="nowrap">
-                                  {formatAmount(lotTotal)}
-                                </td>
-                                {awardsByLot.size > 0 && <td />}
-                              </tr>
-                            </tfoot>
-                          )}
-                        </table>
-                      )}
-                    </Fact>
-                    {available("noticeDetails") && (
-                      <>
-                        <Fact label="Critères d'attribution">
-                          {criteria.length === 0 ? (
-                            <span className="muted">
-                              Non indiqués dans l&apos;avis.
-                            </span>
-                          ) : (
-                            <>
-                              <List
-                                items={criteria.map((criterion) =>
-                                  criterion.weight === null
-                                    ? `${criterion.label} (non pondéré)`
-                                    : `${criterion.label} : ${criterion.weight} %`,
-                                )}
-                              />
-                              {allWeighted && weightTotal !== 100 && (
-                                <p className="hint">
-                                  Les pondérations publiées ne totalisent pas
-                                  100 % : vérifier le règlement de consultation.
-                                </p>
-                              )}
-                            </>
-                          )}
-                        </Fact>
-                        {!info ? (
-                          <Fact label="Informations importantes">
-                            <span className="muted">
-                              Non renseignées dans l&apos;avis : elles seront
-                              relevées dans le DCE.
-                            </span>
-                          </Fact>
-                        ) : (
-                          <>
-                            <Fact label="Visite du site">
-                              {visit?.required ? (
-                                <>
-                                  <span className="badge urgent">
-                                    Obligatoire
-                                  </span>{" "}
-                                  {visit.date &&
-                                    `le ${formatDateTime(visit.date)}`}
-                                  {visit.date &&
-                                    new Date(visit.date) < new Date() && (
-                                      <span className="muted"> (passée)</span>
-                                    )}
-                                </>
-                              ) : visit ? (
-                                "Facultative"
-                              ) : (
-                                "Non mentionnée"
-                              )}
-                            </Fact>
-                            <Fact label="Documents demandés">
-                              {info.requiredDocuments.length > 0 && (
-                                <List items={info.requiredDocuments} />
-                              )}
-                            </Fact>
-                            <Fact label="Qualifications">
-                              {info.qualifications.length > 0 && (
-                                <List items={info.qualifications} />
-                              )}
-                            </Fact>
-                            <Fact label="Certifications">
-                              {info.certifications.length > 0 && (
-                                <List items={info.certifications} />
-                              )}
-                            </Fact>
-                            <Fact label="Conditions particulières">
-                              {info.specialConditions}
-                            </Fact>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </dl>
-                </section>
-
-                <section className="card">
-                  <Fold
-                    title="Détails de l'avis"
-                    count={
-                      tender.source === MANUAL_SOURCE
-                        ? "Ajouté manuellement"
-                        : `${tender.source} · ${tender.externalId}`
-                    }
-                  >
-                    <dl className="facts grid">
-                      <Fact label="Référence">{tender.reference}</Fact>
-                      <Fact label="Lieu d'exécution">
-                        {tender.location && (
-                          <>
-                            {tender.location}
-                            {tender.distanceKm != null && (
-                              <span className="muted">
-                                {" "}
-                                · à {tender.distanceKm} km du siège
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </Fact>
-                      <Fact label="Départements">
-                        {tender.departments.join(", ")}
-                      </Fact>
-                      <Fact label="Type de marché">{marketTypes}</Fact>
-                      <Fact label="Domaine">
-                        <DomainPicker tender={tender} onSaved={setSaved} />
-                      </Fact>
-                      <Fact label="Publication">
-                        {tender.publishedAt && formatDate(tender.publishedAt)}
-                      </Fact>
-                      <Fact label="Pertinence">
-                        {tender.relevanceScore != null &&
-                          `${tender.relevanceScore} %`}
-                      </Fact>
-                      <Fact label="Codes CPV">
-                        {cpv.length > 0 && (
-                          <List
-                            items={cpv.map(
-                              (item) =>
-                                `${item.code}${item.label ? ` – ${item.label}` : ""}`,
-                            )}
-                          />
-                        )}
-                      </Fact>
-                    </dl>
-                    {tender.filterReason && (
-                      <p className="reason">{tender.filterReason}</p>
-                    )}
-                  </Fold>
-                </section>
-              </>
-            ),
-          },
           {
             id: "dce",
             label: "DCE et documents",
             step: journey.dce,
             content: (
-              <section className="card">
+              <section className="card section tone-muted">
                 <h2>Documents (DCE)</h2>
                 <DocumentsSection
                   tenderId={tender.id}
@@ -609,54 +541,67 @@ function TenderDetails() {
             label: "Fiche IA",
             step: journey.summary,
             content: (
-              <section className="card">
+              <section className="card section tone-violet">
                 <h2>Analyse du DCE</h2>
+                <DecisionSection
+                  tenderId={tender.id}
+                  followUp={{ status: tender.followUpStatus, by: tender.followUpBy, at: tender.followUpAt, }}
+                />
                 <AnalysisSection tenderId={tender.id} />
               </section>
             ),
           },
           {
-            id: "finance",
-            label: "Analyse financière",
-            step: journey.financial,
+            id: "rc-ccap",
+            label: "Analyse RC / CCAP",
+            step: journey.summary,
             content: (
-              <section className="card">
-                <h2>Analyse financière (DPGF, BPU, DQE)</h2>
+              <section className="card section tone-info">
+                <h2>Analyse du RC et du CCAP</h2>
                 <p className="muted">
-                  À la demande : les montants des tableurs sont contrôlés par le
-                  logiciel (sommes, totaux, TVA), puis l&apos;IA résume les
-                  postes principaux et les points à vérifier, chacun avec sa
-                  source (document, feuille, ligne).
+                  Après la fiche IA, le détail de ce qui règle la réponse (RC) et
+                  de ce que le contrat coûte (CCAP), chaque point avec sa source.
                 </p>
-                <FinancialSection tenderId={tender.id} />
+                <RcCcapSection tenderId={tender.id} />
               </section>
             ),
           },
           {
-            id: "technique",
-            label: "Choix techniques",
+            id: "cctp",
+            label: "CCTP et choix techniques",
             step: journey.technical,
             content: (
-              <section className="card">
-                <h2>Choix techniques</h2>
+              <section className="card section tone-info">
+                <h2>CCTP et choix techniques</h2>
                 <p className="muted">
-                  Entre l&apos;analyse et le chiffrage : le matériel retenu, la
-                  valorisation de l&apos;énergie, la toiture et le
-                  dimensionnement. Le chiffrage, le mémoire et le dossier de
-                  réponse partent de ces choix.
+                  Dans l&apos;ordre du chiffreur : le matériel, les choix
+                  imposés, la puissance, le chantier, les points de vigilance,
+                  puis nos choix techniques, d&apos;où part le chiffrage.
                 </p>
-                <TechnicalSection tenderId={tender.id} />
+                <CctpSection
+                  tenderId={tender.id}
+                  choices={<TechnicalSection tenderId={tender.id} />}
+                />
               </section>
             ),
           },
           {
             id: "chiffrage",
-            label: "Chiffrage",
+            label: "Étude du chiffrage",
             step: journey.estimate,
             content: (
-              <section className="card">
-                <h2>Chiffrage</h2>
+              <section className="card section tone-success">
+                <h2>Étude du chiffrage</h2>
+                <p className="muted">
+                  Thomas reprend le DPGF, pré-chiffre chaque ligne (matériel et
+                  main-d&apos;œuvre) et vous laisse confirmer : vert = prix sûr,
+                  orange = à vérifier, rouge = sans prix. Une fois validé, le
+                  DPGF rempli s&apos;exporte.
+                </p>
                 <EstimatesSection tender={tender} />
+                <Fold title="Contrôle des bordereaux (DPGF, BPU, DQE)" count="sommes, totaux, TVA">
+                  <FinancialSection tenderId={tender.id} />
+                </Fold>
               </section>
             ),
           },
@@ -665,7 +610,7 @@ function TenderDetails() {
             label: "Mémoire",
             step: journey.memoir,
             content: (
-              <section className="card">
+              <section className="card section tone-violet">
                 <h2>Mémoire technique</h2>
                 <MemoirsSection tender={tender} />
               </section>
@@ -676,7 +621,7 @@ function TenderDetails() {
             label: "Administratif",
             step: journey.administrative,
             content: (
-              <section className="card">
+              <section className="card section tone-warning">
                 <h2>Administratif</h2>
                 <AdministrativeSection
                   tenderId={tender.id}
@@ -690,7 +635,7 @@ function TenderDetails() {
             label: "Dossier de réponse",
             step: journey.response,
             content: (
-              <section className="card">
+              <section className="card section tone-info">
                 <h2>Dossier de réponse</h2>
 
                 <ResponseSection tenderId={tender.id} />
@@ -702,7 +647,7 @@ function TenderDetails() {
             label: "Suivi et historique",
             content: (
               <>
-                <section className="card">
+                <section className="card section tone-warning">
                   <h2>Suivi</h2>
                   <FollowUpForm
                     tender={tender}
@@ -711,7 +656,15 @@ function TenderDetails() {
                   />
                 </section>
 
-                <section className="card">
+                <section className="card section tone-warning">
+                  <h2>Historique des statuts</h2>
+                  <StatusHistory
+                    tenderId={tender.id}
+                    version={tender.followUpAt ?? "new"}
+                  />
+                </section>
+
+                <section className="card section tone-muted">
                   <h2>Historique des publications</h2>
                   <NoticeHistory tender={tender} />
                 </section>

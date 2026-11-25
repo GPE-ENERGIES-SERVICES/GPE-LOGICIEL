@@ -39,6 +39,53 @@ class EstimateCalculatorTests {
 	}
 
 	@Test
+	void splitsAnItemIntoSuppliesAndLabour() {
+		EstimateCalculator.Split split = EstimateCalculator
+			.split(new Line(PriceMode.COMPOSED, d("42"), null, false, SOCKET), K);
+
+		assertThat(split.supplyUnitCost()).isEqualByComparingTo("3.20");
+		assertThat(split.supplyCoefficient()).isEqualByComparingTo("1.30");
+		// 4.16 x 42
+		assertThat(split.supplyAmount()).isEqualTo(d("174.72"));
+		assertThat(split.laborHours()).isEqualByComparingTo("0.25");
+		assertThat(split.laborRate()).isEqualByComparingTo("45");
+		assertThat(split.laborCoefficient()).isEqualByComparingTo("1.50");
+		// 16.875 x 42
+		assertThat(split.laborAmount()).isEqualTo(d("708.75"));
+	}
+
+	@Test
+	void anItemWithoutLabourHasNoLabourFigures() {
+		EstimateCalculator.Split split = EstimateCalculator.split(new Line(PriceMode.COMPOSED, d("1"), null, false,
+				List.of(new Cost(ComponentType.SUPPLY, d("1"), null, null, null))), K);
+
+		assertThat(split.supplyUnitCost()).isNull();
+		assertThat(split.supplyAmount()).isNull();
+		assertThat(split.laborHours()).isNull();
+		assertThat(split.laborAmount()).isNull();
+	}
+
+	@Test
+	void findsTheCoefficientOfAGrossMargin() {
+		List<Line> lines = List.of(new Line(PriceMode.COMPOSED, d("42"), null, false, SOCKET),
+				new Line(PriceMode.FIXED, d("1"), d("1000"), false, List.of()));
+
+		// cost 606.90 ; 25 % of margin: sale 809.20 = 606.90 x 1.33333
+		assertThat(EstimateCalculator.coefficientForMargin(lines, K, d("0.25"), true, true)).isEqualTo(d("1.33333"));
+		// supplies only: labour sells 472.50 x 1.5 = 708.75 ; (809.20 - 708.75) / 134.40
+		assertThat(EstimateCalculator.coefficientForMargin(lines, K, d("0.25"), true, false)).isEqualTo(d("0.74740"));
+	}
+
+	@Test
+	void aMarginWithoutDetailedCostIsRefused() {
+		List<Line> lines = List.of(new Line(PriceMode.FIXED, d("1"), d("1000"), false, List.of()));
+
+		org.assertj.core.api.Assertions
+			.assertThatThrownBy(() -> EstimateCalculator.coefficientForMargin(lines, K, d("0.2"), true, true))
+			.isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
 	void appliesTheWasteAndTheCoefficientOfAComponent() {
 		// 0.8333 x 1.05 = 0.874965 ; x 1.10 = 0.9624615
 		LineResult line = EstimateCalculator.line(new Line(PriceMode.COMPOSED, d("100"), null, false,

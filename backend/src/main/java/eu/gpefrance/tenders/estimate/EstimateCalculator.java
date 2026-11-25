@@ -130,6 +130,118 @@ final class EstimateCalculator {
 		return new LineResult(unitCost, unitPrice, amount, amount != null);
 	}
 
+	/**
+	 * An item as a costing reader reads it: the supplies (every cost but labour)
+	 * and the labour, for one unit, then for the quantity. A value is null when
+	 * the item has no such cost or one of them is missing.
+	 */
+	record Split(BigDecimal supplyUnitCost, BigDecimal supplyCoefficient, BigDecimal supplyAmount,
+			BigDecimal laborHours, BigDecimal laborRate, BigDecimal laborCoefficient, BigDecimal laborAmount) {
+	}
+
+	static Split split(Line line, Map<ComponentType, BigDecimal> coefficients) {
+		Family supply = new Family();
+		Family labor = new Family();
+		for (Cost cost : line.costs()) {
+			Family family = cost.type() == ComponentType.LABOR ? labor : supply;
+			family.add(cost, coefficients);
+		}
+		BigDecimal hours = labor.present ? labor.hours.setScale(COST_SCALE, RoundingMode.HALF_UP) : null;
+		BigDecimal rate = labor.known() && labor.hours.signum() > 0
+				? labor.cost.divide(labor.hours, COST_SCALE, RoundingMode.HALF_UP) : null;
+		return new Split(supply.known() ? supply.cost.setScale(COST_SCALE, RoundingMode.HALF_UP) : null,
+				supply.coefficient(), supply.amount(line.quantity()), hours, rate, labor.coefficient(),
+				labor.amount(line.quantity()));
+	}
+
+	/** The supplies or the labour of one unit of an item. */
+	private static final class Family {
+
+		boolean present;
+
+		boolean missing;
+
+		BigDecimal cost = BigDecimal.ZERO;
+
+		BigDecimal sale = BigDecimal.ZERO;
+
+		BigDecimal hours = BigDecimal.ZERO;
+
+		void add(Cost component, Map<ComponentType, BigDecimal> coefficients) {
+			present = true;
+			BigDecimal waste = component.wasteRate() == null ? BigDecimal.ZERO : component.wasteRate();
+			hours = hours.add(component.quantity().multiply(BigDecimal.ONE.add(waste)));
+			BigDecimal value = component.value();
+			if (value == null) {
+				missing = true;
+				return;
+			}
+			cost = cost.add(value);
+			sale = sale.add(value.multiply(component.coefficient(coefficients)));
+		}
+
+		boolean known() {
+			return present && !missing;
+		}
+
+		/** The sale over the cost: the coefficient of the family, whatever those of its costs. */
+		BigDecimal coefficient() {
+			return known() && cost.signum() > 0 ? sale.divide(cost, 5, RoundingMode.HALF_UP) : null;
+		}
+
+		BigDecimal amount(BigDecimal quantity) {
+			return known() && quantity != null ? cents(sale.multiply(quantity)) : null;
+		}
+
+	}
+
+	/**
+	 * The coefficient that brings the gross margin of the detailed items to a
+	 * target, set on the costs of the families chosen; the others keep theirs.
+	 * The gross margin is (sale - cost) / sale. Only the items priced from
+	 * their costs (COMPOSED, not options, every cost known) are counted.
+	 * @param labor whether the labour gets the coefficient
+	 * @param supplies whether the supplies (every cost but labour) get it
+	 * @return the coefficient, 5 decimals
+	 * @throws IllegalArgumentException when no cost of the families chosen is
+	 * known, or the target cannot be reached with a positive coefficient
+	 */
+	static BigDecimal coefficientForMargin(List<Line> lines, Map<ComponentType, BigDecimal> coefficients,
+			BigDecimal target, boolean supplies, boolean labor) {
+		if (target.signum() < 0 || target.compareTo(BigDecimal.ONE) >= 0) {
+			throw new IllegalArgumentException("La marge doit être comprise entre 0 et 100 %.");
+		}
+		BigDecimal totalCost = BigDecimal.ZERO;
+		BigDecimal chosenCost = BigDecimal.ZERO;
+		BigDecimal otherSale = BigDecimal.ZERO;
+		for (Line line : lines) {
+			if (line.option() || line.mode() != PriceMode.COMPOSED || line.quantity() == null
+					|| line.costs().isEmpty() || line.costs().stream().anyMatch(cost -> cost.value() == null)) {
+				continue;
+			}
+			for (Cost cost : line.costs()) {
+				BigDecimal value = cost.value().multiply(line.quantity());
+				totalCost = totalCost.add(value);
+				boolean chosen = cost.type() == ComponentType.LABOR ? labor : supplies;
+				if (chosen) {
+					chosenCost = chosenCost.add(value);
+				}
+				else {
+					otherSale = otherSale.add(value.multiply(cost.coefficient(coefficients)));
+				}
+			}
+		}
+		if (chosenCost.signum() <= 0) {
+			throw new IllegalArgumentException("Aucun coût détaillé à ajuster : renseignez le détail des postes.");
+		}
+		BigDecimal sale = totalCost.divide(BigDecimal.ONE.subtract(target), 10, RoundingMode.HALF_UP);
+		BigDecimal coefficient = sale.subtract(otherSale).divide(chosenCost, 5, RoundingMode.HALF_UP);
+		if (coefficient.signum() <= 0) {
+			throw new IllegalArgumentException("Marge impossible à atteindre en ne changeant que ce coefficient.");
+		}
+		return coefficient;
+	}
+
 	static BigDecimal cents(BigDecimal value) {
 		return value.setScale(2, RoundingMode.HALF_UP);
 	}

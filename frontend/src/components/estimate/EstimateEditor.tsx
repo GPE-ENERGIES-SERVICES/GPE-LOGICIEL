@@ -54,6 +54,7 @@ import type {
 
 import { AvailabilityLine } from "./ComponentsPanel";
 import { EstimateGrid } from "./EstimateGrid";
+import { EstimateSummary } from "./EstimateSummary";
 
 type Panel = "import" | "settings" | "history" | "supplier" | null;
 
@@ -78,15 +79,16 @@ export function EstimateEditor({ id }: { id: number }) {
   const [saved, setSaved] = useState<Estimate | null>(null);
   const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
+  const [revising, setRevising] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const libraryAi = useAiRun(
     "ESTIMATE_PRICE",
-    "Recherche des prix dans la bibliothèque…",
+    "Thomas cherche les prix dans la bibliothèque…",
   );
-  const reviewAi = useAiRun("ESTIMATE_REVIEW", "L'IA relit le chiffrage…");
+  const reviewAi = useAiRun("ESTIMATE_REVIEW", "Thomas relit le chiffrage…");
   const draftAi = useAiRun(
     "ESTIMATE_DRAFT",
-    "L'IA chiffre les postes sans coût…",
+    "Thomas chiffre les postes sans coût…",
   );
   // The latest of what this screen saved and what was reloaded (a change made in the technical choices).
   const estimate =
@@ -203,6 +205,11 @@ export function EstimateEditor({ id }: { id: number }) {
             Nouvelle version
           </button>
         )}
+        {editable && (
+          <button type="button" onClick={() => setRevising(true)}>
+            Révision marge
+          </button>
+        )}
         {!DEMO_DATA && (
           <a className="button" href={estimateExportUrl(estimate.id)} download>
             Exporter Excel
@@ -248,35 +255,19 @@ export function EstimateEditor({ id }: { id: number }) {
         {editable && (
           <button
             type="button"
-            className="secondary"
-            disabled={busy}
-            title="Pour chaque ligne sans prix (hors forfaits) : le même ouvrage de la bibliothèque GPE, trouvé par le logiciel, puis par l'IA pour les cas ambigus"
-            onClick={() =>
-              run(() =>
-                libraryAi
-                  .track(() => suggestLibraryPrices(estimate.id))
-                  .then(() => undefined),
-              )
-            }
-          >
-            Prix bibliothèque
-          </button>
-        )}
-        {aiAvailable && (
-          <button
-            type="button"
             className="primary"
             disabled={busy}
-            title="Pour chaque poste sans coût : fournitures des catalogues et main-d'œuvre aux taux GPE, d'après les choix techniques. Chaque proposition est à accepter ; les prix viennent du catalogue et des taux, jamais de l'IA."
+            title="Thomas, le chiffreur : pour chaque ligne sans prix, le même ouvrage de la bibliothèque GPE (trouvé par le logiciel, l'IA pour les cas ambigus), puis les fournitures des catalogues et la main-d'œuvre aux taux GPE. Chaque proposition est à accepter ; les prix viennent de la bibliothèque, des catalogues et des taux, jamais de l'IA."
             onClick={() =>
-              run(() =>
-                draftAi
-                  .track(() => draftEstimateWithAi(estimate.id))
-                  .then(() => undefined),
-              )
+              run(async () => {
+                await libraryAi.track(() => suggestLibraryPrices(estimate.id));
+                if (aiAvailable) {
+                  await draftAi.track(() => draftEstimateWithAi(estimate.id));
+                }
+              })
             }
           >
-            Chiffrer avec l&apos;IA
+            Pré-chiffrer avec Thomas
           </button>
         )}
         {aiAvailable && (
@@ -292,7 +283,7 @@ export function EstimateEditor({ id }: { id: number }) {
               )
             }
           >
-            Relecture IA
+            Relecture par Thomas
           </button>
         )}
         {editable && (
@@ -505,15 +496,26 @@ export function EstimateEditor({ id }: { id: number }) {
         </div>
       )}
 
-      <EstimateGrid
-        estimate={estimate}
-        editable={editable}
-        rates={rates.data ?? []}
-        aiAvailable={aiAvailable}
-        suggestions={suggestions.data ?? []}
-        onChanged={changed}
-        onSuggestions={() => setRevision((value) => value + 1)}
-      />
+      <div className="estimate-layout">
+        <div className="estimate-main">
+          <EstimateGrid
+            estimate={estimate}
+            editable={editable}
+            rates={rates.data ?? []}
+            aiAvailable={aiAvailable}
+            suggestions={suggestions.data ?? []}
+            onChanged={changed}
+            onSuggestions={() => setRevision((value) => value + 1)}
+          />
+        </div>
+        <EstimateSummary
+          estimate={estimate}
+          editable={editable}
+          revising={revising}
+          onRevising={setRevising}
+          onChanged={changed}
+        />
+      </div>
 
       {(estimate.incompleteItems > 0 || estimate.itemsToCheck > 0) && (
         <p className="sheet-status">

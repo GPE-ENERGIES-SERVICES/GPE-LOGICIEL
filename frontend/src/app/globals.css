@@ -4270,9 +4270,9 @@ select.status-dismissed {
   height: auto;
 }
 
-/* The name of the software, written as calligraphy. */
+/* The name of the software. */
 .product-name {
-  font-family: "Aref Ruqaa", "Noto Naskh Arabic", "Segoe UI", serif;
+  font-family: inherit;
   font-weight: 700;
 }
 
@@ -4280,7 +4280,7 @@ select.status-dismissed {
   margin: 0;
   width: min(26rem, 100%);
   color: #0a4ab0;
-  font-size: clamp(3rem, 6vw, 4.75rem);
+  font-size: clamp(2.25rem, 4.5vw, 3.25rem);
   line-height: 1.2;
   text-align: center;
 }
@@ -4332,7 +4332,7 @@ select.status-dismissed {
 
   .login-side .login-product {
     width: min(15rem, 100%);
-    font-size: 2.75rem;
+    font-size: 2rem;
   }
 
   .login-main {
@@ -5444,4 +5444,1411 @@ th.number {
   color: #ffffff;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+/*
+ * Tender banner and card, the same in every list (results, follows, archives,
+ * awards) and at the head of a tender: a band of one colour for all, the
+ * buyer and the statuses, then a body with the rest.
+ */
+:root {
+  --banner: #1e3a8a;
+  --awarded-fill: #b7791f;
+  --signed-fill: #166534;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --banner: #233f86;
+  }
+}
+
+:root[data-theme="dark"] {
+  --banner: #233f86;
+}
+
+.tender-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.tender-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+
+.tender-list .tender-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.tender-banner {
+  padding: 0.5rem 1rem 0.55rem;
+  background: var(--banner);
+  color: #ffffff;
+}
+
+.tender-banner-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+
+.tender-banner-kicker {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.tender-banner-kicker strong {
+  color: #ffffff;
+}
+
+.tender-banner-badges,
+.badge-link {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  text-decoration: none;
+}
+
+.tender-banner-badges {
+  margin-left: auto;
+}
+
+.tender-banner .badge {
+  margin: 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.tender-banner .badge.muted-badge {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.tender-banner-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.tender-banner-buyer {
+  font-size: 1.02rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.tender-banner-place {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+}
+
+.tender-banner .star {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tender-banner .star:hover:not(:disabled),
+.tender-banner .star[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fde68a;
+}
+
+.tender-card-body {
+  padding: 0.55rem 1rem 0.5rem;
+}
+
+.tender-card-meta {
+  margin: 0;
+  color: var(--primary);
+  font-size: 0.78rem;
+}
+
+.tender-card-title {
+  margin: 0.15rem 0 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.tender-card-title a {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.tender-card-title a:hover {
+  color: var(--primary);
+}
+
+.tender-card-facts,
+.tender-card-award,
+.tender-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.84rem;
+}
+
+.tender-card-facts {
+  color: var(--muted);
+}
+
+.tender-card-facts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tender-card-facts strong,
+.tender-card-award strong {
+  color: var(--foreground);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.tender-card-award {
+  gap: 0.2rem 0.5rem;
+}
+
+.tender-card-label {
+  font-weight: 650;
+}
+
+.tender-card-foot {
+  gap: 0.4rem 0.75rem;
+  padding-bottom: 0;
+}
+
+.tender-card-published {
+  margin-left: auto;
+  color: var(--subtle);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.tender-card-foot select.status-select {
+  max-width: 11rem;
+  min-height: 1.9rem;
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+  font-size: 0.8rem;
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.55rem;
+  border: 1px solid var(--primary-border);
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chip[data-domain="photovoltaic"] {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.chip[data-domain="irve"] {
+  border-color: var(--success-border);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+@media (max-width: 640px) {
+  .tender-banner-badges,
+  .tender-card-published {
+    margin-left: 0;
+  }
+
+  .tender-banner-badges {
+    width: 100%;
+  }
+}
+
+/* Statuses of the team, the same colours as a badge and as a choice; the result after the answer. */
+.badge.status-new { --badge-fill: var(--primary); }
+.badge.status-to-study { --badge-fill: var(--warning-fill); }
+.badge.status-responding { --badge-fill: var(--violet-fill); }
+.badge.status-submitted { --badge-fill: var(--success-fill); }
+.badge.status-dismissed { --badge-fill: var(--neutral-fill); }
+.badge.status-awarded { --badge-fill: var(--awarded-fill); }
+.badge.status-signed { --badge-fill: var(--signed-fill); }
+.badge.status-rejected { --badge-fill: var(--danger-fill); }
+
+select.status-awarded { background-color: var(--awarded-fill); }
+select.status-signed { background-color: var(--signed-fill); }
+select.status-rejected { background-color: var(--danger-fill); }
+
+select.status-awarded,
+select.status-signed,
+select.status-rejected {
+  border-color: transparent;
+  color: #ffffff;
+}
+
+/* The head of a tender: the banner of the lists, then its title, actions and key facts. */
+.tender-hero.tender-card {
+  margin-bottom: 0.85rem;
+}
+
+.tender-hero .tender-banner {
+  padding: 0.65rem 1.1rem 0.7rem;
+}
+
+.tender-hero .tender-banner-buyer {
+  font-size: 1.15rem;
+}
+
+.tender-hero .tender-card-body {
+  padding: 0.75rem 1.1rem 0.9rem;
+}
+
+.tender-hero h1 {
+  margin: 0.15rem 0 0.45rem;
+  font-size: 1.2rem;
+  line-height: 1.3;
+}
+
+.tender-hero .key-amount dd {
+  color: var(--primary);
+  font-weight: 650;
+}
+
+/* The parts of a tender: denser, each led by the colour of what it holds. */
+.tender-page .card {
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.card.section > h2:first-child,
+.card.section > .fold > summary .fold-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.02rem;
+}
+
+.card.section > h2:first-child {
+  margin-bottom: 0.65rem;
+}
+
+.card.section > h2:first-child::before,
+.card.section > .fold > summary .fold-title::before {
+  content: "";
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 3px;
+  background: var(--tone-fill, var(--primary));
+}
+
+.tender-page .summary h3 {
+  margin: 1.1rem 0 0.6rem;
+  padding: 0.5rem 0.85rem;
+}
+
+.tender-page .summary > .fold {
+  margin-top: 0.5rem;
+}
+
+.tender-page .summary > .fold > summary {
+  padding: 0.5rem 0.85rem;
+}
+
+.tender-page .field-grid {
+  gap: 0.45rem;
+}
+
+.tender-page .field-group {
+  padding: 0.55rem 0.85rem 0.15rem;
+}
+
+.tender-page .field-group .field,
+.tender-page .summary .field {
+  margin-bottom: 0.4rem;
+}
+
+/* The decision: the verdict reads first, in its colour. */
+.tender-page .verdict {
+  padding: 0.75rem 1rem;
+  border-width: 1px 1px 1px 4px;
+}
+
+.tender-page .verdict-label {
+  font-size: 1.12rem;
+}
+
+.decision-badge {
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+/* Selection criteria: their weight as a bar. */
+.facts dd ul.weight-list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weight-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(4rem, 10rem) 6rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.weight-bar {
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.weight-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.weight-list strong {
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The result of an answer: awards, then what to do next. */
+.compact-table {
+  width: 100%;
+  margin-bottom: 0.6rem;
+  font-size: 0.86rem;
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 0.35rem 0.5rem;
+}
+
+.result-form {
+  margin-top: 0.5rem;
+}
+
+.form-grid .span-all {
+  grid-column: 1 / -1;
+}
+
+/* History of the statuses: from, to, when, who, why. */
+.status-timeline {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-timeline li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-timeline li:last-child {
+  border-bottom: none;
+}
+
+.status-timeline .badge {
+  margin: 0;
+}
+
+.status-reason {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-style: italic;
+}
+
+/* Tender cards with room, as a notice: a taller band, then parts set apart by a line. */
+.tender-list {
+  gap: 1.25rem;
+}
+
+.tender-banner {
+  padding: 0.85rem 1.25rem 0.95rem;
+}
+
+
+.tender-banner-top {
+  font-size: 0.86rem;
+}
+
+.tender-banner-main {
+  margin-top: 0.6rem;
+}
+
+.tender-banner-buyer {
+  font-size: 1.2rem;
+}
+
+.tender-banner-place {
+  font-size: 0.85rem;
+}
+
+.tender-card-body {
+  padding: 0.9rem 1.25rem 0.75rem;
+}
+
+.tender-card-meta {
+  font-size: 0.84rem;
+}
+
+.tender-card-title {
+  margin: 0.35rem 0 1rem;
+  font-size: 1rem;
+}
+
+.tender-card-section,
+.tender-card-award {
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.tender-card-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 2rem;
+}
+
+.tender-card-columns > div {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+}
+
+.tender-card-columns > div > span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tender-card-columns strong {
+  color: var(--foreground);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.tender-card-foot {
+  padding-top: 0.65rem;
+}
+
+.tender-card-published {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+@media (max-width: 760px) {
+  .tender-card-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Markers under the title of a tender: what is not said above, each a link to its detail. */
+.key-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.key-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.86rem;
+  text-decoration: none;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.key-link strong {
+  color: var(--foreground);
+  font-weight: 650;
+}
+
+a.key-link:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+}
+
+.key-link.warning {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.key-link.warning strong {
+  color: var(--warning);
+}
+
+/* The notice inside the head of a tender: its object, then three blocks a costing reader scans. */
+.hero-notice {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.hero-object {
+  margin: 0 0 0.85rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-lg);
+  background: var(--info-soft);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.notice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.notice-block {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.notice-block h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notice-block.tone-info h2 { color: var(--info); }
+.notice-block.tone-success h2 { color: var(--success); }
+.notice-block.tone-warning h2 { color: var(--warning); }
+.notice-block.tone-info { border-color: var(--info-border); }
+.notice-block.tone-success { border-color: var(--success-border); }
+.notice-block.tone-warning { border-color: var(--warning-border); }
+
+.notice-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.notice-facts > div {
+  display: contents;
+}
+
+.notice-facts dt {
+  color: var(--muted);
+}
+
+.notice-facts dd {
+  margin: 0;
+}
+
+.notice-facts .badge {
+  margin-left: 0;
+}
+
+.notice-facts .score {
+  color: var(--primary);
+}
+
+.notice-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notice-chips li {
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.8rem;
+}
+
+.notice-chips.strong li {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.notice-lots {
+  margin-top: 0.75rem;
+}
+
+.notice-source {
+  margin: 0.6rem 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+/* The RC, CCAP, CCTP and the summary sheet read for the costing: blocks that fold, each titled on a solid band. */
+.read-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.read-block.tone-accent { --read: var(--primary); --read-soft: var(--primary-soft); --read-fill: var(--banner); }
+.read-block.tone-warning { --read: var(--warning); --read-soft: var(--warning-soft); --read-fill: var(--warning-fill); }
+.read-block.tone-success { --read: var(--success); --read-soft: var(--success-soft); --read-fill: var(--success-fill); }
+.read-block.tone-danger { --read: var(--danger); --read-soft: var(--danger-soft); --read-fill: var(--danger-fill); }
+.read-block.tone-muted { --read: var(--text); --read-soft: var(--surface-2); --read-fill: #5b6474; }
+
+.read-block {
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.read-grid > .read-block {
+  margin-top: 0;
+}
+
+/* The band sits flush on the top edge of the block. */
+.read-block > .read-band {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.55rem 0.95rem;
+  border-radius: 0;
+  background: var(--read-fill);
+  color: #ffffff;
+  font-size: 1.02rem;
+  font-weight: 700;
+  list-style: none;
+}
+
+.read-block > .read-band::-webkit-details-marker {
+  display: none;
+}
+
+.read-block > .read-band .part-title {
+  color: #ffffff;
+}
+
+.read-chevron {
+  margin-left: auto;
+  transition: transform 0.15s;
+}
+
+.read-block:not([open]) .read-chevron {
+  transform: rotate(-90deg);
+}
+
+.read-count {
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.read-body {
+  padding: 0.65rem 0.95rem 0.8rem;
+}
+
+.read-part + .read-part {
+  margin-top: 0.9rem;
+}
+
+.read-part h4 {
+  display: inline-block;
+  margin: 0 0 0.45rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: var(--read-soft, var(--surface-2));
+  color: var(--read, var(--text));
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* A label and its value kept apart, so that the bold of one does not run into the other. */
+.read-points {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 1.25rem;
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.read-points > div {
+  display: contents;
+}
+
+.read-points dt,
+.read-points dd {
+  margin: 0;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.read-points > div:last-child dt,
+.read-points > div:last-child dd {
+  border-bottom: 0;
+}
+
+.read-points dt {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.read-points dt .badge {
+  margin: 0 0.4rem 0 0;
+}
+
+.read-points dd strong {
+  font-weight: 650;
+}
+
+.read-source {
+  display: inline-block;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.read-total {
+  margin: 0.5rem 0 0;
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--read-soft, var(--surface-2));
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* The summary sheet in the same blocks as the RC and the CCAP: bold dark names, dashed rows. */
+.summary .read-grid {
+  margin-top: 0.75rem;
+}
+
+.summary .read-block .field-group {
+  border-bottom: 1px dashed var(--border);
+}
+
+.summary .read-block .field-group h4 {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.summary .read-block .attention,
+.summary .read-block .to-check {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.summary .read-block .attention li + li,
+.summary .read-block .to-check li + li {
+  margin-top: 0.3rem;
+}
+
+.summary > .fold {
+  margin-top: 0.75rem;
+}
+
+/* The head of a tender keeps the same frame whatever the notice says: two equal blocks. */
+.notice-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 760px) {
+  .notice-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The Go / No-Go at the head of the summary sheet: why go and the obstacles side by side. */
+.decision-conclusion {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.decision-columns {
+  margin: 0.6rem 0;
+}
+
+.decision-columns .read-part h4,
+.decision-to-lift h4 {
+  display: block;
+  padding: 0;
+  background: none;
+  font-size: 0.92rem;
+}
+
+.decision-to-lift {
+  margin-bottom: 0.6rem;
+}
+
+/* The verdict on the banner of a tender: a solid pill of its colour. */
+.verdict-badge {
+  border-color: transparent;
+  background: var(--tone-fill, var(--surface-2));
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.verdict-badge.tone-success { --tone-fill: var(--success-fill); }
+.verdict-badge.tone-warning { --tone-fill: var(--warning-fill); }
+.verdict-badge.tone-danger { --tone-fill: var(--danger-fill); }
+.verdict-badge.tone-muted { --tone-fill: rgba(255, 255, 255, 0.2); }
+
+/* The costing sheet: a wide grid scrolled sideways, its summary on the right as in a costing software. */
+.estimate-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 21rem;
+  align-items: start;
+  gap: 1rem;
+}
+
+@media (max-width: 1280px) {
+  .estimate-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.estimate-scroll {
+  overflow-x: auto;
+  border-radius: var(--radius);
+}
+
+.estimate-scroll .estimate-grid {
+  min-width: 112rem;
+}
+
+.estimate-grid .col-designation {
+  width: 22rem;
+}
+
+.estimate-grid .col-number {
+  width: 7rem;
+}
+
+.estimate-grid th {
+  background: #c5e4e8;
+  color: #1e3a5f;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.estimate-grid th.col-supply {
+  background: #d4e7f7;
+}
+
+.estimate-grid th.col-labor {
+  background: #e4e0f3;
+}
+
+.estimate-grid td.col-total {
+  font-weight: 700;
+}
+
+/* The three levels of a price: the number of the line in its solid colour, the line lightly tinted. */
+.estimate-grid tr.level-green > .col-row { background: var(--success-fill); color: #fff; }
+.estimate-grid tr.level-orange > .col-row { background: var(--warning-fill); color: #fff; }
+.estimate-grid tr.level-red > .col-row { background: var(--danger-fill); color: #fff; }
+.estimate-grid tr.level-orange > td { background-color: color-mix(in srgb, var(--warning-soft) 70%, transparent); }
+.estimate-grid tr.level-red > td { background-color: color-mix(in srgb, var(--danger-soft) 70%, transparent); }
+
+.estimate-grid .col-row {
+  font-weight: 700;
+  text-align: center;
+}
+
+.level-validate {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.estimate-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.level-dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  vertical-align: -0.05rem;
+}
+
+.level-dot.level-green { background: var(--success-fill); }
+.level-dot.level-orange { background: var(--warning-fill); }
+.level-dot.level-red { background: var(--danger-fill); }
+
+/* The summary of the sheet: the ring, the figures by family, then the totals. */
+.estimate-summary {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.estimate-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.estimate-ring {
+  width: 7.5rem;
+  height: 7.5rem;
+  flex: none;
+}
+
+.estimate-ring-legend {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.estimate-ring-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.estimate-ring-legend strong {
+  margin-left: auto;
+  padding-left: 0.5rem;
+}
+
+.estimate-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-summary-table th,
+.estimate-summary-table td {
+  padding: 0.3rem 0.25rem;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.estimate-summary-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.estimate-summary-table tbody th {
+  text-align: left;
+  font-weight: 650;
+}
+
+.estimate-summary-table td.margin {
+  background: color-mix(in srgb, var(--success-soft) 80%, transparent);
+  color: var(--success);
+  font-weight: 650;
+}
+
+.estimate-summary-table tr.total th,
+.estimate-summary-table tr.total td {
+  border-bottom: 0;
+  font-weight: 700;
+}
+
+.estimate-summary-facts {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.estimate-summary-facts > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0.6rem;
+  border-left: 3px solid var(--primary);
+  background: var(--surface-2);
+  font-size: 0.88rem;
+}
+
+.estimate-summary-facts dt {
+  font-weight: 600;
+}
+
+.estimate-summary-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-summary-facts > .strong {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+/* The margin revision: a dialog in the colours of the sheet. */
+.margin-dialog {
+  width: min(34rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.margin-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.margin-dialog form {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0 0 1rem;
+}
+
+.margin-dialog .margin-band {
+  margin: 0;
+  padding: 0.7rem 1rem;
+  background: var(--banner);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.margin-dialog fieldset {
+  margin: 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.margin-dialog legend {
+  padding: 0 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.margin-dialog .radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-right: 1.25rem;
+}
+
+.margin-dialog .margin-input input {
+  width: 6rem;
+  text-align: right;
+}
+
+.margin-dialog .hint,
+.margin-dialog .error,
+.margin-dialog .form-actions {
+  margin: 0 1rem;
+}
+
+/* The parts of a step as browser tabs, each in the colour of its card; the open one, solid, joins its card. */
+.substeps-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  margin: 0.6rem 0 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.substep.tone-accent { --sub: var(--primary); --sub-soft: var(--primary-soft); --sub-fill: var(--banner); }
+.substep.tone-warning { --sub: var(--warning); --sub-soft: var(--warning-soft); --sub-fill: var(--warning-fill); }
+.substep.tone-success { --sub: var(--success); --sub-soft: var(--success-soft); --sub-fill: var(--success-fill); }
+.substep.tone-danger { --sub: var(--danger); --sub-soft: var(--danger-soft); --sub-fill: var(--danger-fill); }
+.substep.tone-muted { --sub: var(--text); --sub-soft: var(--surface-2); --sub-fill: #5b6474; }
+
+.substep {
+  flex: none;
+  min-height: 0;
+  margin: 0;
+  padding: 0.5rem 1.1rem 0.45rem;
+  border: 0;
+  border-radius: 10px 10px 0 0;
+  background: var(--sub-soft);
+  box-shadow: none;
+  color: var(--sub);
+  font-size: 0.86rem;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+
+.substep:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sub-fill) 22%, var(--sub-soft));
+  color: var(--sub);
+}
+
+.substep.active,
+.substep.active:hover:not(:disabled) {
+  padding-top: 0.6rem;
+  background: var(--sub-fill);
+  color: #ffffff;
+}
+
+.substeps-panel > .read-block:first-child {
+  margin-top: 0;
+  border-top-left-radius: 4px;
+}
+
+/* The scroll bar repeated above the costing sheet. */
+.estimate-scroll-top {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-bottom: 0.25rem;
+}
+
+.estimate-scroll-top > div {
+  height: 1px;
+}
+
+/* The open tab flows into its card, as in a browser: no line between them, curved feet on each side. */
+.substeps-bar {
+  gap: 0;
+  padding: 0 10px;
+}
+
+.substep + .substep {
+  margin-left: 2px;
+}
+
+.substep.active {
+  position: relative;
+  z-index: 1;
+}
+
+.substep.active::before,
+.substep.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.substep.active::before {
+  left: -10px;
+  background: radial-gradient(circle at 0 0, transparent 9.5px, var(--sub-fill) 10px);
+}
+
+.substep.active::after {
+  right: -10px;
+  background: radial-gradient(circle at 100% 0, transparent 9.5px, var(--sub-fill) 10px);
+}
+
+.substeps-panel > .read-block:first-child {
+  border-top: 0;
+  border-radius: var(--radius-lg);
+}
+
+/* Several values of a field read as a list: a bullet before each, in the colour of the card. */
+.summary .read-block .field-values:has(> .field + .field) .field-value::before {
+  content: "•";
+  margin-right: 0.15rem;
+  color: var(--read, var(--muted));
+  font-weight: 700;
+}
+
+.summary .read-block .attention,
+.summary .read-block .to-check {
+  list-style: disc;
+}
+
+.summary .read-block .attention li::marker {
+  color: var(--danger);
+}
+
+.summary .read-block .to-check li::marker {
+  color: var(--warning);
+}
+
+.notice-chips:not(.strong) {
+  display: block;
+}
+
+.notice-chips:not(.strong) li {
+  display: list-item;
+  margin-left: 1rem;
+  padding: 0.05rem 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 0.85rem;
+  list-style: disc;
+}
+
+/* The first tab starts at the edge of its card: square corner below it, no foot outside the card. */
+.substeps-bar {
+  padding-left: 0;
+}
+
+.substep.active:first-child::before {
+  display: none;
+}
+
+.substeps:has(.substep.active:first-child) .substeps-panel > .read-block:first-child {
+  border-top-left-radius: 0;
+}
+
+/* Lists inside the cards: the bullets inside the frame, the words apart from them. */
+.summary .read-block .attention,
+.summary .read-block .to-check {
+  padding-left: 1.75rem;
+}
+
+.summary .read-block .attention li,
+.summary .read-block .to-check li {
+  padding-left: 0.4rem;
+}
+
+.summary .read-block .field-values:has(> .field + .field) .field-value::before {
+  margin-right: 0.45rem;
+}
+
+.notice-chips:not(.strong) li {
+  margin-left: 1.25rem;
+  padding-left: 0.3rem;
+}
+
+/* The Go / No-Go: the conclusion in plain words, its figures as pills, then the two columns; bold kept for titles. */
+.decision .decision-conclusion {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.decision-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.decision-figures li {
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: var(--tone-soft, var(--surface-2));
+  color: var(--tone, var(--muted));
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.decision-columns .read-part {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--tone-border, var(--border));
+  border-radius: var(--radius);
+}
+
+.decision .decision-points li,
+.decision .decision-checks li {
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.decision .decision-point-text strong {
+  font-weight: 400;
+}
+
+.decision-kinds {
+  margin: -0.2rem 0 0.4rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.decision .decision-kind {
+  margin-right: 0.4rem;
+  font-size: 0.7rem;
+}
+
+.decision-checks {
+  padding-left: 1.5rem;
+}
+
+.decision-checks li {
+  padding-left: 0.3rem;
+}
+
+.decision-check-why {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
 }

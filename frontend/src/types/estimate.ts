@@ -59,7 +59,31 @@ export type EstimateItem = {
   components: EstimateComponent[];
   /** The solution decided in the technical choices; its resources are the components. */
   technical: TechnicalSolution;
+  /** The item as a costing reader reads it, computed by the backend: supplies (every cost but labour), then labour. */
+  supplyUnitCost: number | null;
+  supplyCoefficient: number | null;
+  supplyAmount: number | null;
+  laborHours: number | null;
+  laborRate: number | null;
+  laborCoefficient: number | null;
+  laborAmount: number | null;
+  /** GREEN from a rate or a supplier, ORANGE estimated, old or to check, RED without price. */
+  priceLevel: PriceLevel;
 };
+
+export type PriceLevel = "GREEN" | "ORANGE" | "RED";
+
+/** The estimate by family, options excluded; a price entered has no cost split. */
+export type Breakdown = {
+  supplyCost: number;
+  supplySale: number;
+  laborCost: number;
+  laborSale: number;
+  laborHours: number;
+  undetailedSale: number;
+};
+
+export type MarginTarget = "SUPPLIES" | "LABOR" | "BOTH";
 
 export type TechnicalStatus = "COMPLETE" | "TO_CONFIRM" | "INSUFFICIENT";
 
@@ -110,6 +134,7 @@ export type Estimate = {
   updatedAt: string;
   validatedBy: string | null;
   validatedAt: string | null;
+  breakdown: Breakdown;
   items: EstimateItem[];
 };
 
@@ -173,7 +198,8 @@ export type EstimateEvent = {
     | "SUPPLIER_PRICES_COPIED"
     | "VALIDATED"
     | "SUPERSEDED"
-    | "SUGGESTION_ACCEPTED";
+    | "SUGGESTION_ACCEPTED"
+    | "MARGIN_REVISED";
   detail: string | null;
   createdBy: string | null;
   createdAt: string;

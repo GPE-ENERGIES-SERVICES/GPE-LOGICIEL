@@ -11,7 +11,7 @@ import type { FollowUpStatus, TenderSummary } from "@/types/tender";
 
 import { ListToolbar } from "./ListToolbar";
 import { Pagination } from "./Pagination";
-import { TenderRow } from "./TenderRow";
+import { TenderItem } from "./TenderCard";
 
 /** Values of the sort parameter of GET /api/tenders; "-" sorts in descending order. */
 const SORT_OPTIONS = [
@@ -38,7 +38,7 @@ type Props = {
   onChanged: () => void;
 };
 
-/** A page of tenders: number of results, sort, table and pages. */
+/** A page of tenders: number of results, sort, banners and pages. */
 export function TenderResults({ data, loading, params, onNavigate, caption, emptyMessage, onChanged }: Props) {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -78,35 +78,17 @@ export function TenderResults({ data, loading, params, onNavigate, caption, empt
       {data.content.length === 0 ? (
         <p className="page-message">{emptyMessage}</p>
       ) : (
-        <div className="card table-card">
-          <table className="tender-table">
-            <thead>
-              <tr>
-                <th aria-label="Suivi" className="follow-cell" />
-                <th>Appel d&apos;offres</th>
-                <th>Lieu</th>
-                <th>Travaux</th>
-                <th>Montant estimé</th>
-                <th>Publication</th>
-                <th>Date limite</th>
-                {/* Without relevance score, the column shows the outcome of the criteria. */}
-                <th>{available("relevance") ? "Pertinence" : "Critères"}</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.content.map((tender) => (
-                <TenderRow
-                  key={tender.id}
-                  tender={tender}
-                  href={tenderHref(tender.id, from)}
-                  busy={busyId === tender.id}
-                  onFollowUp={(status) => followUp(tender, status)}
-                  onFollowChanged={onChanged}
-                />
-              ))}
-            </tbody>
-          </table>
+        <div className="tender-list">
+          {data.content.map((tender) => (
+            <TenderItem
+              key={tender.id}
+              tender={tender}
+              href={tenderHref(tender.id, from)}
+              busy={busyId === tender.id}
+              onFollowUp={(status) => followUp(tender, status)}
+              onFollowChanged={onChanged}
+            />
+          ))}
         </div>
       )}
       <Pagination page={page} totalPages={data.totalPages} onNavigate={onNavigate} />

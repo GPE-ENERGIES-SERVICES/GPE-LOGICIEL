@@ -107,6 +107,10 @@ public class EstimateComponent {
 		this.position = position;
 	}
 
+	void setCoefficient(BigDecimal coefficient) {
+		this.coefficient = coefficient;
+	}
+
 	void setPosition(int position) {
 		this.position = position;
 	}

@@ -1,5 +1,6 @@
 package eu.gpefrance.tenders.estimate;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.EnumMap;
 import java.util.List;
@@ -188,6 +189,58 @@ public class EstimateService {
 		return change(id, user, estimate -> estimate.change(ItemRequest.clean(request.label()),
 				request.vatRate() == null ? estimate.getVatRate() : request.vatRate(), request.coefficientsOrEmpty(),
 				user, clock.instant()));
+	}
+
+	/** The families whose coefficient a margin revision changes. */
+	public enum MarginTarget {
+
+		SUPPLIES, LABOR, BOTH
+
+	}
+
+	/**
+	 * Brings the margin of the detailed items to a target by changing the
+	 * coefficient of the families chosen: it becomes that of the estimate, and
+	 * the coefficients of their costs give way to it. A net margin is the gross
+	 * margin less the fees on the sale price (agency, overheads, service).
+	 * @param margin the margin wanted, 0.223 for 22.3 %
+	 */
+	@Transactional
+	public EstimateResponse reviseMargin(Long id, MarginTarget target, BigDecimal margin, boolean net, String user) {
+		PricingSettings fees = settings.current();
+		BigDecimal gross = net ? margin.add(fees.getAgencyFeeRate()).add(fees.getOverheadRate())
+			.add(fees.getServiceFeeRate()) : margin;
+		boolean supplies = target != MarginTarget.LABOR;
+		boolean labor = target != MarginTarget.SUPPLIES;
+		BigDecimal[] coefficient = new BigDecimal[1];
+		EstimateResponse response = change(id, user, estimate -> {
+			try {
+				coefficient[0] = EstimateCalculator.coefficientForMargin(
+						estimate.getItems().stream().map(EstimateItem::line).toList(), estimate.getCoefficients(), gross,
+						supplies, labor);
+			}
+			catch (IllegalArgumentException ex) {
+				throw EstimateRuleException.invalid(ex.getMessage());
+			}
+			java.util.Map<ComponentType, BigDecimal> coefficients = new java.util.EnumMap<>(ComponentType.class);
+			for (ComponentType type : ComponentType.values()) {
+				if (type == ComponentType.LABOR ? labor : supplies) {
+					coefficients.put(type, coefficient[0]);
+				}
+			}
+			estimate.getItems()
+				.stream()
+				.flatMap(item -> item.getComponents().stream())
+				.filter(component -> component.getType() == ComponentType.LABOR ? labor : supplies)
+				.forEach(component -> component.setCoefficient(null));
+			estimate.change(estimate.getLabel(), estimate.getVatRate(), coefficients, user, clock.instant());
+		});
+		record(found(id), Kind.MARGIN_REVISED, "Marge " + (net ? "nette" : "brute") + " visée "
+				+ margin.movePointRight(2).stripTrailingZeros().toPlainString() + " % : coefficient "
+				+ coefficient[0].stripTrailingZeros().toPlainString() + " ("
+				+ (target == MarginTarget.BOTH ? "matériel et M.O." : target == MarginTarget.LABOR ? "M.O." : "matériel")
+				+ ")", user);
+		return response;
 	}
 
 	/** Deletes a draft, with its items. */

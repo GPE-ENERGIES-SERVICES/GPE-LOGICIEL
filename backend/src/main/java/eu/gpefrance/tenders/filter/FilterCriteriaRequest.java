@@ -23,7 +23,7 @@ public record FilterCriteriaRequest(
 		@NotNull List<@NotNull @Size(max = 100) String> excludedKeywords,
 		@PositiveOrZero BigDecimal minAmount,
 		@PositiveOrZero BigDecimal maxAmount,
-		List<@NotNull @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC", message = "domaine inconnu") String> activities) {
+		List<@NotNull @Pattern(regexp = "ELECTRICITY|PHOTOVOLTAIC|IRVE", message = "domaine inconnu") String> activities) {
 
 	/** The domains required, none when not given. */
 	List<String> cleanActivities() {

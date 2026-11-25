@@ -105,6 +105,12 @@ const PATHS = {
       <path d="M12 7.5V12l3 2" />
     </>
   ),
+  pin: (
+    <>
+      <path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </>
+  ),
   chevronDown: <path d="m6 9.5 6 6 6-6" />,
   chevronUp: <path d="m6 14.5 6-6 6 6" />,
   arrowUp: <path d="M12 19V5M6 11l6-6 6 6" />,

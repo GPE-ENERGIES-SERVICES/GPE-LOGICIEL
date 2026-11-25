@@ -26,13 +26,19 @@ public class TenderService {
 
 	private final TenderMatchRepository matches;
 
+	private final FollowUpHistory history;
+
+	private final AwardService awards;
+
 	private final Clock clock;
 
 	public TenderService(TenderRepository tenders, TenderFollowRepository follows, TenderMatchRepository matches,
-			Clock clock) {
+			FollowUpHistory history, AwardService awards, Clock clock) {
 		this.tenders = tenders;
 		this.follows = follows;
 		this.matches = matches;
+		this.history = history;
+		this.awards = awards;
 		this.clock = clock;
 	}
 
@@ -94,8 +100,31 @@ public class TenderService {
 	@Transactional
 	public TenderDetailResponse followUp(Long id, FollowUpRequest request, String user, Long userId) {
 		Tender tender = find(id);
-		tender.followUp(request.status(), request.commentOr(tender.getFollowUpComment()), user, clock.instant());
+		String comment = request.commentOr(tender.getFollowUpComment());
+		Instant now = clock.instant();
+		history.change(tender, request.status(), TenderStatusChange.Origin.USER, comment, request.commentOr(null), user,
+				now);
+		if (request.status() == FollowUpStatus.AWARDED) {
+			awards.recordWonByStatus(tender, user, now);
+		}
 		return TenderDetailResponse.from(tender, isFollowed(id, userId), matchesOf(id));
+	}
+
+	/** The changes of the follow-up status of a tender, the latest first. */
+	@Transactional(readOnly = true)
+	public List<StatusChangeResponse> history(Long id) {
+		find(id);
+		return history.of(id).stream().map(StatusChangeResponse::from).toList();
+	}
+
+	public record StatusChangeResponse(Long id, FollowUpStatus oldStatus, FollowUpStatus newStatus,
+			TenderStatusChange.Origin origin, String changedBy, String reason, Instant changedAt) {
+
+		static StatusChangeResponse from(TenderStatusChange change) {
+			return new StatusChangeResponse(change.getId(), change.getOldStatus(), change.getNewStatus(),
+					change.getOrigin(), change.getChangedBy(), change.getReason(), change.getChangedAt());
+		}
+
 	}
 
 	/**

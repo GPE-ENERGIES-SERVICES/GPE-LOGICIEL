@@ -296,7 +296,7 @@ export function ProcessingPanel({ tenderId, retained }: { tenderId: number; reta
           state: "todo",
           detail: `À lancer à la demande (environ ${duration(typicalFinancial)}).`,
           action: !reading ? (
-            <a href="#finance" className="button">
+            <a href="#chiffrage" className="button">
               Ouvrir l&apos;analyse financière
             </a>
           ) : undefined,

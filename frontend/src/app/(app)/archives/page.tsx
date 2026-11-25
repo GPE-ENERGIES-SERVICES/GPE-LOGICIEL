@@ -1,20 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 
 import { ListToolbar } from "@/components/ListToolbar";
 import { Pagination } from "@/components/Pagination";
 import { SearchForm } from "@/components/SearchForm";
+import { TenderItem } from "@/components/TenderCard";
 import { PAST_FILTERS, TenderFilters } from "@/components/TenderFilters";
-import { ACTIVITY_LABELS, formatAmount, formatDate, MARKET_TYPE_LABELS } from "@/lib/format";
 import { tenderHref } from "@/lib/navigation";
 import { useLoader } from "@/lib/useLoader";
 import { useUrlParams } from "@/lib/useUrlParams";
-import { available } from "@/services/http";
 import { getTenders } from "@/services/tenderApi";
-import type { TenderResult, TenderSummary } from "@/types/tender";
 
 /** The most recent first by default. */
 const SORT_OPTIONS = [
@@ -23,47 +20,6 @@ const SORT_OPTIONS = [
   { value: "-amount", label: "Montant décroissant" },
   { value: "amount", label: "Montant croissant" },
 ];
-
-const RESULT_LABELS: Record<TenderResult["kind"], string> = {
-  AWARDED: "Attribuée",
-  UNSUCCESSFUL: "Sans suite",
-  CANCELLED: "Annulée",
-};
-
-function ArchiveRow({ tender, href }: { tender: TenderSummary; href: string }) {
-  const area = tender.postalCode ?? tender.departments.join(", ");
-  const about = [tender.buyer ?? "Acheteur non indiqué", tender.reference && `Réf. ${tender.reference}`]
-    .filter(Boolean)
-    .join(" · ");
-  return (
-    <tr>
-      <td className="tender-title">
-        <Link href={href}>{tender.title}</Link>
-        <div className="small muted">{about}</div>
-      </td>
-      <td>
-        {tender.location ?? "Non indiqué"}
-        {area && <div className="small muted">{area}</div>}
-      </td>
-      <td>
-        {(tender.activities ?? []).map((code) => ACTIVITY_LABELS[code] ?? code).join(", ")}
-        <div className="small muted">{tender.marketTypes.map((type) => MARKET_TYPE_LABELS[type]).join(", ")}</div>
-      </td>
-      <td className="nowrap">{formatDate(tender.publishedAt)}</td>
-      <td className="nowrap">{formatAmount(tender.estimatedAmount)}</td>
-      <td className="nowrap">
-        {tender.result ? RESULT_LABELS[tender.result.kind] : "Close, résultat non connu"}
-        {tender.followUpStatus === "SUBMITTED" && <div className="small muted">Réponse envoyée</div>}
-      </td>
-      {available("awards") && (
-        <td>
-          {tender.winners?.length ? tender.winners.join(", ") : "–"}
-          {tender.winners?.length ? <div className="small muted">{formatAmount(tender.awardedAmount ?? null)}</div> : null}
-        </td>
-      )}
-    </tr>
-  );
-}
 
 /** Past consultations: closed, awarded, abandoned or cancelled, with their outcome when known. */
 function ArchiveList() {
@@ -121,25 +77,10 @@ function ArchiveList() {
                 : "Aucune consultation passée."}
             </p>
           ) : (
-            <div className="card table-card">
-              <table className="tender-table">
-                <thead>
-                  <tr>
-                    <th>Consultation</th>
-                    <th>Lieu</th>
-                    <th>Travaux</th>
-                    <th>Publication</th>
-                    <th>Montant estimé</th>
-                    <th>Résultat</th>
-                    {available("awards") && <th>Attributaire</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.data.content.map((tender) => (
-                    <ArchiveRow key={tender.id} tender={tender} href={tenderHref(tender.id, from)} />
-                  ))}
-                </tbody>
-              </table>
+            <div className="tender-list">
+              {list.data.content.map((tender) => (
+                <TenderItem key={tender.id} tender={tender} href={tenderHref(tender.id, from)} />
+              ))}
             </div>
           )}
           <Pagination page={page} totalPages={list.data.totalPages} onNavigate={navigate} />

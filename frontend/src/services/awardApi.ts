@@ -1,4 +1,5 @@
 import type { AwardedContract, AwardSearch } from "@/types/award";
+import type { StatusChange } from "@/types/tender";
 
 import { api } from "./http";
 
@@ -9,6 +10,11 @@ import { api } from "./http";
  */
 export function getAwardedContracts(params: URLSearchParams | string): Promise<AwardSearch> {
   return api(`/api/awards?${params}`);
+}
+
+/** Changes of the follow-up status, the latest first. */
+export function getStatusHistory(tenderId: number): Promise<StatusChange[]> {
+  return api(`/api/tenders/${tenderId}/history`);
 }
 
 /** Contracts awarded for a consultation, one per lot. */

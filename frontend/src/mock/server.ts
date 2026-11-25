@@ -9,7 +9,7 @@ import { ACTIVITY_LABELS, formatAmount, MARKET_TYPE_LABELS, normalizeText, TENDE
 import { REGIONS } from "@/lib/regions";
 import { ApiError } from "@/services/http";
 import type { Alert, AlertInput, AlertSummary } from "@/types/alert";
-import type { AwardedContract, AwardSearch } from "@/types/award";
+import type { AwardedContract, AwardRequest, AwardSearch } from "@/types/award";
 import type { AnalysisConfiguration, AnalysisQuality, TenderAnalysis } from "@/types/analysis";
 import type { Page } from "@/types/common";
 import type { DceLink, DceSummary, DocumentHit, DocumentInfo, PieceType } from "@/types/document";
@@ -401,7 +401,16 @@ function counts(params: URLSearchParams): Record<TenderTab, number> {
 function statusCounts(params: URLSearchParams): Record<FollowUpStatus, number> {
   const others = new URLSearchParams(params);
   others.delete("status");
-  const counts: Record<FollowUpStatus, number> = { NEW: 0, TO_STUDY: 0, RESPONDING: 0, SUBMITTED: 0, DISMISSED: 0 };
+  const counts: Record<FollowUpStatus, number> = {
+    NEW: 0,
+    TO_STUDY: 0,
+    RESPONDING: 0,
+    SUBMITTED: 0,
+    DISMISSED: 0,
+    AWARDED: 0,
+    SIGNED: 0,
+    REJECTED: 0,
+  };
   for (const tender of tenders.filter((candidate) => matches(candidate, others))) {
     counts[tender.followUpStatus] += 1;
   }
@@ -573,7 +582,53 @@ function followUp(id: string, body: unknown): TenderDetail {
   Object.assign(tender, change);
   state.followUps[tender.id] = change;
   saveState();
+  // As in the backend, « Attribué » adds the tender to the awarded contracts, won by the company.
+  if (status === "AWARDED" && !MOCK_AWARDS.some((award) => award.tenderId === tender.id && award.won)) {
+    recordAward(id, {
+      won: true,
+      winner: "GPE Énergies & Services",
+      amount: null,
+      awardedAt: new Date().toISOString().slice(0, 10),
+      source: "MANUAL",
+      lotNumber: null,
+      reason: null,
+    });
+  }
   return tender;
+}
+
+/** The result of a tender, as the backend records it: once per lot; won makes it AWARDED, lost after an answer REJECTED. */
+function recordAward(id: string, body: unknown): TenderDetail {
+  const tender = find(id);
+  const request = body as AwardRequest;
+  const lot = tender.lots.find((candidate) => candidate.number === request.lotNumber);
+  const award: AwardedContract = {
+    id: Math.max(0, ...MOCK_AWARDS.map((item) => item.id)) + 1,
+    tenderId: tender.id,
+    title: tender.title,
+    buyer: tender.buyer ?? "Acheteur non indiqué",
+    location: tender.location,
+    postalCode: tender.postalCode ?? null,
+    department: tender.departments[0] ?? null,
+    marketType: tender.marketTypes[0] ?? "WORKS",
+    activities: tender.activities ?? [],
+    lotNumber: request.lotNumber,
+    lot: lot ? `Lot ${lot.number} – ${lot.title ?? "sans intitulé"}` : null,
+    winner: request.winner,
+    winnerCity: null,
+    amount: request.amount,
+    awardedAt: request.awardedAt,
+    offersReceived: null,
+    source: request.source,
+    won: request.won,
+  };
+  const existing = MOCK_AWARDS.findIndex((item) => item.tenderId === tender.id && item.lotNumber === request.lotNumber);
+  MOCK_AWARDS.splice(existing < 0 ? MOCK_AWARDS.length : existing, existing < 0 ? 0 : 1, award);
+  const status = tender.followUpStatus;
+  if (request.won && status !== "AWARDED" && status !== "SIGNED") {
+    return followUp(id, { status: "AWARDED" });
+  }
+  return !request.won && status === "SUBMITTED" ? followUp(id, { status: "REJECTED", comment: request.reason }) : tender;
 }
 
 function follow(id: string, followed: boolean): undefined {
@@ -799,6 +854,9 @@ const ROUTES: Route[] = [
   ["GET", /^\/api\/tenders\/status-counts$/, (_, url) => statusCounts(url.searchParams)],
   ["GET", /^\/api\/tenders\/(\d+)$/, (id) => toDetail(find(id))],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow-up$/, (id, _, body) => toDetail(followUp(id, body))],
+  ["PUT", /^\/api\/tenders\/(\d+)\/award$/, (id, _, body) => toDetail(recordAward(id, body))],
+  // The demo keeps no history of the statuses.
+  ["GET", /^\/api\/tenders\/(\d+)\/history$/, (id) => find(id) && []],
   ["PUT", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, true)],
   ["DELETE", /^\/api\/tenders\/(\d+)\/follow$/, (id) => follow(id, false)],
   ["GET", /^\/api\/tenders\/(\d+)\/dossiers$/, (id) => MOCK_DOSSIERS[find(id).id] ?? []],

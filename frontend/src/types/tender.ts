@@ -14,7 +14,32 @@ export type ProcedureType =
 
 export type TenderStatus = "ACTIVE" | "CLOSED" | "CANCELLED" | "UNSUCCESSFUL";
 
-export type FollowUpStatus = "NEW" | "TO_STUDY" | "RESPONDING" | "SUBMITTED" | "DISMISSED";
+/**
+ * Step of the company on the tender. DISMISSED is the NO GO of GPE; AWARDED (won,
+ * its award recorded), REJECTED (offer or application rejected) and SIGNED come
+ * after the answer is sent, see FOLLOW_UP_NEXT.
+ */
+export type FollowUpStatus =
+  | "NEW"
+  | "TO_STUDY"
+  | "RESPONDING"
+  | "SUBMITTED"
+  | "DISMISSED"
+  | "AWARDED"
+  | "SIGNED"
+  | "REJECTED";
+
+/** One change of the follow-up status, kept for good. */
+export type StatusChange = {
+  id: number;
+  oldStatus: FollowUpStatus;
+  newStatus: FollowUpStatus;
+  /** USER: chosen by a user; NOTICE: from a published award notice, confirmed by a user. */
+  origin: "USER" | "NOTICE";
+  changedBy: string | null;
+  reason: string | null;
+  changedAt: string;
+};
 
 export type TenderTab = "NEW" | "TO_PROCESS" | "FOLLOWED" | "ALL" | "DISMISSED" | "ARCHIVED" | "FILTERED_OUT";
 
@@ -42,7 +67,7 @@ export type TenderSummary = {
   followed?: boolean;
   /** Outcome of a past consultation, null while it is open or when unknown. */
   result?: TenderResult | null;
-  /** Domains of GPE (ELECTRICITY, PHOTOVOLTAIC), see ACTIVITY_LABELS. */
+  /** Domains of GPE (ELECTRICITY, PHOTOVOLTAIC, IRVE), see ACTIVITY_LABELS. */
   activities?: string[];
   // Provided by the simulated API; the backend does not send them yet.
   /** Distance from the company's headquarters, null when the place is unknown. */
